@@ -1,4 +1,5 @@
 from .data import *
+from typing import Union
 import functools
 import os
 import pandas as pd
@@ -32,26 +33,30 @@ class HistoricalData:
             self._timespan = 'day'
 
     @functools.lru_cache(maxsize=_MEMORY_CACHE_SIZE)
-    def get_data_point(self, ticker, time_point: pd.Timestamp):
+    def get_data_point(self, ticker, time_point: Union[pd.Timestamp, pd.DatetimeIndex]):
         res = self.get_data_list(ticker, time_point, time_point)
         return res[0] if res else None
 
     @functools.lru_cache(maxsize=_MEMORY_CACHE_SIZE)
-    def get_daily_data(self, ticker: str, day: pd.Timestamp):
+    def get_daily_data(self, ticker: str, day: Union[pd.Timestamp, pd.DatetimeIndex]):
         day_str = day.strftime('%F')
         start_time = pd.to_datetime(day_str + ' 00:00').tz_localize(tz=_TIME_ZONE)
         end_time = pd.to_datetime(day_str + ' 23:59').tz_localize(tz=_TIME_ZONE)
         return self.get_data_list(ticker, start_time, end_time)
 
     @functools.lru_cache(maxsize=_MEMORY_CACHE_SIZE)
-    def get_data_list(self, ticker: str, start_time: pd.Timestamp, end_time: pd.Timestamp):
+    def get_data_list(self, ticker: str,
+                      start_time: Union[pd.Timestamp, pd.DatetimeIndex],
+                      end_time: Union[pd.Timestamp, pd.DatetimeIndex]):
         if self._data_source == DataSource.POLYGON:
             return self._polygon_get_data_list(ticker, start_time, end_time)
 
     def _cache_get_data_point(self, ticker, time_point):
         pass
 
-    def _polygon_get_data_list(self, ticker: str, start_time: pd.Timestamp, end_time: pd.Timestamp):
+    def _polygon_get_data_list(self, ticker: str,
+                               start_time: Union[pd.Timestamp, pd.DatetimeIndex],
+                               end_time: Union[pd.Timestamp, pd.DatetimeIndex]):
         from_ = int(start_time.timestamp() * 1000)
         to = int(end_time.timestamp() * 1000)
         response = self._polygon_client.stocks_equities_aggregates(
@@ -61,4 +66,3 @@ class HistoricalData:
         return [DataPoint(o=res['o'], h=res['h'], l=res['l'], c=res['c'], v=res['v'],
                           t=pd.to_datetime(int(res['t']), unit='ms', utc=True).tz_convert(_TIME_ZONE))
                 for res in response.results]
-
