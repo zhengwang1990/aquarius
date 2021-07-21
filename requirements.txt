@@ -1,0 +1,6 @@
+alpaca-trade-api
+numpy
+pandas
+polygon-api-client
+tabulate
+yfinance
