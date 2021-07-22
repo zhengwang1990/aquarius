@@ -1,7 +1,12 @@
 from enum import Enum
 import collections
+import os
 
 POLYGON_API_KEY = 'POLYGON_API_KEY'
+
+TIME_ZONE = 'US/Eastern'
+
+CACHE_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'cache')
 
 
 class TimeInterval(Enum):

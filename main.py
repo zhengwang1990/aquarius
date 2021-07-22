@@ -7,4 +7,4 @@ data = aquarius.HistoricalData(aquarius.TimeInterval.FIVE_MIN, aquarius.DataSour
 
 timestamp = pd.to_datetime('2021-07-19 16:00').tz_localize(tz='US/Eastern')
 
-pprint.pprint(data.get_daily_data('MSFT', timestamp))
+print(data.get_daily_data('MSFT', timestamp))
