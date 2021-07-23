@@ -2,7 +2,7 @@ from enum import Enum
 import collections
 import os
 
-POLYGON_API_KEY = 'POLYGON_API_KEY'
+POLYGON_API_KEY = os.environ.get('POLYGON_API_KEY')
 
 TIME_ZONE = 'US/Eastern'
 
@@ -14,10 +14,16 @@ class TimeInterval(Enum):
     HOUR = 2
     DAY = 3
 
+    def __str__(self):
+        return self.name
+
 
 class DataSource(Enum):
     POLYGON = 1
     YAHOO = 2
+
+    def __str__(self):
+        return self.name
 
 
 class DataError(Exception):
