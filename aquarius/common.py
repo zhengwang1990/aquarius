@@ -28,6 +28,3 @@ class DataSource(Enum):
 
 class DataError(Exception):
     pass
-
-
-DataPoint = collections.namedtuple('DataPoint', ['o', 'h', 'l', 'c', 'v', 't'])
