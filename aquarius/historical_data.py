@@ -1,7 +1,7 @@
 from .common import *
 from concurrent import futures
 from tqdm import tqdm
-from typing import List, Dict, Union
+from typing import List, Dict
 import datetime
 import functools
 import pandas as pd
@@ -11,9 +11,7 @@ import yfinance as yf
 
 _MEMORY_CACHE_SIZE = 5000
 
-_DATETIME_TYPE = Union[pd.Timestamp, pd.DatetimeIndex, datetime.datetime]
-
-_DATA_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume']
+_DATA_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume', 'VWAP']
 
 _MAX_WORKERS = 5
 
@@ -51,10 +49,10 @@ class HistoricalData:
         elif self._time_interval == TimeInterval.DAY:
             self._interval = '1d'
 
-    def get_data_point(self, symbol: str, time_point: _DATETIME_TYPE) -> pd.DataFrame:
+    def get_data_point(self, symbol: str, time_point: DATETIME_TYPE) -> pd.DataFrame:
         return self.get_data_list(symbol, time_point, time_point)
 
-    def get_daily_data(self, symbol: str, day: _DATETIME_TYPE) -> pd.DataFrame:
+    def get_daily_data(self, symbol: str, day: DATETIME_TYPE) -> pd.DataFrame:
         start_time = pd.Timestamp(year=day.year, month=day.month,
                                   day=day.day, hour=0, minute=0).tz_localize(tz=TIME_ZONE)
         end_time = start_time + datetime.timedelta(days=1)
@@ -62,25 +60,28 @@ class HistoricalData:
 
     @functools.lru_cache(maxsize=_MEMORY_CACHE_SIZE)
     def get_data_list(self, symbol: str,
-                      start_time: _DATETIME_TYPE,
-                      end_time: _DATETIME_TYPE) -> pd.DataFrame:
+                      start_time: DATETIME_TYPE,
+                      end_time: DATETIME_TYPE) -> pd.DataFrame:
         if not start_time.tzinfo:
             start_time = start_time.tz_localize(TIME_ZONE)
         if not end_time.tzinfo:
             end_time = end_time.tz_localize(TIME_ZONE)
 
+        res = None
         if self._data_source == DataSource.POLYGON:
             res = self._polygon_get_data_list(symbol, start_time, end_time)
         if self._data_source == DataSource.YAHOO:
             res = self._yahoo_get_data_list(symbol, start_time, end_time)
+        if not res:
+            raise DataError(f'{self._data_source} is not supported')
 
         res.index.rename('Time', inplace=True)
         return res
 
     def _polygon_get_data_list(self,
                                symbol: str,
-                               start_time: _DATETIME_TYPE,
-                               end_time: _DATETIME_TYPE) -> pd.DataFrame:
+                               start_time: DATETIME_TYPE,
+                               end_time: DATETIME_TYPE) -> pd.DataFrame:
         from_ = int(start_time.timestamp() * 1000)
         to = int(end_time.timestamp() * 1000 - 1)
         response = self._polygon_client.stocks_equities_aggregates(
@@ -89,19 +90,27 @@ class HistoricalData:
             raise DataError(f'Polygon response status {response.status}')
         if not hasattr(response, 'results'):
             return pd.DataFrame([], columns=['Open', 'High', 'Low', 'Close', 'Volume'])
-        df = pd.DataFrame([[res['o'], res['h'], res['l'], res['c'], res['v']] for res in response.results],
-                          index=[pd.to_datetime(int(res['t']), unit='ms', utc=True).tz_convert(TIME_ZONE)
-                                 for res in response.results],
+        if self._time_interval == TimeInterval.DAY:
+            index = [pd.to_datetime(pd.to_datetime(int(res['t']), unit='ms', utc=True).tz_convert(TIME_ZONE).date())
+                     for res in response.results]
+        else:
+            index = [pd.to_datetime(int(res['t']), unit='ms', utc=True).tz_convert(TIME_ZONE)
+                     for res in response.results]
+        df = pd.DataFrame([[res['o'], res['h'], res['l'], res['c'], res['v'], res['vw']] for res in response.results],
+                          index=index,
                           columns=_DATA_COLUMNS)
         return df
 
     def _yahoo_get_data_list(self,
                              symbol: str,
-                             start_time: _DATETIME_TYPE,
-                             end_time: _DATETIME_TYPE) -> pd.DataFrame:
-        t = yf.ticker(symbol)
-        response = t.history(start=start_time, end=end_time, interval=self._interval)
-        return response[_DATA_COLUMNS]
+                             start_time: DATETIME_TYPE,
+                             end_time: DATETIME_TYPE) -> pd.DataFrame:
+        if self._time_interval != TimeInterval.DAY:
+            raise DataError(f'Yahoo data source is not supported for {self._time_interval}')
+        t = yf.Ticker(symbol)
+        df = t.history(start=start_time, end=end_time, interval=self._interval)
+        df['VWAP'] = df.apply(lambda row: (row['High']+row['Low']+row['Close'])/3, axis=1)
+        return df[_DATA_COLUMNS]
 
 
 class HistoricalDataCache:
@@ -111,8 +120,8 @@ class HistoricalDataCache:
 
     def load_history(self,
                      symbols: List[str],
-                     start_time: _DATETIME_TYPE,
-                     end_time: _DATETIME_TYPE) -> Dict[str, pd.DataFrame]:
+                     start_time: DATETIME_TYPE,
+                     end_time: DATETIME_TYPE) -> Dict[str, pd.DataFrame]:
         cache_dir = os.path.join(CACHE_ROOT, start_time.strftime('%F'), end_time.strftime('%F'))
         if symbols:
             os.makedirs(cache_dir, exist_ok=True)
@@ -129,8 +138,8 @@ class HistoricalDataCache:
 
     def _load_symbol_history(self,
                              symbol: str,
-                             start_time: _DATETIME_TYPE,
-                             end_time: _DATETIME_TYPE) -> pd.DataFrame:
+                             start_time: DATETIME_TYPE,
+                             end_time: DATETIME_TYPE) -> pd.DataFrame:
         cache_file = os.path.join(CACHE_ROOT, start_time.strftime('%F'), end_time.strftime('%F'),
                                   f'history_{symbol}.csv')
         if os.path.isfile(cache_file):

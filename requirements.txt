@@ -1,6 +1,7 @@
 alpaca-trade-api
 numpy
 pandas
+pandas_market_calendars
 polygon-api-client
 tabulate
 tqdm

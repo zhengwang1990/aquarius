@@ -1,19 +1,19 @@
 from aquarius import *
 import pandas as pd
+import collections
+import unittest.mock as mock
+import alpaca_trade_api as tradeapi
 
-# print(aquarius.TimeInterval.FIVE_MIN)
+Asset = collections.namedtuple('Asset', ['symbol', 'tradable', 'marginable',
+                                         'shortable', 'easy_to_borrow'])
+assets = [Asset(symbol, True, True, True, True) for symbol in ['GOOG', 'AAPL', 'AMZN', 'FB', 'MSFT']]
+patch = mock.patch.object(tradeapi.REST, 'list_assets', return_value=assets)
+patch.start()
 
-data = HistoricalData(TimeInterval.DAY, DataSource.POLYGON)
+universe = StockUniverse()
 
-timestamp = pd.to_datetime('2021-07-19 16:00').tz_localize(tz='US/Eastern')
+universe.set_data_window(pd.to_datetime('2020-07-24'), pd.to_datetime('2021-07-24'), DataSource.YAHOO)
 
-#print(data.get_daily_data('MSFT', timestamp))
+universe.set_average_true_range_percent_filter(low=0.02)
 
-#print(data.get_data_list('MSFT',
-#                         pd.to_datetime('2021-04-09'),
-#                         pd.to_datetime('2021-04-16')))
-
-data_cache = HistoricalDataCache(TimeInterval.DAY, DataSource.POLYGON)
-res = data_cache.load_history(['AAPL', 'MSFT', 'GOOG', 'FB', 'AMZN'],
-                              pd.to_datetime('2020-01-01'), pd.to_datetime('2021-07-21'))
-print(res['GOOG'])
+print(universe.get_stock_universe(pd.to_datetime('2020-12-05')))
