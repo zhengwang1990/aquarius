@@ -72,7 +72,7 @@ class HistoricalData:
             res = self._polygon_get_data_list(symbol, start_time, end_time)
         if self._data_source == DataSource.YAHOO:
             res = self._yahoo_get_data_list(symbol, start_time, end_time)
-        if not res:
+        if res is None:
             raise DataError(f'{self._data_source} is not supported')
 
         res.index.rename('Time', inplace=True)

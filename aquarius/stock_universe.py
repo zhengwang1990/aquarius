@@ -1,6 +1,6 @@
 from .common import *
 from .exlcusions import EXCLUSIONS
-from .historical_data import HistoricalDataCache
+from .data import HistoricalDataCache
 from typing import List, Optional
 import alpaca_trade_api as tradeapi
 import functools
@@ -52,11 +52,7 @@ class StockUniverse:
     def _get_dollar_volume(self, symbol: str, prev_day: DATETIME_TYPE) -> float:
         hist = self._data[symbol]
         pv = []
-        p = -1
-        for i in range(len(hist.index)):
-            if hist.index[i] == prev_day:
-                p = i
-                break
+        p = timestamp_to_index(hist.index, prev_day)
         for i in range(max(p - DAYS_IN_A_MONTH + 1, 0), p + 1):
             pv.append(hist.iloc[i]['VWAP'] * hist.iloc[i]['Volume'])
         return np.average(pv) if pv else 0
@@ -65,11 +61,7 @@ class StockUniverse:
     def _get_average_true_range_percent(self, symbol: str, prev_day: DATETIME_TYPE) -> float:
         hist = self._data[symbol]
         atrp = []
-        p = -1
-        for i in range(len(hist.index)):
-            if hist.index[i] == prev_day:
-                p = i
-                break
+        p = timestamp_to_index(hist.index, prev_day)
         for i in range(max(p - DAYS_IN_A_MONTH + 1, 1), p + 1):
             h = hist.iloc[i]['High']
             l = hist.iloc[i]['Low']
