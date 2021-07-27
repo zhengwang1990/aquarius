@@ -1,40 +1,28 @@
 from .common import *
-from .exlcusions import EXCLUSIONS
-from .data import HistoricalDataCache
+from .data import load_tradable_history
 from typing import List, Optional
-import alpaca_trade_api as tradeapi
+import datetime
 import functools
 import numpy as np
 import pandas_market_calendars as mcal
-import re
 
 
 class StockUniverse:
 
-    def __init__(self, alpaca: Optional[tradeapi.REST] = None) -> None:
-        if not alpaca:
-            alpaca = tradeapi.REST()
-        assets = alpaca.list_assets()
-        self._tradable = [asset.symbol for asset in assets
-                          if re.match('^[A-Z]*$', asset.symbol)
-                          and asset.tradable and asset.marginable
-                          and asset.shortable and asset.easy_to_borrow]
-        self._tradable = list(set(self._tradable).difference(EXCLUSIONS))
-        self._data = None
-        self._market_dates = None
-        self._price_low, self._price_high = None, None
-        self._dvolume_low, self._dvolume_high = None, None
-        self._atrp_low, self._atrp_high = None, None
-
-    def set_data_window(self,
-                        start_time: DATETIME_TYPE,
-                        end_time: DATETIME_TYPE,
-                        data_source: DataSource, timeout: float = 5) -> None:
+    def __init__(self,
+                 start_time: DATETIME_TYPE,
+                 end_time: DATETIME_TYPE,
+                 data_source: DataSource) -> None:
         nyse = mcal.get_calendar('NYSE')
         schedule = nyse.schedule(start_date=start_time, end_date=end_time)
         self._market_dates = [d.date() for d in mcal.date_range(schedule, frequency='1D')]
-        cache = HistoricalDataCache(TimeInterval.DAY, data_source, timeout)
-        self._data = cache.load_history(self._tradable, start_time, end_time)
+
+        history_start = start_time - datetime.timedelta(days=CALENDAR_DAYS_IN_A_MONTH)
+        self._historical_data = load_tradable_history(history_start, end_time, data_source)
+
+        self._price_low, self._price_high = None, None
+        self._dvolume_low, self._dvolume_high = None, None
+        self._atrp_low, self._atrp_high = None, None
 
     def set_price_filer(self, low: Optional[float] = None, high: Optional[float] = None) -> None:
         self._price_low = low
@@ -50,7 +38,7 @@ class StockUniverse:
 
     @functools.lru_cache()
     def _get_dollar_volume(self, symbol: str, prev_day: DATETIME_TYPE) -> float:
-        hist = self._data[symbol]
+        hist = self._historical_data[symbol]
         pv = []
         p = timestamp_to_index(hist.index, prev_day)
         for i in range(max(p - DAYS_IN_A_MONTH + 1, 0), p + 1):
@@ -59,7 +47,7 @@ class StockUniverse:
 
     @functools.lru_cache()
     def _get_average_true_range_percent(self, symbol: str, prev_day: DATETIME_TYPE) -> float:
-        hist = self._data[symbol]
+        hist = self._historical_data[symbol]
         atrp = []
         p = timestamp_to_index(hist.index, prev_day)
         for i in range(max(p - DAYS_IN_A_MONTH + 1, 1), p + 1):
@@ -70,9 +58,6 @@ class StockUniverse:
         return np.average(atrp) if atrp else 0
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
-        if self._data is None:
-            raise ValueError('set_data_window must be called first')
-
         prev_day = view_time.date() - datetime.timedelta(days=1)
         while prev_day not in self._market_dates:
             prev_day -= datetime.timedelta(days=1)
@@ -80,7 +65,7 @@ class StockUniverse:
                 raise ValueError(f'{view_time} is too early')
         res = []
         prev_day = pd.to_datetime(prev_day)
-        for symbol, hist in self._data.items():
+        for symbol, hist in self._historical_data.items():
             if prev_day not in hist.index:
                 continue
             if self._price_low is not None and hist.loc[prev_day]['Close'] < self._price_low:

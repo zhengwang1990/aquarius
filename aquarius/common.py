@@ -1,9 +1,11 @@
 from enum import Enum
-from typing import List, Union
+from typing import List, Optional, Union
 import collections
 import datetime
+import logging
 import os
 import pandas as pd
+import sys
 
 POLYGON_API_KEY = os.environ.get('POLYGON_API_KEY')
 TIME_ZONE = 'America/New_York'
@@ -11,6 +13,7 @@ CACHE_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__fil
 DATETIME_TYPE = Union[pd.Timestamp, pd.DatetimeIndex, datetime.datetime]
 DAYS_IN_A_WEEK = 5
 DAYS_IN_A_MONTH = 20
+CALENDAR_DAYS_IN_A_MONTH = 35
 DAYS_IN_A_QUARTER = 60
 DAYS_IN_A_YEAR = 250
 
@@ -43,6 +46,7 @@ class ActionType(Enum):
 
 
 Action = collections.namedtuple('Action', ['symbol', 'type', 'size', 'weight'], defaults=[None])
+Position = collections.namedtuple('Position', ['symbol', 'qty', 'entry_price'])
 
 
 class DataError(Exception):
@@ -58,16 +62,31 @@ def timestamp_to_index(index: pd.Index, timestamp: DATETIME_TYPE) -> int:
     return p
 
 
-class Processor:
+def logging_config(logging_file=None):
+    """Configuration for logging."""
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        '[%(levelname)s] [%(asctime)s] [%(filename)s:%(lineno)d] [%(threadName)s]\n%(message)s')
+    stream_handler = logging.StreamHandler()
+    if sys.stdout.isatty():
+        stream_handler.setLevel(logging.INFO)
+    else:
+        stream_handler.setLevel(logging.WARNING)
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+    if logging_file:
+        file_handler = logging.FileHandler(logging_file)
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    alpaca_logger = logging.getLogger('alpaca_trade_api')
+    alpaca_logger.setLevel(logging.ERROR)
 
-    def __init__(self):
-        pass
 
-    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
-        raise NotImplementedError('Calling parent interface')
-
-    def handle_data(self, context, data) -> Action:
-        raise NotImplementedError('Calling parent interface')
+def get_header(title):
+    header_left = '== [ %s ] ' % (title,)
+    return header_left + '=' * (80 - len(header_left))
 
 
 class Context:
@@ -75,13 +94,34 @@ class Context:
     def __init__(self,
                  symbol: str,
                  current_time: DATETIME_TYPE,
-                 inter_day_look_back: pd.DataFrame,
-                 intra_day_look_back: pd.DataFrame) -> None:
+                 interday_lookback: pd.DataFrame,
+                 intraday_lookback: pd.DataFrame) -> None:
         self.symbol = symbol
         self.current_time = current_time
-        self.inter_day_look_back = inter_day_look_back
-        self.intra_day_look_back = intra_day_look_back
+        self.interday_lookback = interday_lookback
+        self.intraday_lookback = intraday_lookback
 
     @property
     def prev_day_close(self) -> float:
-        return self.inter_day_look_back.iloc[-1]['Close']
+        return self.interday_lookback.iloc[-1]['Close']
+
+
+class Processor:
+
+    def __init__(self) -> None:
+        pass
+
+    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+        raise NotImplementedError('Calling parent interface')
+
+    def handle_data(self, context: Context) -> Optional[Action]:
+        raise NotImplementedError('Calling parent interface')
+
+
+class ProcessorFactory:
+
+    def __init__(self) -> None:
+        pass
+
+    def create(self, *args, **kwargs) -> Processor:
+        raise NotImplementedError('Calling parent interface')
