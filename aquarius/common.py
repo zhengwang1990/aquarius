@@ -45,7 +45,7 @@ class ActionType(Enum):
         return self.name
 
 
-Action = collections.namedtuple('Action', ['symbol', 'type', 'size', 'weight'], defaults=[None])
+Action = collections.namedtuple('Action', ['symbol', 'type', 'percent', 'price'])
 Position = collections.namedtuple('Position', ['symbol', 'qty', 'entry_price'])
 
 
@@ -53,7 +53,7 @@ class DataError(Exception):
     """Error in data loading."""
 
 
-def timestamp_to_index(index: pd.Index, timestamp: DATETIME_TYPE) -> int:
+def timestamp_to_index(index: pd.Index, timestamp: Union[DATETIME_TYPE, datetime.date]) -> int:
     p = None
     for i in range(len(index)):
         if index[i] == timestamp:
@@ -62,12 +62,15 @@ def timestamp_to_index(index: pd.Index, timestamp: DATETIME_TYPE) -> int:
     return p
 
 
-def logging_config(logging_file=None):
+def logging_config(logging_file=None, detail_info=True):
     """Configuration for logging."""
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        '[%(levelname)s] [%(asctime)s] [%(filename)s:%(lineno)d] [%(threadName)s]\n%(message)s')
+    if detail_info:
+        formatter = logging.Formatter(
+            '[%(levelname)s] [%(asctime)s] [%(filename)s:%(lineno)d] [%(threadName)s]\n%(message)s')
+    else:
+        formatter = logging.Formatter('%(message)s')
     stream_handler = logging.StreamHandler()
     if sys.stdout.isatty():
         stream_handler.setLevel(logging.INFO)

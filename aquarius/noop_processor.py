@@ -11,7 +11,13 @@ class NoopProcessor(Processor):
         return ['AAPL', 'AMZN', 'FB', 'GOOG', 'MSFT']
 
     def handle_data(self, context: Context) -> Optional[Action]:
-        return
+        if context.current_time.time() == datetime.time(9, 30):
+            return Action('MSFT', ActionType.SELL_TO_OPEN, 0.5, 200)
+        if context.current_time.time() == datetime.time(10, 30):
+            return Action('GOOG', ActionType.SELL_TO_OPEN, 1, 2500)
+        if context.current_time.time() == datetime.time(12, 0):
+            return Action('MSFT', ActionType.BUY_TO_CLOSE, 1, 100)
+        return None
 
 
 class NoopProcessorFactory(ProcessorFactory):
