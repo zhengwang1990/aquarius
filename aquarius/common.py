@@ -10,6 +10,7 @@ import sys
 POLYGON_API_KEY = os.environ.get('POLYGON_API_KEY')
 TIME_ZONE = 'America/New_York'
 CACHE_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'cache')
+OUTPUT_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'outputs')
 DATETIME_TYPE = Union[pd.Timestamp, pd.DatetimeIndex, datetime.datetime]
 DAYS_IN_A_WEEK = 5
 DAYS_IN_A_MONTH = 20

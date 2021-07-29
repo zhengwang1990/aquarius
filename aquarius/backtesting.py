@@ -1,10 +1,14 @@
 from .common import *
 from .data import load_cached_daily_data, load_tradable_history, get_header
-from typing import Any, Dict, List, Union
+from typing import Any, List, Union
 import datetime
 import logging
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import os
 import pandas as pd
 import pandas_market_calendars as mcal
+import signal
 import tabulate
 
 _DATA_SOURCE = DataSource.POLYGON
@@ -12,6 +16,7 @@ _TIME_INTERVAL = TimeInterval.FIVE_MIN
 _MARKET_OPEN = datetime.time(9, 30)
 _MARKET_CLOSE = datetime.time(16, 0)
 _SHORT_RESERVE_RATIO = 1
+_EPS = 1E-7
 
 
 class Backtesting:
@@ -31,6 +36,27 @@ class Backtesting:
         self._daily_equity = [1]
         self._num_win, self._num_lose = 0, 0
         self._cash = 1
+        self._interday_datas = None
+
+        backtesting_output_dir = os.path.join(OUTPUT_ROOT, 'backtesting')
+        os.makedirs(backtesting_output_dir, exist_ok=True)
+        output_num = 1
+        while True:
+            output_dir = os.path.join(backtesting_output_dir,
+                                      datetime.datetime.now().strftime('%m-%d'),
+                                      f'{output_num:02d}')
+            if not os.path.exists(output_dir):
+                self._output_dir = output_dir
+                os.makedirs(output_dir, exist_ok=True)
+                break
+            output_num += 1
+
+        logging_config(os.path.join(self._output_dir, 'result.txt'), detail_info=False)
+
+        nyse = mcal.get_calendar('NYSE')
+        schedule = nyse.schedule(start_date=self._start_date, end_date=self._end_date)
+        self._market_dates = [pd.to_datetime(d.date()) for d in mcal.date_range(schedule, frequency='1D')]
+        signal.signal(signal.SIGINT, self._print_summary)
 
     def _init_processors(self):
         processors = []
@@ -41,19 +67,18 @@ class Backtesting:
         return processors
 
     def run(self) -> None:
-        nyse = mcal.get_calendar('NYSE')
-        schedule = nyse.schedule(start_date=self._start_date, end_date=self._end_date)
-        market_dates = [pd.to_datetime(d.date()) for d in mcal.date_range(schedule, frequency='1D')]
+
         history_start = self._start_date - datetime.timedelta(days=CALENDAR_DAYS_IN_A_MONTH)
-        interday_datas = load_tradable_history(history_start, self._end_date, _DATA_SOURCE)
+        self._interday_datas = load_tradable_history(history_start, self._end_date, _DATA_SOURCE)
         processors = self._init_processors()
 
-        for day in market_dates:
-            self._process_day(day, processors, interday_datas)
-            break
+        for day in self._market_dates:
+            self._process_day(day, processors)
 
-    def _process_day(self, day: DATETIME_TYPE, processors: List[Processor],
-                     interday_datas: Dict[str, pd.DataFrame]) -> None:
+        self._print_summary()
+        self._plot_summary()
+
+    def _process_day(self, day: DATETIME_TYPE, processors: List[Processor]) -> None:
         stock_universes = {}
         for processor in processors:
             processor_name = type(processor).__name__
@@ -78,7 +103,7 @@ class Backtesting:
                     intraday_data = intraday_datas[symbol]
                     intraday_ind = timestamp_to_index(intraday_data.index, current_time)
                     intraday_lookback = intraday_data.iloc[:intraday_ind]
-                    interday_data = interday_datas[symbol]
+                    interday_data = self._interday_datas[symbol]
                     interday_ind = timestamp_to_index(interday_data.index, day.date())
                     interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH:interday_ind]
                     context = Context(symbol=symbol, current_time=current_time,
@@ -89,11 +114,11 @@ class Backtesting:
                         actions.append(action)
             current_executed_actions = self._process_actions(actions)
             executed_actions.extend([[current_time.time()] + executed_action
-                                     for executed_action in current_executed_actions] )
+                                     for executed_action in current_executed_actions])
 
             current_time += datetime.timedelta(minutes=5)
 
-        self._log_day(day, executed_actions, interday_datas)
+        self._log_day(day, executed_actions)
 
     def _process_actions(self, actions: List[Action]) -> List[List[Any]]:
         action_sets = set([(action.symbol, action.type) for action in actions])
@@ -144,7 +169,7 @@ class Backtesting:
             self._pop_current_position(symbol)
             qty = current_position.qty * action.percent
             new_qty = current_position.qty - qty
-            if abs(new_qty - 0) > 1E-7:
+            if abs(new_qty) > _EPS:
                 self._positions.append(Position(symbol, new_qty, current_position.entry_price))
             self._cash += action.price * qty
             profit = (action.price - current_position.entry_price) * qty
@@ -169,7 +194,7 @@ class Backtesting:
             if self._get_current_position(symbol) is not None:
                 continue
             cash_to_trade = min(tradable_cash / len(actions), tradable_cash * action.percent)
-            if cash_to_trade == 0:
+            if abs(cash_to_trade) < _EPS:
                 continue
             qty = cash_to_trade / action.price
             if action.type == ActionType.SELL_TO_OPEN:
@@ -182,22 +207,107 @@ class Backtesting:
 
     def _log_day(self,
                  day: DATETIME_TYPE,
-                 executed_actions: List[List[Any]],
-                 interday_datas: Dict[str, pd.DataFrame]) -> None:
+                 executed_actions: List[List[Any]]) -> None:
         outputs = [get_header(day.date())]
+
         if executed_actions:
-            action_info = tabulate.tabulate(executed_actions,
-                                            headers=['Time', 'Symbol', 'Action', 'Qty', 'Entry Price',
-                                                     'Exit Price', 'Gain/Loss'],
-                                            tablefmt='grid')
-            outputs.append(action_info)
+            trade_info = tabulate.tabulate(executed_actions,
+                                           headers=['Time', 'Symbol', 'Action', 'Qty', 'Entry Price',
+                                                    'Exit Price', 'Gain/Loss'],
+                                           tablefmt='grid')
+            outputs.append('[ Trades ]')
+            outputs.append(trade_info)
+
+        if self._positions:
+            position_info = []
+            for position in self._positions:
+                close_price = self._interday_datas[position.symbol].loc[day]['Close']
+                change = (close_price / position.entry_price - 1) * 100
+                position_info.append([position.symbol, position.qty, position.entry_price,
+                                      close_price, f'{change:+.2f}%'])
+
+            outputs.append('[ Positions ]')
+            outputs.append(tabulate.tabulate(position_info,
+                                             headers=['Symbol', 'Qty', 'Entry Price', 'Current Price', 'Change'],
+                                             tablefmt='grid'))
+
         equity = self._cash
         for position in self._positions:
-            close_price = interday_datas[position.symbol].loc[day]['Close']
+            close_price = self._interday_datas[position.symbol].loc[day]['Close']
             equity += position.qty * close_price
         profit_pct = (equity / self._daily_equity[-1] - 1) * 100 if self._daily_equity[-1] else 0
         self._daily_equity.append(equity)
-        summary = [['Current Equity', f'{equity:.3g}', 'Daily Gain/Loss', f'{profit_pct:+.2f}%']]
-        outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
+        total_profit_pct = ((equity / self._daily_equity[0] - 1) * 100)
+        stats = [['Total Gain/Loss', f'{total_profit_pct:+.2f}%', 'Daily Gain/Loss', f'{profit_pct:+.2f}%']]
+
+        outputs.append('[ Stats ]')
+        outputs.append(tabulate.tabulate(stats, tablefmt='grid'))
 
         logging.info('\n'.join(outputs))
+
+    def _print_summary(self):
+        outputs = [get_header('Summary')]
+        summary = [['Time Range', f'{self._start_date.date()} ~ {self._end_date.date()}']]
+        current_year = self._start_date.year
+        current_start = 0
+        for i, date in enumerate(self._market_dates):
+            if i != len(self._market_dates) - 1 and self._market_dates[i + 1].year != current_start + 1:
+                continue
+            profit_pct = (self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
+            summary.append([f'{current_year} Gain/Loss',
+                            f'{profit_pct:+.2f}%'])
+            current_start = i
+            current_year += 1
+        total_profit_pct = (self._daily_equity[-1] / self._daily_equity[0] - 1) * 100
+        summary.append(['Total Gain/Loss', f'{total_profit_pct:+.2f}%'])
+        outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
+        logging.info('\n'.join(outputs))
+
+    def _plot_summary(self):
+        pd.plotting.register_matplotlib_converters()
+        plot_symbols = ['QQQ', 'SPY', 'TQQQ']
+        color_map = {'QQQ': '#78d237', 'SPY': '#FF6358', 'TQQQ': '#aa46be'}
+        formatter = mdates.DateFormatter('%m-%d')
+        current_year = self._start_date.year
+        current_start = 0
+        dates, values = [], [1]
+        for i, date in enumerate(self._market_dates):
+            dates.append(date)
+            values.append(self._daily_equity[i + 1] / self._daily_equity[current_start])
+            if i != len(self._market_dates) - 1 and self._market_dates[i + 1].year != current_start + 1:
+                continue
+            dates = [dates[0] - datetime.timedelta(days=1)] + dates
+            profit_pct = (self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
+            plt.figure(figsize=(10, 4))
+            plt.plot(dates, values,
+                     label=f'My Portfolio ({profit_pct:+.2f}%)',
+                     color='#28b4c8')
+            for symbol in plot_symbols:
+                if symbol not in self._interday_datas:
+                    break
+                last_day_index = timestamp_to_index(self._interday_datas[symbol].index, date)
+                symbol_values = self._interday_datas[symbol]['Close'][
+                                last_day_index + 1 - len(dates):last_day_index + 1]
+                for j in range(len(symbol_values) - 1, -1, -1):
+                    symbol_values[j] /= symbol_values[0]
+                plt.plot(dates, symbol_values,
+                         label=f'{symbol} ({(symbol_values[-1] - 1) * 100:+.2f}%)',
+                         color=color_map[symbol])
+            text_kwargs = {'family': 'monospace'}
+            plt.xlabel('Date', **text_kwargs)
+            plt.ylabel('Normalized Value', **text_kwargs)
+            plt.title(f'{current_year} History', **text_kwargs, y=1.15)
+            plt.grid(linestyle='--', alpha=0.5)
+            plt.legend(ncol=len(plot_symbols) + 1, bbox_to_anchor=(0, 1),
+                       loc='lower left', prop=text_kwargs)
+            ax = plt.gca()
+            ax.spines['right'].set_color('none')
+            ax.spines['top'].set_color('none')
+            ax.xaxis.set_major_formatter(formatter)
+            plt.tight_layout()
+            plt.savefig(os.path.join(self._output_dir, f'{current_year}.png'))
+            plt.close()
+
+            dates, values = [], []
+            current_start = i
+            current_year += 1

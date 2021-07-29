@@ -12,11 +12,9 @@ class NoopProcessor(Processor):
 
     def handle_data(self, context: Context) -> Optional[Action]:
         if context.current_time.time() == datetime.time(9, 30):
-            return Action('MSFT', ActionType.SELL_TO_OPEN, 0.5, 200)
-        if context.current_time.time() == datetime.time(10, 30):
-            return Action('GOOG', ActionType.SELL_TO_OPEN, 1, 2500)
+            return Action('MSFT', ActionType.BUY_TO_OPEN, 0.5, 200)
         if context.current_time.time() == datetime.time(12, 0):
-            return Action('MSFT', ActionType.BUY_TO_CLOSE, 1, 100)
+            return Action('MSFT', ActionType.SELL_TO_CLOSE, 1, 100)
         return None
 
 
