@@ -10,6 +10,6 @@ assets = [Asset(symbol, True, True, True, True) for symbol in ['GOOG', 'AAPL', '
 patch = mock.patch.object(tradeapi.REST, 'list_assets', return_value=assets)
 patch.start()
 
-backtesting = Backtesting(start_date='2021-07-20', end_date='2021-07-24', processor_factories=[NoopProcessorFactory()])
+backtesting = Backtesting(start_date='2020-12-29', end_date='2021-01-06', processor_factories=[NoopProcessorFactory()])
 
 backtesting.run()

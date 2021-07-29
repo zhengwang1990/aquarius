@@ -14,7 +14,7 @@ class NoopProcessor(Processor):
         if context.current_time.time() == datetime.time(9, 30):
             return Action('MSFT', ActionType.BUY_TO_OPEN, 0.5, 200)
         if context.current_time.time() == datetime.time(12, 0):
-            return Action('MSFT', ActionType.SELL_TO_CLOSE, 1, 100)
+            return Action('MSFT', ActionType.SELL_TO_CLOSE, 1, 201)
         return None
 
 

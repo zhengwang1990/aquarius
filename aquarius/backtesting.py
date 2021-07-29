@@ -54,7 +54,7 @@ class Backtesting:
         logging_config(os.path.join(self._output_dir, 'result.txt'), detail_info=False)
 
         nyse = mcal.get_calendar('NYSE')
-        schedule = nyse.schedule(start_date=self._start_date, end_date=self._end_date)
+        schedule = nyse.schedule(start_date=self._start_date, end_date=self._end_date - datetime.timedelta(days=1))
         self._market_dates = [pd.to_datetime(d.date()) for d in mcal.date_range(schedule, frequency='1D')]
         signal.signal(signal.SIGINT, self._print_summary)
 
@@ -251,7 +251,7 @@ class Backtesting:
         current_year = self._start_date.year
         current_start = 0
         for i, date in enumerate(self._market_dates):
-            if i != len(self._market_dates) - 1 and self._market_dates[i + 1].year != current_start + 1:
+            if i != len(self._market_dates) - 1 and self._market_dates[i + 1].year != current_year + 1:
                 continue
             profit_pct = (self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
             summary.append([f'{current_year} Gain/Loss',
@@ -274,7 +274,7 @@ class Backtesting:
         for i, date in enumerate(self._market_dates):
             dates.append(date)
             values.append(self._daily_equity[i + 1] / self._daily_equity[current_start])
-            if i != len(self._market_dates) - 1 and self._market_dates[i + 1].year != current_start + 1:
+            if i != len(self._market_dates) - 1 and self._market_dates[i + 1].year != current_year + 1:
                 continue
             dates = [dates[0] - datetime.timedelta(days=1)] + dates
             profit_pct = (self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
@@ -286,8 +286,8 @@ class Backtesting:
                 if symbol not in self._interday_datas:
                     break
                 last_day_index = timestamp_to_index(self._interday_datas[symbol].index, date)
-                symbol_values = self._interday_datas[symbol]['Close'][
-                                last_day_index + 1 - len(dates):last_day_index + 1]
+                symbol_values = list(self._interday_datas[symbol]['Close'][
+                                     last_day_index + 1 - len(dates):last_day_index + 1])
                 for j in range(len(symbol_values) - 1, -1, -1):
                     symbol_values[j] /= symbol_values[0]
                 plt.plot(dates, symbol_values,
@@ -308,6 +308,6 @@ class Backtesting:
             plt.savefig(os.path.join(self._output_dir, f'{current_year}.png'))
             plt.close()
 
-            dates, values = [], []
+            dates, values = [], [1]
             current_start = i
             current_year += 1
