@@ -63,6 +63,15 @@ def timestamp_to_index(index: pd.Index, timestamp: Union[DATETIME_TYPE, datetime
     return p
 
 
+def timestamp_to_prev_index(index: pd.Index, timestamp: Union[DATETIME_TYPE, datetime.date]) -> int:
+    p = len(index) - 1
+    for i in range(len(index)):
+        if index[i] > timestamp:
+            p = i - 1
+            break
+    return p
+
+
 def logging_config(logging_file=None, detail_info=True):
     """Configuration for logging."""
     logger = logging.getLogger()
@@ -98,10 +107,12 @@ class Context:
     def __init__(self,
                  symbol: str,
                  current_time: DATETIME_TYPE,
+                 current_price: float,
                  interday_lookback: pd.DataFrame,
                  intraday_lookback: pd.DataFrame) -> None:
         self.symbol = symbol
         self.current_time = current_time
+        self.current_price = current_price
         self.interday_lookback = interday_lookback
         self.intraday_lookback = intraday_lookback
 

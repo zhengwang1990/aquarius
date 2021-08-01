@@ -16,7 +16,7 @@ _MEMORY_CACHE_SIZE = 5000
 
 _DATA_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume', 'VWAP']
 
-_MAX_WORKERS = 5
+_MAX_WORKERS = 10
 
 
 class HistoricalDataLoader:
@@ -100,7 +100,8 @@ class HistoricalDataLoader:
         else:
             index = [pd.to_datetime(int(res['t']), unit='ms', utc=True).tz_convert(TIME_ZONE)
                      for res in response.results]
-        df = pd.DataFrame([[res['o'], res['h'], res['l'], res['c'], res['v'], res['vw']] for res in response.results],
+        df = pd.DataFrame([[res['o'], res['h'], res['l'], res['c'], res['v'],
+                            res['vw'] if 'vw' in res else res['c']] for res in response.results],
                           index=index,
                           columns=_DATA_COLUMNS)
         return df

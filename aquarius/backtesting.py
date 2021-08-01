@@ -91,22 +91,33 @@ class Backtesting:
                 intraday_datas[symbol] = load_cached_daily_data(symbol, day, _TIME_INTERVAL, _DATA_SOURCE)
         market_open = pd.to_datetime(pd.Timestamp.combine(day.date(), _MARKET_OPEN)).tz_localize(TIME_ZONE)
         market_close = pd.to_datetime(pd.Timestamp.combine(day.date(), _MARKET_CLOSE)).tz_localize(TIME_ZONE)
-        current_time = market_open
+        current_interval_start = market_open
 
         executed_actions = []
-        while current_time < market_close:
+        while current_interval_start < market_close:
+            current_time = current_interval_start + datetime.timedelta(minutes=5)
             actions = []
             for processor in processors:
                 processor_name = type(processor).__name__
                 stock_universe = stock_universes[processor_name]
                 for symbol in stock_universe:
                     intraday_data = intraday_datas[symbol]
-                    intraday_ind = timestamp_to_index(intraday_data.index, current_time)
-                    intraday_lookback = intraday_data.iloc[:intraday_ind]
+                    intraday_ind = timestamp_to_index(intraday_data.index, current_interval_start)
+                    if intraday_ind is None:
+                        intraday_ind = timestamp_to_prev_index(intraday_data.index, current_interval_start)
+                    intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
+                    if current_time in intraday_data.index:
+                        current_price = intraday_data.loc[current_time]['Open']
+                    elif intraday_ind >= 0:
+                        current_price = intraday_data.iloc[intraday_ind]['Close']
+                    else:
+                        continue
                     interday_data = self._interday_datas[symbol]
                     interday_ind = timestamp_to_index(interday_data.index, day.date())
                     interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH:interday_ind]
-                    context = Context(symbol=symbol, current_time=current_time,
+                    context = Context(symbol=symbol,
+                                      current_time=current_time,
+                                      current_price=current_price,
                                       interday_lookback=interday_lookback,
                                       intraday_lookback=intraday_lookback)
                     action = processor.handle_data(context)
@@ -116,7 +127,7 @@ class Backtesting:
             executed_actions.extend([[current_time.time()] + executed_action
                                      for executed_action in current_executed_actions])
 
-            current_time += datetime.timedelta(minutes=5)
+            current_interval_start += datetime.timedelta(minutes=5)
 
         self._log_day(day, executed_actions)
 
@@ -253,6 +264,8 @@ class Backtesting:
         for i, date in enumerate(self._market_dates):
             if i != len(self._market_dates) - 1 and self._market_dates[i + 1].year != current_year + 1:
                 continue
+            if i >= len(self._daily_equity) - 1:
+                break
             profit_pct = (self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
             summary.append([f'{current_year} Gain/Loss',
                             f'{profit_pct:+.2f}%'])
@@ -273,6 +286,8 @@ class Backtesting:
         dates, values = [], [1]
         for i, date in enumerate(self._market_dates):
             dates.append(date)
+            if i >= len(self._daily_equity) - 1:
+                break
             values.append(self._daily_equity[i + 1] / self._daily_equity[current_start])
             if i != len(self._market_dates) - 1 and self._market_dates[i + 1].year != current_year + 1:
                 continue
