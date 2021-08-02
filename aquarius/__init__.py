@@ -1,4 +1,5 @@
 from .common import TimeInterval, DataSource, logging_config
+from .reversal_processor import ReversalProcessor, ReversalProcessorFactory
 from .backtesting import Backtesting
 from .data import HistoricalDataLoader
 from .noop_processor import NoopProcessor, NoopProcessorFactory

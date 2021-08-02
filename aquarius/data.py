@@ -9,6 +9,7 @@ import functools
 import pandas as pd
 import polygon
 import re
+import retrying
 import sys
 import yfinance as yf
 
@@ -82,6 +83,7 @@ class HistoricalDataLoader:
         res.index.rename('Time', inplace=True)
         return res
 
+    @retrying.retry(stop_max_attempt_number=10, wait_exponential_multiplier=1000)
     def _polygon_load_data_list(self,
                                 symbol: str,
                                 start_time: DATETIME_TYPE,

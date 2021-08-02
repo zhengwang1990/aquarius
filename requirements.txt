@@ -5,6 +5,7 @@ pandas
 pandas_market_calendars
 polygon-api-client
 retrying
+ta
 tabulate
 tqdm
 yfinance

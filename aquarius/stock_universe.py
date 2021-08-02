@@ -13,12 +13,12 @@ class StockUniverse:
                  start_time: DATETIME_TYPE,
                  end_time: DATETIME_TYPE,
                  data_source: DataSource) -> None:
-        nyse = mcal.get_calendar('NYSE')
-        schedule = nyse.schedule(start_date=start_time, end_date=end_time)
-        self._market_dates = [d.date() for d in mcal.date_range(schedule, frequency='1D')]
-
         history_start = start_time - datetime.timedelta(days=CALENDAR_DAYS_IN_A_MONTH)
         self._historical_data = load_tradable_history(history_start, end_time, data_source)
+
+        nyse = mcal.get_calendar('NYSE')
+        schedule = nyse.schedule(start_date=history_start, end_date=end_time)
+        self._market_dates = [d.date() for d in mcal.date_range(schedule, frequency='1D')]
 
         self._price_low, self._price_high = None, None
         self._dvolume_low, self._dvolume_high = None, None
@@ -57,6 +57,7 @@ class StockUniverse:
             atrp.append(max(h - l, h - c, c - l) / c)
         return np.average(atrp) if atrp else 0
 
+    @functools.lru_cache()
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         prev_day = view_time.date() - datetime.timedelta(days=1)
         while prev_day not in self._market_dates:
@@ -82,3 +83,10 @@ class StockUniverse:
                 continue
             res.append(symbol)
         return res
+
+
+@functools.lru_cache()
+def create_stock_universe(start_time: DATETIME_TYPE,
+                          end_time: DATETIME_TYPE,
+                          data_source: DataSource) -> StockUniverse:
+    return StockUniverse(start_time, end_time, data_source)

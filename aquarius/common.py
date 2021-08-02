@@ -17,6 +17,9 @@ DAYS_IN_A_MONTH = 20
 CALENDAR_DAYS_IN_A_MONTH = 35
 DAYS_IN_A_QUARTER = 60
 DAYS_IN_A_YEAR = 250
+MARKET_OPEN = datetime.time(9, 30)
+MARKET_CLOSE = datetime.time(16, 0)
+SHORT_RESERVE_RATIO = 1
 
 
 class TimeInterval(Enum):

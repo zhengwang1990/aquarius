@@ -1,5 +1,5 @@
 from .common import *
-from typing import Optional
+from typing import List, Optional
 
 
 class NoopProcessor(Processor):

@@ -13,9 +13,6 @@ import tabulate
 
 _DATA_SOURCE = DataSource.POLYGON
 _TIME_INTERVAL = TimeInterval.FIVE_MIN
-_MARKET_OPEN = datetime.time(9, 30)
-_MARKET_CLOSE = datetime.time(16, 0)
-_SHORT_RESERVE_RATIO = 1
 _EPS = 1E-7
 
 
@@ -63,7 +60,7 @@ class Backtesting:
         for factory in self._processor_factories:
             processors.append(factory.create(lookback_start_date=self._start_date,
                                              lookback_end_date=self._end_date,
-                                             datasource=_DATA_SOURCE))
+                                             data_source=_DATA_SOURCE))
         return processors
 
     def run(self) -> None:
@@ -89,8 +86,8 @@ class Backtesting:
                 if symbol in intraday_datas:
                     continue
                 intraday_datas[symbol] = load_cached_daily_data(symbol, day, _TIME_INTERVAL, _DATA_SOURCE)
-        market_open = pd.to_datetime(pd.Timestamp.combine(day.date(), _MARKET_OPEN)).tz_localize(TIME_ZONE)
-        market_close = pd.to_datetime(pd.Timestamp.combine(day.date(), _MARKET_CLOSE)).tz_localize(TIME_ZONE)
+        market_open = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_OPEN)).tz_localize(TIME_ZONE)
+        market_close = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_CLOSE)).tz_localize(TIME_ZONE)
         current_interval_start = market_open
 
         executed_actions = []
@@ -114,6 +111,8 @@ class Backtesting:
                         continue
                     interday_data = self._interday_datas[symbol]
                     interday_ind = timestamp_to_index(interday_data.index, day.date())
+                    if interday_ind is None or interday_ind < DAYS_IN_A_MONTH:
+                        continue
                     interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH:interday_ind]
                     context = Context(symbol=symbol,
                                       current_time=current_time,
@@ -198,7 +197,7 @@ class Backtesting:
         tradable_cash = self._cash
         for position in self._positions:
             if position.qty < 0:
-                tradable_cash += position.entry_price * position.qty * (1 + _SHORT_RESERVE_RATIO)
+                tradable_cash += position.entry_price * position.qty * (1 + SHORT_RESERVE_RATIO)
         for action in actions:
             assert action.type in [ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]
             symbol = action.symbol
@@ -273,6 +272,8 @@ class Backtesting:
             current_year += 1
         total_profit_pct = (self._daily_equity[-1] / self._daily_equity[0] - 1) * 100
         summary.append(['Total Gain/Loss', f'{total_profit_pct:+.2f}%'])
+        success_rate = self._num_win / (self._num_win + self._num_lose) if self._num_win + self._num_lose > 0 else 0
+        summary.apend(['Success Rate', f'{success_rate * 100:.2f}%'])
         outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
         logging.info('\n'.join(outputs))
 
