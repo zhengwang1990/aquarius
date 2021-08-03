@@ -53,7 +53,12 @@ class Backtesting:
         nyse = mcal.get_calendar('NYSE')
         schedule = nyse.schedule(start_date=self._start_date, end_date=self._end_date - datetime.timedelta(days=1))
         self._market_dates = [pd.to_datetime(d.date()) for d in mcal.date_range(schedule, frequency='1D')]
-        signal.signal(signal.SIGINT, self._print_summary)
+        signal.signal(signal.SIGINT, self._safe_exit)
+
+    def _safe_exit(self, signum, frame) -> None:
+        logging.info('Signal [%d] received', signum)
+        self._print_summary()
+        exit(1)
 
     def _init_processors(self):
         processors = []
@@ -273,7 +278,7 @@ class Backtesting:
         total_profit_pct = (self._daily_equity[-1] / self._daily_equity[0] - 1) * 100
         summary.append(['Total Gain/Loss', f'{total_profit_pct:+.2f}%'])
         success_rate = self._num_win / (self._num_win + self._num_lose) if self._num_win + self._num_lose > 0 else 0
-        summary.apend(['Success Rate', f'{success_rate * 100:.2f}%'])
+        summary.append(['Success Rate', f'{success_rate * 100:.2f}%'])
         outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
         logging.info('\n'.join(outputs))
 

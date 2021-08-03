@@ -42,6 +42,8 @@ class ReversalProcessor(Processor):
             return
         levels = [context.prev_day_close]
         closes = intraday_lookback['Close']
+        if np.abs(closes[-1] - closes[-2]) > np.abs(closes[-2] - closes[-3]):
+            return
         up_trend, down_trend = False, False
         if closes[-1] > closes[-2] > closes[-3] > closes[-4] > closes[-5]:
             up_trend = True
@@ -70,17 +72,19 @@ class ReversalProcessor(Processor):
             if abs(context.current_price - level) / level < 0.01:
                 direction = 'long' if down_trend else 'short'
                 action_type = ActionType.BUY_TO_OPEN if down_trend else ActionType.SELL_TO_OPEN
-                take_profit = context.current_price * 1.05 if down_trend else context.current_price * 0.95
+                take_profit = context.current_price * 1.01 if down_trend else context.current_price * 0.99
+                stop_loss = context.current_price * 0.99 if down_trend else context.current_price * 1.01
                 if down_trend:
                     for j in range(i + 1, len(levels)):
-                        if levels[j] > context.current_price * 1.005:
+                        if levels[j] > context.current_price * 1.01:
                             take_profit = levels[j]
                             break
                 if up_trend:
                     for j in range(i - 1, -1, -1):
-                        if levels[j] < context.current_price * 0.995:
+                        if levels[j] < context.current_price * 0.99:
                             take_profit = levels[i - 1]
-                self._hold_positions[context.symbol] = {'stop_loss': context.current_price * 0.99,
+                            break
+                self._hold_positions[context.symbol] = {'stop_loss': stop_loss,
                                                         'take_profit': take_profit,
                                                         'direction': direction,
                                                         'entry_time': context.current_time}

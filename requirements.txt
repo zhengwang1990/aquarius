@@ -1,5 +1,6 @@
 alpaca-trade-api
 matplotlib
+mplfinance
 numpy
 pandas
 pandas_market_calendars
