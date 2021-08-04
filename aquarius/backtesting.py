@@ -1,5 +1,6 @@
 from .common import *
 from .data import load_cached_daily_data, load_tradable_history, get_header
+from concurrent import futures
 from typing import Any, List, Union
 import datetime
 import logging
@@ -13,6 +14,7 @@ import tabulate
 
 _DATA_SOURCE = DataSource.POLYGON
 _TIME_INTERVAL = TimeInterval.FIVE_MIN
+_MAX_WORKERS = 20
 _EPS = 1E-7
 
 
@@ -85,12 +87,21 @@ class Backtesting:
         for processor in processors:
             processor_name = type(processor).__name__
             stock_universes[processor_name] = processor.get_stock_universe(day)
-        intraday_datas = {}
-        for processor_name, symbols in stock_universes.items():
+
+        stock_universe = set()
+        for _, symbols in stock_universes.items():
             for symbol in symbols:
-                if symbol in intraday_datas:
-                    continue
-                intraday_datas[symbol] = load_cached_daily_data(symbol, day, _TIME_INTERVAL, _DATA_SOURCE)
+                stock_universe.add(symbol)
+
+        intraday_datas = {}
+        tasks = {}
+        with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
+            for symbol in stock_universe:
+                t = pool.submit(load_cached_daily_data, symbol, day, _TIME_INTERVAL, _DATA_SOURCE)
+                tasks[symbol] = t
+            for symbol, t in tasks.items():
+                intraday_datas[symbol] = t.result()
+
         market_open = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_OPEN)).tz_localize(TIME_ZONE)
         market_close = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_CLOSE)).tz_localize(TIME_ZONE)
         current_interval_start = market_open

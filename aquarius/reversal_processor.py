@@ -17,7 +17,7 @@ class ReversalProcessor(Processor):
                                                       end_time=lookback_end_date,
                                                       data_source=data_source)
         self._stock_unviverse.set_dollar_volume_filter(low=1E7, high=1E9)
-        self._stock_unviverse.set_average_true_range_percent_filter(low=0.05)
+        self._stock_unviverse.set_average_true_range_percent_filter(low=0.03, high=0.1)
         self._stock_unviverse.set_price_filer(low=5)
         self._hold_positions = {}
 
@@ -38,16 +38,17 @@ class ReversalProcessor(Processor):
         if p is None:
             return
         intraday_lookback = intraday_lookback.iloc[p:]
-        if len(intraday_lookback) < 12:  # RSI size
+        if len(intraday_lookback) < 14:  # RSI size
             return
         levels = [context.prev_day_close]
         closes = intraday_lookback['Close']
         if np.abs(closes[-1] - closes[-2]) > np.abs(closes[-2] - closes[-3]):
             return
         up_trend, down_trend = False, False
-        if closes[-1] > closes[-2] > closes[-3] > closes[-4] > closes[-5]:
+        rsi = momentum.rsi(closes).values[-1]
+        if rsi > 90:
             up_trend = True
-        if closes[-1] < closes[-2] < closes[-3] < closes[-4] < closes[-5]:
+        if rsi < 10:
             down_trend = True
         if not up_trend and not down_trend:
             return
@@ -55,11 +56,6 @@ class ReversalProcessor(Processor):
         if down_trend and last_candle['Close'] - last_candle['Low'] < last_candle['High'] - last_candle['Close']:
             return
         if up_trend and last_candle['High'] - last_candle['Close'] < last_candle['Close'] - last_candle['Low']:
-            return
-        rsi = momentum.rsi(closes, window=12).values[-1]
-        if down_trend and rsi > 20:
-            return
-        if up_trend and rsi < 80:
             return
         for i in range(6, len(closes) - 7):
             close = closes[i]
@@ -69,20 +65,20 @@ class ReversalProcessor(Processor):
                 levels.append(close)
         levels.sort()
         for i, level in enumerate(levels):
-            if abs(context.current_price - level) / level < 0.01:
+            if abs(context.current_price - level) / level < 0.005:
                 direction = 'long' if down_trend else 'short'
                 action_type = ActionType.BUY_TO_OPEN if down_trend else ActionType.SELL_TO_OPEN
                 take_profit = context.current_price * 1.01 if down_trend else context.current_price * 0.99
                 stop_loss = context.current_price * 0.99 if down_trend else context.current_price * 1.01
                 if down_trend:
                     for j in range(i + 1, len(levels)):
-                        if levels[j] > context.current_price * 1.01:
-                            take_profit = levels[j]
+                        if levels[j] * 0.99 > context.current_price * 1.01:
+                            take_profit = levels[j] * 0.99
                             break
                 if up_trend:
                     for j in range(i - 1, -1, -1):
-                        if levels[j] < context.current_price * 0.99:
-                            take_profit = levels[i - 1]
+                        if levels[j] * 1.01 < context.current_price * 0.99:
+                            take_profit = levels[j] * 1.01
                             break
                 self._hold_positions[context.symbol] = {'stop_loss': stop_loss,
                                                         'take_profit': take_profit,
