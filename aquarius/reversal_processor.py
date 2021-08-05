@@ -38,25 +38,27 @@ class ReversalProcessor(Processor):
         if p is None:
             return
         intraday_lookback = intraday_lookback.iloc[p:]
-        if len(intraday_lookback) < 14:  # RSI size
+        if len(intraday_lookback) < 13:  # RSI size
             return
         levels = [context.prev_day_close]
         closes = intraday_lookback['Close']
-        if np.abs(closes[-1] - closes[-2]) > np.abs(closes[-2] - closes[-3]):
-            return
+
         up_trend, down_trend = False, False
-        rsi = momentum.rsi(closes).values[-1]
-        if rsi > 90:
+        rsi = momentum.rsi(closes, window=10).values[-3]
+        if rsi > 70:
             up_trend = True
-        if rsi < 10:
+        if rsi < 30:
             down_trend = True
         if not up_trend and not down_trend:
             return
-        last_candle = intraday_lookback.iloc[-1]
-        if down_trend and last_candle['Close'] - last_candle['Low'] < last_candle['High'] - last_candle['Close']:
+
+        if down_trend and (closes[-2] < context.vwap[-2] or closes[-1] < context.vwap[-1]
+                           or closes[-3] > context.vwap[-3] or closes[-4] > context.vwap[-4]):
             return
-        if up_trend and last_candle['High'] - last_candle['Close'] < last_candle['Close'] - last_candle['Low']:
+        if up_trend and (closes[-2] > context.vwap[-2] or closes[-1] > context.vwap[-1]
+                         or closes[-3] < context.vwap[-3] or closes[-4] < context.vwap[-4]):
             return
+
         for i in range(6, len(closes) - 7):
             close = closes[i]
             if close < np.min(closes[i - 6:i]) and close < np.min(closes[i + 1:i + 7]):
@@ -64,22 +66,25 @@ class ReversalProcessor(Processor):
             if close > np.max(closes[i - 6:i]) and close > np.max(closes[i + 1:i + 7]):
                 levels.append(close)
         levels.sort()
+
         for i, level in enumerate(levels):
-            if abs(context.current_price - level) / level < 0.005:
+            if abs(closes[-3] - level) / level < 0.005:
                 direction = 'long' if down_trend else 'short'
                 action_type = ActionType.BUY_TO_OPEN if down_trend else ActionType.SELL_TO_OPEN
                 take_profit = context.current_price * 1.01 if down_trend else context.current_price * 0.99
-                stop_loss = context.current_price * 0.99 if down_trend else context.current_price * 1.01
+                stop_loss = None
                 if down_trend:
                     for j in range(i + 1, len(levels)):
                         if levels[j] * 0.99 > context.current_price * 1.01:
                             take_profit = levels[j] * 0.99
                             break
+                    stop_loss = levels[i] if levels[i] < context.current_price else context.current_price * 0.99
                 if up_trend:
                     for j in range(i - 1, -1, -1):
                         if levels[j] * 1.01 < context.current_price * 0.99:
                             take_profit = levels[j] * 1.01
                             break
+                    stop_loss = levels[i] if levels[i] > context.current_price else context.current_price * 1.01
                 self._hold_positions[context.symbol] = {'stop_loss': stop_loss,
                                                         'take_profit': take_profit,
                                                         'direction': direction,

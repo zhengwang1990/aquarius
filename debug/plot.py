@@ -5,11 +5,24 @@ import pandas as pd
 
 CACHE_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'cache')
 
+def vwap(df):
+    res = []
+    vwaps = df['VWAP']
+    volumes = df['Volume']
+    total_dolloar = 0
+    total_volume = 0
+    for i in range(len(df)):
+        total_dolloar += vwaps[i] * volumes[i]
+        total_volume += volumes[i]
+        res.append((df.index[i], total_dolloar / total_volume))
+    return res
+
 
 def plot(date, symbol):
     file_path = os.path.join(CACHE_ROOT, 'FIVE_MIN', date, f'history_{symbol}.csv')
     df = pd.read_csv(file_path, index_col=0, parse_dates=True)
-    fplt.plot(df, type='candle', style='charles', title=f'{symbol} on {date}', figsize=(20, 9))
+    fplt.plot(df, type='candle', style='charles', title=f'{symbol} on {date}', figsize=(20, 9),
+              alines=vwap(df), volume=True)
 
 
 def main():

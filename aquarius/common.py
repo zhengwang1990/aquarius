@@ -123,6 +123,19 @@ class Context:
     def prev_day_close(self) -> float:
         return self.interday_lookback.iloc[-1]['Close']
 
+    @property
+    def vwap(self) -> List[float]:
+        res = []
+        vwaps = self.intraday_lookback['VWAP']
+        volumes = self.intraday_lookback['Volume']
+        total_dolloar = 0
+        total_volume = 0
+        for i in range(len(self.intraday_lookback)):
+            total_dolloar += vwaps[i] * volumes[i]
+            total_volume += volumes[i]
+            res.append(total_dolloar / total_volume)
+        return res
+
 
 class Processor:
 
