@@ -60,6 +60,7 @@ class Backtesting:
     def _safe_exit(self, signum, frame) -> None:
         logging.info('Signal [%d] received', signum)
         self._print_summary()
+        self._plot_summary()
         exit(1)
 
     def _init_processors(self):
@@ -301,12 +302,11 @@ class Backtesting:
         current_year = self._start_date.year
         current_start = 0
         dates, values = [], [1]
-        for i, date in enumerate(self._market_dates):
+        market_dates = self._market_dates[:len(self._daily_equity) - 1]
+        for i, date in enumerate(market_dates):
             dates.append(date)
-            if i >= len(self._daily_equity) - 1:
-                break
             values.append(self._daily_equity[i + 1] / self._daily_equity[current_start])
-            if i != len(self._market_dates) - 1 and self._market_dates[i + 1].year != current_year + 1:
+            if i != len(market_dates) - 1 and market_dates[i + 1].year != current_year + 1:
                 continue
             dates = [dates[0] - datetime.timedelta(days=1)] + dates
             profit_pct = (self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
