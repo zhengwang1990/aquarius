@@ -27,7 +27,7 @@ class ReversalProcessor(Processor):
     def handle_data(self, context: Context) -> Optional[Action]:
         if context.symbol in self._hold_positions:
             return self._handle_position(context)
-        if context.current_time.time() >= datetime.time(15, 55):
+        if context.current_time.time() >= datetime.time(15, 0):
             return
         intraday_lookback = context.intraday_lookback
         p = None
@@ -42,12 +42,14 @@ class ReversalProcessor(Processor):
             return
         levels = [context.prev_day_close]
         closes = intraday_lookback['Close']
+        highs = intraday_lookback['High']
+        lows = intraday_lookback['Low']
 
         up_trend, down_trend = False, False
         rsi = momentum.rsi(closes, window=10).values[-3]
-        if rsi > 70:
+        if rsi > 75:
             up_trend = True
-        if rsi < 30:
+        if rsi < 25:
             down_trend = True
         if not up_trend and not down_trend:
             return
@@ -57,6 +59,11 @@ class ReversalProcessor(Processor):
             return
         if up_trend and (closes[-2] > context.vwap[-2] or closes[-1] > context.vwap[-1]
                          or closes[-3] < context.vwap[-3] or closes[-4] < context.vwap[-4]):
+            return
+
+        if down_trend and highs[-1] - closes[-1] > closes[-1] - lows[-1]:
+            return
+        if up_trend and closes[-1] - lows[-1] > highs[-1] - closes[-1]:
             return
 
         for i in range(6, len(closes) - 7):
@@ -88,13 +95,16 @@ class ReversalProcessor(Processor):
                 self._hold_positions[context.symbol] = {'stop_loss': stop_loss,
                                                         'take_profit': take_profit,
                                                         'direction': direction,
-                                                        'entry_time': context.current_time}
+                                                        'entry_time': context.current_time,
+                                                        'entry_price': context.current_price}
                 return Action(context.symbol, action_type, 1, context.current_price)
 
     def _handle_position(self, context: Context) -> Optional[Action]:
         position = self._hold_positions[context.symbol]
         entry_time = position['entry_time']
         prev_close = context.intraday_lookback['Close'][-1]
+        prev_open = context.intraday_lookback['Open'][-1]
+        entry_price = position['entry_price']
         if position['direction'] == 'long':
             action = Action(context.symbol, ActionType.SELL_TO_CLOSE, 1, context.current_price)
             if context.current_price <= position['stop_loss'] or context.current_price >= position['take_profit']:
@@ -103,6 +113,8 @@ class ReversalProcessor(Processor):
             if prev_close < context.vwap[-1]:
                 self._hold_positions.pop(context.symbol)
                 return action
+            if context.current_price > entry_price * 1.005 and prev_close < prev_open:
+                return action
         else:
             action = Action(context.symbol, ActionType.BUY_TO_CLOSE, 1, context.current_price)
             if context.current_price >= position['stop_loss'] or context.current_price <= position['take_profit']:
@@ -110,6 +122,8 @@ class ReversalProcessor(Processor):
                 return action
             if prev_close > context.vwap[-1]:
                 self._hold_positions.pop(context.symbol)
+                return action
+            if context.current_price < entry_price * 0.995 and prev_close > prev_open:
                 return action
         if (context.current_time - entry_time >= datetime.timedelta(hours=1) or
                 context.current_time.time() >= datetime.time(15, 55)):
