@@ -121,7 +121,7 @@ class Context:
 
     @property
     def prev_day_close(self) -> float:
-        return self.interday_lookback.iloc[-1]['Close']
+        return self.interday_lookback['Close'][-1]
 
     @property
     def vwap(self) -> List[float]:

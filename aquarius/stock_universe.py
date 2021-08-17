@@ -57,15 +57,18 @@ class StockUniverse:
             atrp.append(max(h - l, h - c, c - l) / c)
         return np.average(atrp) if atrp else 0
 
-    @functools.lru_cache()
-    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+    def get_prev_day(self, view_time: DATETIME_TYPE):
         prev_day = view_time.date() - datetime.timedelta(days=1)
         while prev_day not in self._market_dates:
             prev_day -= datetime.timedelta(days=1)
             if prev_day < self._market_dates[0]:
                 raise ValueError(f'{view_time} is too early')
+        return pd.to_datetime(prev_day)
+
+    @functools.lru_cache()
+    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         res = []
-        prev_day = pd.to_datetime(prev_day)
+        prev_day = self.get_prev_day(view_time)
         for symbol, hist in self._historical_data.items():
             if prev_day not in hist.index:
                 continue

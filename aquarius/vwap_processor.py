@@ -1,5 +1,5 @@
 from .common import *
-from .stock_universe import create_stock_universe
+from .stock_universe import StockUniverse
 from typing import List, Optional
 import datetime
 import numpy as np
@@ -15,11 +15,11 @@ class VwapProcessor(Processor):
                  lookback_end_date: DATETIME_TYPE,
                  data_source: DataSource) -> None:
         super().__init__()
-        self._stock_unviverse = create_stock_universe(start_time=lookback_start_date,
-                                                      end_time=lookback_end_date,
-                                                      data_source=data_source)
-        self._stock_unviverse.set_dollar_volume_filter(low=1E7, high=2E7)
-        self._stock_unviverse.set_average_true_range_percent_filter(low=0.05)
+        self._stock_unviverse = VwapStockUniverse(start_time=lookback_start_date,
+                                                  end_time=lookback_end_date,
+                                                  data_source=data_source)
+        self._stock_unviverse.set_dollar_volume_filter(low=1E7)
+        self._stock_unviverse.set_average_true_range_percent_filter(low=0.03)
         self._stock_unviverse.set_price_filer(low=5)
         self._hold_positions = {}
 
@@ -32,8 +32,8 @@ class VwapProcessor(Processor):
         return self._open_position(context)
 
     def _open_position(self, context: Context) -> Optional[Action]:
-        if (context.current_time.time() >= datetime.time(14, 0)
-                or context.current_time.time() <= datetime.time(11, 00)):
+        if (context.current_time.time() >= datetime.time(15, 0)
+                or context.current_time.time() <= datetime.time(10, 00)):
             return
         intraday_lookback = context.intraday_lookback
         p = None
@@ -60,8 +60,10 @@ class VwapProcessor(Processor):
             vwap_distances.append(closes[-i] - context.vwap[-i])
 
         distance_sign = np.sign(vwap_distances[0])
-        for distance in vwap_distances:
-            if np.sign(distance) != distance_sign:
+        if np.sign(vwap_distances[1]) != distance_sign:
+            return
+        for distance in vwap_distances[2:]:
+            if np.sign(distance) == distance_sign:
                 return
 
         if distance_sign > 0:
@@ -72,17 +74,27 @@ class VwapProcessor(Processor):
             action_type = ActionType.SELL_TO_OPEN
 
         nearest_distance = np.min(np.abs(vwap_distances))
-        if nearest_distance > intraday_range * 0.05:
+        if nearest_distance > intraday_range * 0.1:
             return
 
         if np.abs(context.current_price - context.vwap[-1]) > 0.01 * context.current_price:
             return
 
         rsi = momentum.rsi(closes, window=6).values[-1]
-        if direction == 'long' and rsi <= 40:
-            return
-        if direction == 'short' and rsi >= 60:
-            down_trend = True
+        if direction == 'long':
+            if context.prev_day_close < context.interday_lookback['Close'][-2]:
+                return
+            if context.prev_day_close < context.interday_lookback['Close'][-DAYS_IN_A_MONTH]:
+                return
+            if context.prev_day_close > closes[0]:
+                return
+        if direction == 'short':
+            if context.prev_day_close > context.interday_lookback['Close'][-2]:
+                return
+            if context.prev_day_close > context.interday_lookback['Close'][-DAYS_IN_A_MONTH]:
+                return
+            if context.prev_day_close < closes[0]:
+                return
 
         self._hold_positions[context.symbol] = {'direction': direction,
                                                 'entry_time': context.current_time,
@@ -126,3 +138,39 @@ class VwapProcessorFactory(ProcessorFactory):
                data_source: DataSource,
                *args, **kwargs) -> VwapProcessor:
         return VwapProcessor(lookback_start_date, lookback_end_date, data_source)
+
+
+class VwapStockUniverse(StockUniverse):
+
+    def __init__(self,
+                 start_time: DATETIME_TYPE,
+                 end_time: DATETIME_TYPE,
+                 data_source: DataSource) -> None:
+        super().__init__(start_time, end_time, data_source)
+
+    def get_significant_change(self, symbol: str, prev_day: DATETIME_TYPE) -> bool:
+        hist = self._historical_data[symbol]
+        p = timestamp_to_index(hist.index, prev_day)
+        closes = np.array(hist['Close'][max(p - DAYS_IN_A_MONTH + 1, 1):p + 1])
+        changes = np.array([np.log(closes[i + 1] / closes[i]) for i in range(len(closes) - 1)
+                            if closes[i + 1] > 0 and closes[i] > 0])
+        if not len(changes):
+            return False
+        std = np.std(changes)
+        mean = np.mean(changes)
+        if std < 1E-7:
+            return False
+        if np.abs((changes[-1] - mean) / std) < 2:
+            return False
+        if np.any(np.abs((changes[-5:-1] - mean) / std) > 1):
+            return False
+        return True
+
+    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+        prev_day = self.get_prev_day(view_time)
+        symbols = super().get_stock_universe(view_time)
+        res = []
+        for symbol in symbols:
+            if self.get_significant_change(symbol, prev_day):
+                res.append(symbol)
+        return res
