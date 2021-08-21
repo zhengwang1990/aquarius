@@ -121,7 +121,7 @@ class VwapProcessor(Processor):
                 return action
             if context.current_price < entry_price * 0.99 and prev_close > prev_open:
                 return action
-        if (context.current_time - entry_time >= datetime.timedelta(minutes=30) or
+        if (context.current_time - entry_time >= datetime.timedelta(hours=1) or
                 context.current_time.time() >= datetime.time(15, 55)):
             self._hold_positions.pop(context.symbol)
             return action
@@ -160,7 +160,7 @@ class VwapStockUniverse(StockUniverse):
         mean = np.mean(changes)
         if std < 1E-7:
             return False
-        if np.abs((changes[-1] - mean) / std) < 2:
+        if np.abs((changes[-1] - mean) / std) < 1.5:
             return False
         if np.any(np.abs((changes[-5:-1] - mean) / std) > 1):
             return False
