@@ -1,7 +1,8 @@
 from .common import *
 from .data import load_cached_daily_data, load_tradable_history, get_header
+from .feature_extractor import FeatureExtractor
 from concurrent import futures
-from typing import Any, List, Union
+from typing import Any, Dict, List, Union
 import datetime
 import logging
 import matplotlib.pyplot as plt
@@ -36,6 +37,7 @@ class Backtesting:
         self._num_win, self._num_lose = 0, 0
         self._cash = 1
         self._interday_datas = None
+        self._feature_extractor = FeatureExtractor()
 
         backtesting_output_dir = os.path.join(OUTPUT_ROOT, 'backtesting')
         os.makedirs(backtesting_output_dir, exist_ok=True)
@@ -59,9 +61,14 @@ class Backtesting:
 
     def _safe_exit(self, signum, frame) -> None:
         logging.info('Signal [%d] received', signum)
+        self._close()
+        exit(1)
+
+    def _close(self):
         self._print_summary()
         self._plot_summary()
-        exit(1)
+        self._feature_extractor.save(os.path.join(self._output_dir, 'data.csv'))
+
 
     def _init_processors(self):
         processors = []
@@ -72,16 +79,12 @@ class Backtesting:
         return processors
 
     def run(self) -> None:
-
         history_start = self._start_date - datetime.timedelta(days=CALENDAR_DAYS_IN_A_MONTH)
         self._interday_datas = load_tradable_history(history_start, self._end_date, _DATA_SOURCE)
         processors = self._init_processors()
-
         for day in self._market_dates:
             self._process_day(day, processors)
-
-        self._print_summary()
-        self._plot_summary()
+        self._close()
 
     def _process_day(self, day: DATETIME_TYPE, processors: List[Processor]) -> None:
         stock_universes = {}
@@ -139,15 +142,15 @@ class Backtesting:
                     action = processor.handle_data(context)
                     if action is not None:
                         actions.append(action)
-            current_executed_actions = self._process_actions(actions)
-            executed_actions.extend([[current_time.time()] + executed_action
-                                     for executed_action in current_executed_actions])
+            current_executed_actions = self._process_actions(current_time.time(), actions)
+            executed_actions.extend(current_executed_actions)
 
             current_interval_start += datetime.timedelta(minutes=5)
 
         self._log_day(day, executed_actions)
+        self._extract_features(day, executed_actions, intraday_datas)
 
-    def _process_actions(self, actions: List[Action]) -> List[List[Any]]:
+    def _process_actions(self, current_time: datetime.time, actions: List[Action]) -> List[List[Any]]:
         action_sets = set([(action.symbol, action.type) for action in actions])
         unique_actions = []
         for unique_action in action_sets:
@@ -160,13 +163,13 @@ class Backtesting:
 
         close_actions = [action for action in unique_actions
                          if action.type in [ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]]
-        executed_closes = self._close_positions(close_actions)
+        executed_closes = self._close_positions(current_time, close_actions)
 
         open_actions = [action for action in unique_actions
                         if action.type in [ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]]
-        executed_opens = self._open_positions(open_actions)
+        self._open_positions(current_time, open_actions)
 
-        return executed_closes + executed_opens
+        return executed_closes
 
     def _pop_current_position(self, symbol: str) -> Optional[Position]:
         for ind, position in enumerate(self._positions):
@@ -181,7 +184,7 @@ class Backtesting:
                 return position
         return None
 
-    def _close_positions(self, actions: List[Action]) -> List[List[Any]]:
+    def _close_positions(self, current_time: datetime.time, actions: List[Action]) -> List[List[Any]]:
         executed_actions = []
         for action in actions:
             assert action.type in [ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]
@@ -205,12 +208,13 @@ class Backtesting:
             else:
                 self._num_lose += 1
             profit_pct = profit / (current_position.entry_price * abs(qty)) * 100
-            executed_actions.append([symbol, action.type, qty, current_position.entry_price,
-                                     action.price, f'{profit:.2f}({profit_pct:+.2f}%)'])
+            executed_actions.append([symbol, current_position.entry_time, current_time,
+                                     'long' if action.type == ActionType.SELL_TO_CLOSE else 'short',
+                                     qty, current_position.entry_price,
+                                     action.price, f'{profit_pct:+.2f}%'])
         return executed_actions
 
-    def _open_positions(self, actions: List[Action]) -> List[List[Any]]:
-        executed_actions = []
+    def _open_positions(self, current_time: datetime.time, actions: List[Action]) -> None:
         tradable_cash = self._cash
         for position in self._positions:
             if position.qty < 0:
@@ -226,11 +230,9 @@ class Backtesting:
             qty = cash_to_trade / action.price
             if action.type == ActionType.SELL_TO_OPEN:
                 qty = -qty
-            new_position = Position(symbol, qty, action.price)
+            new_position = Position(symbol, qty, action.price, current_time)
             self._positions.append(new_position)
             self._cash -= action.price * qty
-            executed_actions.append([symbol, action.type, qty, action.price])
-        return executed_actions
 
     def _log_day(self,
                  day: DATETIME_TYPE,
@@ -239,7 +241,7 @@ class Backtesting:
 
         if executed_actions:
             trade_info = tabulate.tabulate(executed_actions,
-                                           headers=['Time', 'Symbol', 'Action', 'Qty', 'Entry Price',
+                                           headers=['Symbol', 'Entry Time', 'Exit Time', 'Side', 'Qty', 'Entry Price',
                                                     'Exit Price', 'Gain/Loss'],
                                            tablefmt='grid')
             outputs.append('[ Trades ]')
@@ -272,7 +274,7 @@ class Backtesting:
 
         logging.info('\n'.join(outputs))
 
-    def _print_summary(self):
+    def _print_summary(self) -> None:
         outputs = [get_header('Summary')]
         summary = [['Time Range', f'{self._start_date.date()} ~ {self._end_date.date()}']]
         current_year = self._start_date.year
@@ -294,7 +296,7 @@ class Backtesting:
         outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
         logging.info('\n'.join(outputs))
 
-    def _plot_summary(self):
+    def _plot_summary(self) -> None:
         pd.plotting.register_matplotlib_converters()
         plot_symbols = ['QQQ', 'SPY', 'TQQQ']
         color_map = {'QQQ': '#78d237', 'SPY': '#FF6358', 'TQQQ': '#aa46be'}
@@ -343,3 +345,32 @@ class Backtesting:
             dates, values = [], [1]
             current_start = i
             current_year += 1
+
+    def _extract_features(self,
+                          day: DATETIME_TYPE,
+                          executed_actions: List[List[Any]],
+                          intraday_datas: Dict[str, pd.DataFrame]) -> None:
+        for action in executed_actions:
+            symbol = action[0]
+            entry_time = action[1]
+            exit_time = action[2]
+            side = action[3]
+            entry_price = action[5]
+            exit_price = action[6]
+            interday_data = self._interday_datas[symbol]
+            interday_ind = timestamp_to_index(interday_data.index, day.date())
+            if interday_ind is None or interday_ind < DAYS_IN_A_MONTH:
+                continue
+            interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH:interday_ind]
+            intraday_data = intraday_datas[symbol]
+            entry_interval_start = (pd.to_datetime(datetime.datetime.combine(day, entry_time)).tz_localize(TIME_ZONE)
+                                    - datetime.timedelta(minutes=5))
+            intraday_ind = timestamp_to_index(intraday_data.index, entry_interval_start)
+            if intraday_ind is None:
+                intraday_ind = timestamp_to_prev_index(intraday_data.index, entry_interval_start)
+            intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
+            self._feature_extractor.extract(day, symbol, entry_time, exit_time, side, entry_price, exit_price,
+                                            intraday_lookback, interday_lookback)
+
+
+

@@ -50,7 +50,7 @@ class ActionType(Enum):
 
 
 Action = collections.namedtuple('Action', ['symbol', 'type', 'percent', 'price'])
-Position = collections.namedtuple('Position', ['symbol', 'qty', 'entry_price'])
+Position = collections.namedtuple('Position', ['symbol', 'qty', 'entry_price', 'entry_time'])
 
 
 class DataError(Exception):

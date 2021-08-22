@@ -5,5 +5,6 @@ from .data import HistoricalDataLoader
 from .noop_processor import NoopProcessor, NoopProcessorFactory
 from .stock_universe import StockUniverse
 from .vwap_processor import VwapProcessor, VwapProcessorFactory, VwapStockUniverse
+from .feature_extractor import FeatureExtractor
 
 __version__ = '1.0.0'
