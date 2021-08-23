@@ -1,13 +1,21 @@
+from .common import *
 from sklearn import ensemble
 from sklearn import metrics
 from tabulate import tabulate
+from typing import Optional
 import numpy as np
 import pandas as pd
 
 
-def _get_data(df: pd.DataFrame):
+def _get_data(df: pd.DataFrame,
+              start_date: Optional[DATETIME_TYPE] = None,
+              end_date: Optional[DATETIME_TYPE] = None):
     X, Y = [], []
     for _, row in df.iterrows():
+        if start_date is not None and pd.to_datetime(row['date']) < start_date:
+            continue
+        if end_date is not None and pd.to_datetime(row['date']) > end_date:
+            continue
         side = 1 if row['side'] == 'long' else 0
         std_1_month = row['std_1_month']
         normalized_yesterday_change = row['yesterday_change'] / std_1_month
@@ -21,7 +29,6 @@ def _get_data(df: pd.DataFrame):
         y = 1 if row['profit'] > 0 else 0
         X.append(x)
         Y.append(y)
-
     return np.array(X), np.array(Y)
 
 
@@ -46,10 +53,21 @@ class Model:
     def __init__(self):
         self._model = None
 
-    def train(self, data_path):
+    def train(self,
+              data_path: str,
+              start_date: Optional[DATETIME_TYPE] = None,
+              end_date: Optional[DATETIME_TYPE] = None):
         df = pd.read_csv(data_path)
-        X, Y = _get_data(df)
+        X, Y = _get_data(df, start_date, end_date)
         self._model = _create_model()
         self._model.fit(X, Y)
+        Y_pred = self._model.predict(X)
+        _print_metrics(Y, Y_pred)
+
+    def evaluate(self, data_path: str,
+                 start_date: Optional[DATETIME_TYPE] = None,
+                 end_date: Optional[DATETIME_TYPE] = None):
+        df = pd.read_csv(data_path)
+        X, Y = _get_data(df, start_date, end_date)
         Y_pred = self._model.predict(X)
         _print_metrics(Y, Y_pred)

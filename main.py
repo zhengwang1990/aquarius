@@ -1,3 +1,5 @@
+import pandas as pd
+
 from aquarius import *
 import os
 
@@ -13,7 +15,8 @@ def main():
                              '08-21',
                              '07',
                              'data.csv')
-    m.train(data_path)
+    m.train(data_path, pd.to_datetime('2020-07-01'), pd.to_datetime('2020-09-30'))
+    m.evaluate(data_path, pd.to_datetime('2020-10-01'), pd.to_datetime('2020-10-31'))
 
 
 if __name__ == main():
