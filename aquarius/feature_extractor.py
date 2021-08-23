@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import ta.momentum as momentum
 
-_FEATURES = [
+FEATURES = [
     'date',
     'symbol',
     'entry_time',
@@ -24,7 +24,7 @@ _FEATURES = [
 class FeatureExtractor:
 
     def __init__(self):
-        self.data = []
+        self._data = []
 
     def extract(self, day: DATETIME_TYPE, symbol: str, entry_time: datetime.time, exit_time: datetime.time,
                 side: str, entry_price: float, exit_price: float,
@@ -57,7 +57,7 @@ class FeatureExtractor:
         if p is None:
             return
 
-        rsi_14_window = momentum.rsi(intraday_closes, window=14).values[-1]
+        rsi_14_window = momentum.rsi(intraday_closes, window=14).values[-1] if len(intraday_closes) >= 14 else 0
 
         pre_market_change = 0
         if p > 0:
@@ -70,8 +70,8 @@ class FeatureExtractor:
         data = [day, symbol, entry_time, exit_time, side, profit, yesterday_change,
                 change_1_month, std_1_month, true_range_1_month, rsi_14_window,
                 pre_market_change, today_change, prev_window_change]
-        self.data.append(data)
+        self._data.append(data)
 
     def save(self, data_path: str):
-        df = pd.DataFrame(self.data, columns=_FEATURES)
+        df = pd.DataFrame(self._data, columns=FEATURES)
         df.to_csv(data_path, index=False)

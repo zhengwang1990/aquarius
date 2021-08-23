@@ -8,5 +8,6 @@ polygon-api-client
 retrying
 ta
 tabulate
+tensorflow
 tqdm
 yfinance

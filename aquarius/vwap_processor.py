@@ -20,7 +20,7 @@ class VwapProcessor(Processor):
                                                   data_source=data_source)
         self._stock_unviverse.set_dollar_volume_filter(low=1E7)
         self._stock_unviverse.set_average_true_range_percent_filter(low=0.03)
-        self._stock_unviverse.set_price_filer(low=5)
+        self._stock_unviverse.set_price_filer(low=1)
         self._hold_positions = {}
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
