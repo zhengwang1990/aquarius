@@ -14,8 +14,8 @@ def main():
     data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              'outputs',
                              'backtesting',
-                             '08-23',
-                             '02',
+                             '08-27',
+                             '05',
                              'data.csv')
     start_date = pd.to_datetime('2020-01-01')
     end_date = pd.to_datetime('2021-07-01')

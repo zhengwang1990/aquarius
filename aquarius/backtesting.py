@@ -200,7 +200,7 @@ class Backtesting:
             qty = current_position.qty * action.percent
             new_qty = current_position.qty - qty
             if abs(new_qty) > _EPS:
-                self._positions.append(Position(symbol, new_qty, current_position.entry_price))
+                self._positions.append(Position(symbol, new_qty, current_position.entry_price, current_time))
             self._cash += action.price * qty
             profit = (action.price - current_position.entry_price) * qty
             if profit > 0:
@@ -279,11 +279,10 @@ class Backtesting:
         summary = [['Time Range', f'{self._start_date.date()} ~ {self._end_date.date()}']]
         current_year = self._start_date.year
         current_start = 0
-        for i, date in enumerate(self._market_dates):
-            if i != len(self._market_dates) - 1 and self._market_dates[i + 1].year != current_year + 1:
+        market_dates = self._market_dates[:len(self._daily_equity) - 1]
+        for i, date in enumerate(market_dates):
+            if i != len(market_dates) - 1 and market_dates[i + 1].year != current_year + 1:
                 continue
-            if i >= len(self._daily_equity) - 1:
-                break
             profit_pct = (self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
             summary.append([f'{current_year} Gain/Loss',
                             f'{profit_pct:+.2f}%'])

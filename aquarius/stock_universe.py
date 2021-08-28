@@ -86,10 +86,3 @@ class StockUniverse:
                 continue
             res.append(symbol)
         return res
-
-
-@functools.lru_cache()
-def create_stock_universe(start_time: DATETIME_TYPE,
-                          end_time: DATETIME_TYPE,
-                          data_source: DataSource) -> StockUniverse:
-    return StockUniverse(start_time, end_time, data_source)

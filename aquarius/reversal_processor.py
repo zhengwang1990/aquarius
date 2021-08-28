@@ -1,5 +1,5 @@
 from .common import *
-from .stock_universe import create_stock_universe
+from .stock_universe import StockUniverse
 from typing import List, Optional
 import datetime
 import numpy as np
@@ -13,11 +13,11 @@ class ReversalProcessor(Processor):
                  lookback_end_date: DATETIME_TYPE,
                  data_source: DataSource) -> None:
         super().__init__()
-        self._stock_unviverse = create_stock_universe(start_time=lookback_start_date,
+        self._stock_unviverse = ReversalStockUniverse(start_time=lookback_start_date,
                                                       end_time=lookback_end_date,
                                                       data_source=data_source)
         self._stock_unviverse.set_dollar_volume_filter(low=1E7, high=1E9)
-        self._stock_unviverse.set_average_true_range_percent_filter(low=0.03, high=0.1)
+        self._stock_unviverse.set_average_true_range_percent_filter(low=0.05, high=0.1)
         self._stock_unviverse.set_price_filer(low=5)
         self._hold_positions = {}
 
@@ -38,7 +38,7 @@ class ReversalProcessor(Processor):
         if p is None:
             return
         intraday_lookback = intraday_lookback.iloc[p:]
-        if len(intraday_lookback) < 13:  # RSI size
+        if len(intraday_lookback) < 14 + 3:  # RSI size
             return
         levels = [context.prev_day_close]
         closes = intraday_lookback['Close']
@@ -46,10 +46,10 @@ class ReversalProcessor(Processor):
         lows = intraday_lookback['Low']
 
         up_trend, down_trend = False, False
-        rsi = momentum.rsi(closes, window=10).values[-3]
-        if rsi > 75:
+        rsi = momentum.rsi(closes, window=14).values[-3]
+        if rsi > 60:
             up_trend = True
-        if rsi < 25:
+        if rsi < 40:
             down_trend = True
         if not up_trend and not down_trend:
             return
@@ -113,7 +113,7 @@ class ReversalProcessor(Processor):
             if prev_close < context.vwap[-1]:
                 self._hold_positions.pop(context.symbol)
                 return action
-            if context.current_price > entry_price * 1.005 and prev_close < prev_open:
+            if context.current_price > entry_price * 1.01 and prev_close < prev_open:
                 return action
         else:
             action = Action(context.symbol, ActionType.BUY_TO_CLOSE, 1, context.current_price)
@@ -123,7 +123,7 @@ class ReversalProcessor(Processor):
             if prev_close > context.vwap[-1]:
                 self._hold_positions.pop(context.symbol)
                 return action
-            if context.current_price < entry_price * 0.995 and prev_close > prev_open:
+            if context.current_price < entry_price * 0.99 and prev_close > prev_open:
                 return action
         if (context.current_time - entry_time >= datetime.timedelta(hours=1) or
                 context.current_time.time() >= datetime.time(15, 55)):
@@ -142,3 +142,37 @@ class ReversalProcessorFactory(ProcessorFactory):
                data_source: DataSource,
                *args, **kwargs) -> ReversalProcessor:
         return ReversalProcessor(lookback_start_date, lookback_end_date, data_source)
+
+
+class ReversalStockUniverse(StockUniverse):
+
+    def __init__(self,
+                 start_time: DATETIME_TYPE,
+                 end_time: DATETIME_TYPE,
+                 data_source: DataSource) -> None:
+        super().__init__(start_time, end_time, data_source)
+
+    def get_significant_change(self, symbol: str, prev_day: DATETIME_TYPE) -> bool:
+        hist = self._historical_data[symbol]
+        p = timestamp_to_index(hist.index, prev_day)
+        closes = np.array(hist['Close'][max(p - DAYS_IN_A_MONTH + 1, 1):p + 1])
+        changes = np.array([np.log(closes[i + 1] / closes[i]) for i in range(len(closes) - 1)
+                            if closes[i + 1] > 0 and closes[i] > 0])
+        if not len(changes):
+            return False
+        std = np.std(changes)
+        mean = np.mean(changes)
+        if std < 1E-7:
+            return False
+        if np.abs((changes[-1] - mean) / std) < 1:
+            return False
+        return True
+
+    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+        prev_day = self.get_prev_day(view_time)
+        symbols = super().get_stock_universe(view_time)
+        res = []
+        for symbol in symbols:
+            if self.get_significant_change(symbol, prev_day):
+                res.append(symbol)
+        return res
