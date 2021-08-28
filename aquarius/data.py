@@ -183,7 +183,7 @@ def load_cached_daily_data(symbol: str,
     assert time_interval in [TimeInterval.FIVE_MIN, TimeInterval.HOUR]
     cache_dir = os.path.join(CACHE_ROOT, str(time_interval), day.strftime('%F'))
     if not os.path.isdir(cache_dir):
-        os.makedirs(cache_dir)
+        os.makedirs(cache_dir, exist_ok=True)
     cache_file = os.path.join(cache_dir, f'history_{symbol}.csv')
     if os.path.isfile(cache_file):
         hist = pd.read_csv(cache_file, index_col=0, parse_dates=True)

@@ -3,7 +3,6 @@ from .stock_universe import StockUniverse
 from typing import List, Optional
 import datetime
 import numpy as np
-import ta.momentum as momentum
 
 _WATCHING_WINDOW = 12
 
@@ -80,20 +79,11 @@ class VwapProcessor(Processor):
         if np.abs(context.current_price - context.vwap[-1]) > 0.01 * context.current_price:
             return
 
-        rsi = momentum.rsi(closes, window=6).values[-1]
         if direction == 'long':
             if context.prev_day_close < context.interday_lookback['Close'][-2]:
                 return
-            if context.prev_day_close < context.interday_lookback['Close'][-DAYS_IN_A_MONTH]:
-                return
-            if context.prev_day_close > closes[0]:
-                return
         if direction == 'short':
             if context.prev_day_close > context.interday_lookback['Close'][-2]:
-                return
-            if context.prev_day_close > context.interday_lookback['Close'][-DAYS_IN_A_MONTH]:
-                return
-            if context.prev_day_close < closes[0]:
                 return
 
         self._hold_positions[context.symbol] = {'direction': direction,

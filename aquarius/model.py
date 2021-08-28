@@ -10,7 +10,7 @@ import pandas as pd
 def _get_data(df: pd.DataFrame,
               start_date: Optional[DATETIME_TYPE] = None,
               end_date: Optional[DATETIME_TYPE] = None):
-    X, Y = [], []
+    X, Y, W = [], [], []
     for _, row in df.iterrows():
         if start_date is not None and pd.to_datetime(row['date']) < start_date:
             continue
@@ -27,9 +27,11 @@ def _get_data(df: pd.DataFrame,
         x = [side, normalized_yesterday_change, normalized_change_1_month, normalized_pre_market_change, rsi_14_window,
              normalized_today_change, normalized_prev_window_change]
         y = 1 if row['profit'] > 0 else 0
+        w = np.abs(row['profit'])
         X.append(x)
         Y.append(y)
-    return np.array(X), np.array(Y)
+        W.append(w)
+    return np.array(X), np.array(Y), np.array(W)
 
 
 def _create_model():
@@ -58,16 +60,23 @@ class Model:
               start_date: Optional[DATETIME_TYPE] = None,
               end_date: Optional[DATETIME_TYPE] = None):
         df = pd.read_csv(data_path)
-        X, Y = _get_data(df, start_date, end_date)
+        X, Y, W = _get_data(df, start_date, end_date)
         self._model = _create_model()
-        self._model.fit(X, Y)
+        self._model.fit(X, Y, W)
         Y_pred = self._model.predict(X)
-        _print_metrics(Y, Y_pred)
+        #_print_metrics(Y, Y_pred)
 
     def evaluate(self, data_path: str,
                  start_date: Optional[DATETIME_TYPE] = None,
                  end_date: Optional[DATETIME_TYPE] = None):
         df = pd.read_csv(data_path)
-        X, Y = _get_data(df, start_date, end_date)
+        profits = df['profit']
+        X, Y, _ = _get_data(df, start_date, end_date)
         Y_pred = self._model.predict(X)
         _print_metrics(Y, Y_pred)
+        asset = 1
+        for y, p in zip(Y, profits):
+            if y == 1:
+                asset *= 1 + p
+        print(f'Gain/Loss: {(asset - 1) * 100:.2f}%')
+        return asset - 1
