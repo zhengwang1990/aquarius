@@ -133,7 +133,7 @@ class Backtesting:
                     interday_ind = timestamp_to_index(interday_data.index, day.date())
                     if interday_ind is None or interday_ind < DAYS_IN_A_MONTH:
                         continue
-                    interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH:interday_ind]
+                    interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH - 1:interday_ind]
                     context = Context(symbol=symbol,
                                       current_time=current_time,
                                       current_price=current_price,
@@ -360,7 +360,7 @@ class Backtesting:
             interday_ind = timestamp_to_index(interday_data.index, day.date())
             if interday_ind is None or interday_ind < DAYS_IN_A_MONTH:
                 continue
-            interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH:interday_ind]
+            interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH - 1:interday_ind]
             intraday_data = intraday_datas[symbol]
             entry_interval_start = (pd.to_datetime(datetime.datetime.combine(day, entry_time)).tz_localize(TIME_ZONE)
                                     - datetime.timedelta(minutes=5))

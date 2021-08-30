@@ -45,7 +45,7 @@ class FeatureExtractor:
         std_1_month = np.std(changes) if len(changes) else 0
 
         atrp = []
-        for i in range(-DAYS_IN_A_MONTH + 1, 0):
+        for i in range(-DAYS_IN_A_MONTH, 0):
             h = interday_lookback['High'][i]
             l = interday_lookback['Low'][i]
             c = interday_lookback['Close'][i - 1]

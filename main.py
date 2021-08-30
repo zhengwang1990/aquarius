@@ -1,11 +1,10 @@
 from aquarius import *
 from dateutil.relativedelta import relativedelta
-import datetime
 import pandas as pd
 import os
 
 def main():
-    # bt = Backtesting(start_date='2019-10-01', end_date='2021-07-31',
+    # bt = Backtesting(start_date='2019-10-01', end_date='2019-10-03',
     #                  processor_factories=[VwapProcessorFactory()])
     #
     # bt.run()
@@ -14,11 +13,13 @@ def main():
     data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              'outputs',
                              'backtesting',
-                             '08-27',
-                             '05',
+                             '08-28',
+                             '14',
                              'data.csv')
-    start_date = pd.to_datetime('2020-01-01')
-    end_date = pd.to_datetime('2021-07-01')
+    df = pd.read_csv(data_path, index_col=0, parse_dates=True)
+    start_date = df.index[0] + relativedelta(months=3)
+    start_date = pd.to_datetime(f'{start_date.year}-{start_date.month}-01')
+    end_date = df.index[-1]
     current = start_date
     asset = 1
     while current <= end_date:

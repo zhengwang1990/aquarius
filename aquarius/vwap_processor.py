@@ -18,7 +18,7 @@ class VwapProcessor(Processor):
                                                   end_time=lookback_end_date,
                                                   data_source=data_source)
         self._stock_unviverse.set_dollar_volume_filter(low=1E7)
-        self._stock_unviverse.set_average_true_range_percent_filter(low=0.03)
+        self._stock_unviverse.set_average_true_range_percent_filter(low=0.01)
         self._stock_unviverse.set_price_filer(low=1)
         self._hold_positions = {}
 
@@ -92,28 +92,32 @@ class VwapProcessor(Processor):
         return Action(context.symbol, action_type, 1, context.current_price)
 
     def _close_position(self, context: Context) -> Optional[Action]:
-        position = self._hold_positions[context.symbol]
+        symbol = context.symbol
+        position = self._hold_positions[symbol]
         entry_time = position['entry_time']
         prev_close = context.intraday_lookback['Close'][-1]
         prev_open = context.intraday_lookback['Open'][-1]
+        current_price = context.current_price
         entry_price = position['entry_price']
         if position['direction'] == 'long':
-            action = Action(context.symbol, ActionType.SELL_TO_CLOSE, 1, context.current_price)
-            if prev_close < context.vwap[-1]:
-                self._hold_positions.pop(context.symbol)
+            action = Action(symbol, ActionType.SELL_TO_CLOSE, 1, current_price)
+            if current_price < context.vwap[-1]:
+                self._hold_positions.pop(symbol)
                 return action
-            if context.current_price > entry_price * 1.01 and prev_close < prev_open:
+            if current_price > entry_price * 1.01 and prev_close < prev_open:
+                self._hold_positions.pop(symbol)
                 return action
         else:
-            action = Action(context.symbol, ActionType.BUY_TO_CLOSE, 1, context.current_price)
-            if prev_close > context.vwap[-1]:
-                self._hold_positions.pop(context.symbol)
+            action = Action(symbol, ActionType.BUY_TO_CLOSE, 1, current_price)
+            if current_price > context.vwap[-1]:
+                self._hold_positions.pop(symbol)
                 return action
-            if context.current_price < entry_price * 0.99 and prev_close > prev_open:
+            if current_price < entry_price * 0.99 and prev_close > prev_open:
+                self._hold_positions.pop(symbol)
                 return action
         if (context.current_time - entry_time >= datetime.timedelta(hours=1) or
                 context.current_time.time() >= datetime.time(15, 55)):
-            self._hold_positions.pop(context.symbol)
+            self._hold_positions.pop(symbol)
             return action
 
 

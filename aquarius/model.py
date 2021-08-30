@@ -1,4 +1,5 @@
 from .common import *
+from datetime import datetime
 from sklearn import ensemble
 from sklearn import metrics
 from tabulate import tabulate
@@ -17,19 +18,21 @@ def _get_data(df: pd.DataFrame,
         if end_date is not None and pd.to_datetime(row['date']) > end_date:
             continue
         side = 1 if row['side'] == 'long' else 0
+        entry_time = datetime.strptime(row['entry_time'], '%H:%M:%S').hour
         std_1_month = row['std_1_month']
         normalized_yesterday_change = row['yesterday_change'] / std_1_month
         normalized_change_5_day = row['change_5_day'] / std_1_month
         normalized_change_1_month = row['change_1_month'] / std_1_month
         rsi_14_window = row['rsi_14_window']
         rsi_14_window_prev1 = row['rsi_14_window_prev1']
-        rsi_14_window_prev2 = row['rsi_14_window_prev2']
+        #rsi_14_window_prev2 = row['rsi_14_window_prev2']
         normalized_pre_market_change = row['pre_market_change'] / std_1_month
         normalized_today_change = row['today_change'] / std_1_month
         normalized_prev_window_change = row['prev_window_change'] / std_1_month
-        x = [side, normalized_yesterday_change, normalized_change_5_day, normalized_change_1_month,
-             normalized_pre_market_change, rsi_14_window, rsi_14_window_prev1, rsi_14_window_prev2,
-             normalized_today_change, normalized_prev_window_change]
+        true_range_1_month = row['true_range_1_month']
+        x = [side, entry_time, normalized_yesterday_change, normalized_change_5_day, normalized_change_1_month,
+             normalized_pre_market_change, rsi_14_window, rsi_14_window_prev1,
+             normalized_today_change, normalized_prev_window_change, true_range_1_month]
         p = row['profit']
         y = 1 if p > 0 else 0
         w = np.abs(p)
