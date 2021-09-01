@@ -69,7 +69,6 @@ class Backtesting:
         self._plot_summary()
         self._feature_extractor.save(os.path.join(self._output_dir, 'data.csv'))
 
-
     def _init_processors(self):
         processors = []
         for factory in self._processor_factories:
@@ -123,9 +122,7 @@ class Backtesting:
                     if intraday_ind is None:
                         intraday_ind = timestamp_to_prev_index(intraday_data.index, current_interval_start)
                     intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
-                    if current_time in intraday_data.index:
-                        current_price = intraday_data.loc[current_time]['Open']
-                    elif intraday_ind >= 0:
+                    if intraday_ind >= 0:
                         current_price = intraday_data.iloc[intraday_ind]['Close']
                     else:
                         continue
@@ -202,12 +199,13 @@ class Backtesting:
             if abs(new_qty) > _EPS:
                 self._positions.append(Position(symbol, new_qty, current_position.entry_price, current_time))
             self._cash += action.price * qty
-            profit = (action.price - current_position.entry_price) * qty
-            if profit > 0:
+            profit_pct = (action.price - current_position.entry_price) / current_position.entry_price * 100
+            if action.type == ActionType.BUY_TO_CLOSE:
+                profit_pct *= -1
+            if profit_pct > 0:
                 self._num_win += 1
             else:
                 self._num_lose += 1
-            profit_pct = profit / (current_position.entry_price * abs(qty)) * 100
             executed_actions.append([symbol, current_position.entry_time, current_time,
                                      'long' if action.type == ActionType.SELL_TO_CLOSE else 'short',
                                      qty, current_position.entry_price,
@@ -226,7 +224,7 @@ class Backtesting:
                 continue
             cash_to_trade = min(tradable_cash / len(actions), tradable_cash * action.percent)
             if abs(cash_to_trade) < _EPS:
-                continue
+                cash_to_trade = 0
             qty = cash_to_trade / action.price
             if action.type == ActionType.SELL_TO_OPEN:
                 qty = -qty
@@ -370,6 +368,3 @@ class Backtesting:
             intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
             self._feature_extractor.extract(day, symbol, entry_time, exit_time, side, entry_price, exit_price,
                                             intraday_lookback, interday_lookback)
-
-
-

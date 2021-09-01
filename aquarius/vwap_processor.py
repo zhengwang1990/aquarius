@@ -79,6 +79,8 @@ class VwapProcessor(Processor):
         if np.abs(context.current_price - context.vwap[-1]) > 0.01 * context.current_price:
             return
 
+        if len(context.interday_lookback['Close']) < 2:
+            return
         if direction == 'long':
             if context.prev_day_close < context.interday_lookback['Close'][-2]:
                 return
@@ -101,7 +103,7 @@ class VwapProcessor(Processor):
         entry_price = position['entry_price']
         if position['direction'] == 'long':
             action = Action(symbol, ActionType.SELL_TO_CLOSE, 1, current_price)
-            if current_price < context.vwap[-1]:
+            if current_price < context.vwap[-1] and current_price < entry_price * 0.995:
                 self._hold_positions.pop(symbol)
                 return action
             if current_price > entry_price * 1.01 and prev_close < prev_open:
@@ -109,7 +111,7 @@ class VwapProcessor(Processor):
                 return action
         else:
             action = Action(symbol, ActionType.BUY_TO_CLOSE, 1, current_price)
-            if current_price > context.vwap[-1]:
+            if current_price > context.vwap[-1] and current_price > entry_price * 1.005:
                 self._hold_positions.pop(symbol)
                 return action
             if current_price < entry_price * 0.99 and prev_close > prev_open:

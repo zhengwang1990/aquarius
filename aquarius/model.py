@@ -23,6 +23,8 @@ def _get_data(df: pd.DataFrame,
         normalized_yesterday_change = row['yesterday_change'] / std_1_month
         normalized_change_5_day = row['change_5_day'] / std_1_month
         normalized_change_1_month = row['change_1_month'] / std_1_month
+        normalized_change_1_month_low = row['change_1_month_low'] / std_1_month
+        normalized_change_1_month_high = row['change_1_month_high'] / std_1_month
         rsi_14_window = row['rsi_14_window']
         rsi_14_window_prev1 = row['rsi_14_window_prev1']
         #rsi_14_window_prev2 = row['rsi_14_window_prev2']

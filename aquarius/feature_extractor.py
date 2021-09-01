@@ -13,8 +13,15 @@ FEATURES = [
     'yesterday_change',
     'change_5_day',
     'change_1_month',
+    'change_1_month_low',
+    'change_1_month_high',
+    'current_change_today',
+    'current_change_2_day',
+    'current_change_today_low',
+    'current_change_today_high',
     'std_1_month',
     'true_range_1_month',
+    'dollar_volume',
     'rsi_14_window',
     'rsi_14_window_prev1',
     'rsi_14_window_prev2',
@@ -40,17 +47,27 @@ class FeatureExtractor:
         yesterday_change = prev_close / interday_closes[-2] - 1
         change_5_day = prev_close / interday_closes[-6] - 1
         change_1_month = prev_close / interday_closes[-DAYS_IN_A_MONTH] - 1
+        change_1_month_low = prev_close / np.min(interday_closes[-DAYS_IN_A_MONTH:]) - 1
+        change_1_month_high = prev_close / np.max(interday_closes[-DAYS_IN_A_MONTH:]) - 1
+
+        current_change_today = entry_price / prev_close - 1
+        current_change_2_day = entry_price / interday_closes[-2] - 1
+        current_change_today_low = entry_price / np.min(interday_closes) - 1
+        current_change_today_high = entry_price / np.max(interday_closes) - 1
 
         changes = interday_closes[-DAYS_IN_A_MONTH:]
         std_1_month = np.std(changes) if len(changes) else 0
 
         atrp = []
+        dvol = []
         for i in range(-DAYS_IN_A_MONTH, 0):
             h = interday_lookback['High'][i]
             l = interday_lookback['Low'][i]
             c = interday_lookback['Close'][i - 1]
             atrp.append(max(h - l, h - c, c - l) / c)
+            dvol.append(interday_lookback['VWAP'][i] * interday_lookback['Volume'][i])
         true_range_1_month = np.average(atrp) if len(atrp) else 0
+        dollar_volume = np.average(dvol) if len(dvol) else 0
 
         intraday_closes = intraday_lookback['Close']
         p = None
@@ -75,7 +92,10 @@ class FeatureExtractor:
         prev_window_change = intraday_closes[-1] / intraday_closes[-2] - 1
 
         data = [day, symbol, entry_time, exit_time, side, profit, yesterday_change,
-                change_5_day,  change_1_month, std_1_month, true_range_1_month,
+                change_5_day, change_1_month, change_1_month_low, change_1_month_high,
+                current_change_today, current_change_2_day,
+                current_change_today_low, current_change_today_high,
+                std_1_month, true_range_1_month, dollar_volume,
                 rsi_14_window, rsi_14_window_prev1, rsi_14_window_prev2,
                 pre_market_change, today_change, prev_window_change]
         self._data.append(data)
