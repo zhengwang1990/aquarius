@@ -110,35 +110,58 @@ class Backtesting:
         current_interval_start = market_open
 
         executed_actions = []
+        intraday_ind_dict = {}
+        interday_ind_dict = {}
         while current_interval_start < market_close:
             current_time = current_interval_start + datetime.timedelta(minutes=5)
             actions = []
+            symbols = set()
             for processor in processors:
                 processor_name = type(processor).__name__
                 stock_universe = stock_universes[processor_name]
                 for symbol in stock_universe:
-                    intraday_data = intraday_datas[symbol]
+                    symbols.add(symbol)
+
+            contexts = {}
+            for symbol in symbols:
+                intraday_data = intraday_datas[symbol]
+                intraday_ind = intraday_ind_dict.get(symbol)
+                if intraday_ind is None or intraday_data.index[intraday_ind] != current_interval_start:
                     intraday_ind = timestamp_to_index(intraday_data.index, current_interval_start)
-                    if intraday_ind is None:
-                        intraday_ind = timestamp_to_prev_index(intraday_data.index, current_interval_start)
-                    intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
-                    if intraday_ind >= 0:
-                        current_price = intraday_data.iloc[intraday_ind]['Close']
-                    else:
-                        continue
-                    interday_data = self._interday_datas[symbol]
+                if intraday_ind is None:
+                    intraday_ind = timestamp_to_prev_index(intraday_data.index, current_interval_start)
+                intraday_ind_dict[symbol] = intraday_ind + 1
+                intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
+                if intraday_ind >= 0:
+                    current_price = intraday_data.iloc[intraday_ind]['Close']
+                else:
+                    continue
+                interday_data = self._interday_datas[symbol]
+                interday_ind = interday_ind_dict.get(symbol)
+                if interday_ind is None:
                     interday_ind = timestamp_to_index(interday_data.index, day.date())
-                    if interday_ind is None or interday_ind < DAYS_IN_A_MONTH:
+                    interday_ind_dict[symbol] = interday_ind
+                if interday_ind is None or interday_ind < DAYS_IN_A_MONTH:
+                    continue
+                interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH - 1:interday_ind]
+                context = Context(symbol=symbol,
+                                  current_time=current_time,
+                                  current_price=current_price,
+                                  interday_lookback=interday_lookback,
+                                  intraday_lookback=intraday_lookback)
+                contexts[symbol] = context
+
+            for processor in processors:
+                processor_name = type(processor).__name__
+                stock_universe = stock_universes[processor_name]
+                for symbol in stock_universe:
+                    context = contexts.get(symbol)
+                    if context is None:
                         continue
-                    interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH - 1:interday_ind]
-                    context = Context(symbol=symbol,
-                                      current_time=current_time,
-                                      current_price=current_price,
-                                      interday_lookback=interday_lookback,
-                                      intraday_lookback=intraday_lookback)
                     action = processor.handle_data(context)
                     if action is not None:
                         actions.append(action)
+
             current_executed_actions = self._process_actions(current_time.time(), actions)
             executed_actions.extend(current_executed_actions)
 

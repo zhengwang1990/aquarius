@@ -42,21 +42,14 @@ class VwapProcessor(Processor):
                 break
         if p is None:
             return
-        intraday_lookback = intraday_lookback.iloc[p:]
-        if len(intraday_lookback) < _WATCHING_WINDOW:
+        intraday_closes = intraday_lookback['Close'][p:]
+        if len(intraday_closes) < _WATCHING_WINDOW:
             return
 
-        closes = intraday_lookback['Close']
-        highs = intraday_lookback['High']
-        lows = intraday_lookback['Low']
-
-        intraday_low = np.min(lows)
-        intraday_high = np.max(highs)
-        intraday_range = intraday_high - intraday_low
-
+        vwap = context.vwap
         vwap_distances = []
         for i in range(1, _WATCHING_WINDOW + 1):
-            vwap_distances.append(closes[-i] - context.vwap[-i])
+            vwap_distances.append(intraday_closes[-i] - vwap[-i])
 
         distance_sign = np.sign(vwap_distances[0])
         if np.sign(vwap_distances[1]) != distance_sign:
@@ -72,20 +65,17 @@ class VwapProcessor(Processor):
             direction = 'short'
             action_type = ActionType.SELL_TO_OPEN
 
-        nearest_distance = np.min(np.abs(vwap_distances))
-        if nearest_distance > intraday_range * 0.1:
+        if np.abs(context.current_price - vwap[-1]) > 0.01 * context.current_price:
             return
 
-        if np.abs(context.current_price - context.vwap[-1]) > 0.01 * context.current_price:
-            return
-
-        if len(context.interday_lookback['Close']) < 2:
+        interday_closes = context.interday_lookback['Close']
+        if len(interday_closes) < 2:
             return
         if direction == 'long':
-            if context.prev_day_close < context.interday_lookback['Close'][-2]:
+            if context.prev_day_close < interday_closes[-2]:
                 return
         if direction == 'short':
-            if context.prev_day_close > context.interday_lookback['Close'][-2]:
+            if context.prev_day_close > interday_closes[-2]:
                 return
 
         self._hold_positions[context.symbol] = {'direction': direction,

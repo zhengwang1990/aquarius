@@ -28,6 +28,15 @@ FEATURES = [
     'pre_market_change',
     'today_change',
     'prev_window_change',
+    'current_volume_change',
+    'current_candle_top_portion',
+    'current_candle_middle_portion',
+    'current_candle_bottom_portion',
+    'prev_volume_change',
+    'prev_candle_top_portion',
+    'prev_candle_middle_portion',
+    'prev_candle_bottom_portion',
+    'current_change_since_open',
 ]
 
 
@@ -70,6 +79,10 @@ class FeatureExtractor:
         dollar_volume = np.average(dvol) if len(dvol) else 0
 
         intraday_closes = intraday_lookback['Close']
+        intraday_opens = intraday_lookback['Open']
+        intraday_volumes = intraday_lookback['Volume']
+        intraday_highs = intraday_lookback['Volume']
+        intraday_lows = intraday_lookback['Low']
         p = None
         for i in range(len(intraday_lookback)):
             if intraday_lookback.index[i].time() >= MARKET_OPEN:
@@ -91,13 +104,38 @@ class FeatureExtractor:
 
         prev_window_change = intraday_closes[-1] / intraday_closes[-2] - 1
 
+        current_volume_change = 0
+        if len(intraday_volumes) - 1 > p:
+            current_volume_change = intraday_volumes[-1] / np.average(intraday_volumes[p:len(intraday_volumes) - 1])
+        current_candle_size = intraday_highs[-1] - intraday_lows[-1]
+        current_candle_top_portion = (intraday_highs[-1] -
+                                      max(intraday_opens[-1], intraday_closes[-1])) / current_candle_size
+        current_candle_middle_portion = abs(intraday_opens[-1] - intraday_closes[-1]) / current_candle_size
+        current_candle_bottom_portion = (min(intraday_opens[-1], intraday_closes[-1]) -
+                                         intraday_lows[-1]) / current_candle_size
+
+        prev_volume_change = 0
+        if len(intraday_volumes) - 2 > p:
+            prev_volume_change = intraday_volumes[-2] / np.average(intraday_volumes[p:len(intraday_volumes) - 2])
+        prev_candle_size = intraday_highs[-2] - intraday_lows[-2]
+        prev_candle_top_portion = (intraday_highs[-2] -
+                                   max(intraday_opens[-2], intraday_closes[-2])) / prev_candle_size
+        prev_candle_middle_portion = abs(intraday_opens[-2] - intraday_closes[-2]) / prev_candle_size
+        prev_candle_bottom_portion = (min(intraday_opens[-2], intraday_closes[-2]) -
+                                      intraday_lows[-2]) / prev_candle_size
+
+        current_change_since_open = entry_price / intraday_opens[p] - 1
+
         data = [day, symbol, entry_time, exit_time, side, profit, yesterday_change,
                 change_5_day, change_1_month, change_1_month_low, change_1_month_high,
                 current_change_today, current_change_2_day,
                 current_change_today_low, current_change_today_high,
                 std_1_month, true_range_1_month, dollar_volume,
                 rsi_14_window, rsi_14_window_prev1, rsi_14_window_prev2,
-                pre_market_change, today_change, prev_window_change]
+                pre_market_change, today_change, prev_window_change,
+                current_volume_change, current_candle_top_portion, current_candle_middle_portion,
+                current_candle_bottom_portion, prev_volume_change, prev_candle_top_portion,
+                prev_candle_middle_portion, prev_candle_bottom_portion, current_change_since_open]
         self._data.append(data)
 
     def save(self, data_path: str):

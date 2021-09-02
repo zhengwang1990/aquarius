@@ -36,24 +36,19 @@ class StockUniverse:
         self._atrp_low = low
         self._atrp_high = high
 
-    @functools.lru_cache()
-    def _get_dollar_volume(self, symbol: str, prev_day: DATETIME_TYPE) -> float:
+    def _get_dollar_volume(self, symbol: str, prev_day_ind: int) -> float:
         hist = self._historical_data[symbol]
-        pv = []
-        p = timestamp_to_index(hist.index, prev_day)
-        for i in range(max(p - DAYS_IN_A_MONTH + 1, 0), p + 1):
-            pv.append(hist.iloc[i]['VWAP'] * hist.iloc[i]['Volume'])
+        pv = [hist['VWAP'][i] * hist['Volume'][i]
+              for i in range(max(prev_day_ind - DAYS_IN_A_MONTH + 1, 0), prev_day_ind + 1)]
         return np.average(pv) if pv else 0
 
-    @functools.lru_cache()
-    def _get_average_true_range_percent(self, symbol: str, prev_day: DATETIME_TYPE) -> float:
+    def _get_average_true_range_percent(self, symbol: str, prev_day_ind: int) -> float:
         hist = self._historical_data[symbol]
         atrp = []
-        p = timestamp_to_index(hist.index, prev_day)
-        for i in range(max(p - DAYS_IN_A_MONTH + 1, 1), p + 1):
-            h = hist.iloc[i]['High']
-            l = hist.iloc[i]['Low']
-            c = hist.iloc[i - 1]['Close']
+        for i in range(max(prev_day_ind - DAYS_IN_A_MONTH + 1, 1), prev_day_ind + 1):
+            h = hist['High'][i]
+            l = hist['Low'][i]
+            c = hist['Close'][i - 1]
             atrp.append(max(h - l, h - c, c - l) / c)
         return np.average(atrp) if atrp else 0
 
@@ -72,17 +67,23 @@ class StockUniverse:
         for symbol, hist in self._historical_data.items():
             if prev_day not in hist.index:
                 continue
-            if self._price_low is not None and hist.loc[prev_day]['Close'] < self._price_low:
+            prev_day_ind = timestamp_to_index(hist.index, prev_day)
+            prev_close = hist['Close'][prev_day_ind]
+            if self._price_low is not None and prev_close < self._price_low:
                 continue
-            if self._price_high is not None and hist.loc[prev_day]['Close'] > self._price_high:
+            if self._price_high is not None and prev_close > self._price_high:
                 continue
-            if self._dvolume_low is not None and self._get_dollar_volume(symbol, prev_day) < self._dvolume_low:
-                continue
-            if self._dvolume_high is not None and self._get_dollar_volume(symbol, prev_day) > self._dvolume_high:
-                continue
-            if self._atrp_low is not None and self._get_average_true_range_percent(symbol, prev_day) < self._atrp_low:
-                continue
-            if self._atrp_high is not None and self._get_average_true_range_percent(symbol, prev_day) > self._atrp_high:
-                continue
+            if self._dvolume_low is not None or self._dvolume_high is not None:
+                dvolume = self._get_dollar_volume(symbol, prev_day_ind)
+                if self._dvolume_low is not None and dvolume < self._dvolume_low:
+                    continue
+                if self._dvolume_high is not None and dvolume > self._dvolume_high:
+                    continue
+            if self._atrp_low is not None or self._atrp_high is not None:
+                atrp = self._get_average_true_range_percent(symbol, prev_day_ind)
+                if self._atrp_low is not None and atrp < self._atrp_low:
+                    continue
+                if self._atrp_high is not None and atrp > self._atrp_high:
+                    continue
             res.append(symbol)
         return res
