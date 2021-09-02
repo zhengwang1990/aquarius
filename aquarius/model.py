@@ -25,6 +25,11 @@ def _get_data(df: pd.DataFrame,
         normalized_change_1_month = row['change_1_month'] / std_1_month
         normalized_change_1_month_low = row['change_1_month_low'] / std_1_month
         normalized_change_1_month_high = row['change_1_month_high'] / std_1_month
+        normalized_current_change_today = row['current_change_today'] / std_1_month
+        normalized_current_change_2_day = row['current_change_2_day'] / std_1_month
+        normalized_current_change_today_low = row['current_change_today_low'] / std_1_month
+        normalized_current_change_today_high = row['current_change_today_high'] / std_1_month
+
         rsi_14_window = row['rsi_14_window']
         rsi_14_window_prev1 = row['rsi_14_window_prev1']
         #rsi_14_window_prev2 = row['rsi_14_window_prev2']
@@ -33,8 +38,10 @@ def _get_data(df: pd.DataFrame,
         normalized_prev_window_change = row['prev_window_change'] / std_1_month
         true_range_1_month = row['true_range_1_month']
         x = [side, entry_time, normalized_yesterday_change, normalized_change_5_day, normalized_change_1_month,
+             normalized_change_1_month_low, normalized_change_1_month_high,
+             normalized_current_change_today_low, normalized_current_change_today_high,
              normalized_pre_market_change, rsi_14_window, rsi_14_window_prev1,
-             normalized_today_change, normalized_prev_window_change, true_range_1_month]
+             normalized_prev_window_change, true_range_1_month]
         p = row['profit']
         y = 1 if p > 0 else 0
         w = np.abs(p)
