@@ -126,16 +126,16 @@ class Backtesting:
             for symbol in symbols:
                 intraday_data = intraday_datas[symbol]
                 intraday_ind = intraday_ind_dict.get(symbol)
-                if intraday_ind is None or intraday_data.index[intraday_ind] != current_interval_start:
+                if (intraday_ind is None or intraday_ind >= len(intraday_data.index) or
+                        intraday_data.index[intraday_ind] != current_interval_start):
                     intraday_ind = timestamp_to_index(intraday_data.index, current_interval_start)
                 if intraday_ind is None:
                     intraday_ind = timestamp_to_prev_index(intraday_data.index, current_interval_start)
+                if intraday_ind is None:
+                    continue
                 intraday_ind_dict[symbol] = intraday_ind + 1
                 intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
-                if intraday_ind >= 0:
-                    current_price = intraday_data.iloc[intraday_ind]['Close']
-                else:
-                    continue
+                current_price = intraday_data['Close'][intraday_ind]
                 interday_data = self._interday_datas[symbol]
                 interday_ind = interday_ind_dict.get(symbol)
                 if interday_ind is None:

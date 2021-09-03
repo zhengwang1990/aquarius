@@ -26,7 +26,6 @@ FEATURES = [
     'rsi_14_window_prev1',
     'rsi_14_window_prev2',
     'pre_market_change',
-    'today_change',
     'prev_window_change',
     'current_volume_change',
     'current_candle_top_portion',
@@ -100,8 +99,6 @@ class FeatureExtractor:
         if p > 0:
             pre_market_change = intraday_closes[p - 1] / prev_close - 1
 
-        today_change = intraday_closes[-1] / prev_close - 1
-
         prev_window_change = intraday_closes[-1] / intraday_closes[-2] - 1
 
         current_volume_change = 0
@@ -132,7 +129,7 @@ class FeatureExtractor:
                 current_change_today_low, current_change_today_high,
                 std_1_month, true_range_1_month, dollar_volume,
                 rsi_14_window, rsi_14_window_prev1, rsi_14_window_prev2,
-                pre_market_change, today_change, prev_window_change,
+                pre_market_change, prev_window_change,
                 current_volume_change, current_candle_top_portion, current_candle_middle_portion,
                 current_candle_bottom_portion, prev_volume_change, prev_candle_top_portion,
                 prev_candle_middle_portion, prev_candle_bottom_portion, current_change_since_open]

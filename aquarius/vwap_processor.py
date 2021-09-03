@@ -65,7 +65,11 @@ class VwapProcessor(Processor):
             direction = 'short'
             action_type = ActionType.SELL_TO_OPEN
 
-        if np.abs(context.current_price - vwap[-1]) > 0.01 * context.current_price:
+        intraday_low = np.min(intraday_lookback['Low'])
+        intraday_high = np.max(intraday_lookback['High'])
+        intraday_range = intraday_high - intraday_low
+
+        if np.abs(context.current_price - vwap[-1]) > min(0.01 * context.current_price, 0.1 * intraday_range):
             return
 
         interday_closes = context.interday_lookback['Close']

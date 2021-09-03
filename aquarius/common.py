@@ -57,7 +57,7 @@ class DataError(Exception):
     """Error in data loading."""
 
 
-def timestamp_to_index(index: pd.Index, timestamp: Union[DATETIME_TYPE, datetime.date]) -> int:
+def timestamp_to_index(index: pd.Index, timestamp: Union[DATETIME_TYPE, datetime.date]) -> Optional[int]:
     p = None
     for i in range(len(index)):
         if index[i] == timestamp:
@@ -66,7 +66,9 @@ def timestamp_to_index(index: pd.Index, timestamp: Union[DATETIME_TYPE, datetime
     return p
 
 
-def timestamp_to_prev_index(index: pd.Index, timestamp: Union[DATETIME_TYPE, datetime.date]) -> int:
+def timestamp_to_prev_index(index: pd.Index, timestamp: Union[DATETIME_TYPE, datetime.date]) -> Optional[int]:
+    if len(index) == 0:
+        return None
     p = len(index) - 1
     for i in range(len(index)):
         if index[i] > timestamp:
