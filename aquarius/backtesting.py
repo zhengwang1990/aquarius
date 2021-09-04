@@ -389,5 +389,7 @@ class Backtesting:
             if intraday_ind is None:
                 intraday_ind = timestamp_to_prev_index(intraday_data.index, entry_interval_start)
             intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
-            self._feature_extractor.extract(day, symbol, entry_time, exit_time, side, entry_price, exit_price,
-                                            intraday_lookback, interday_lookback)
+            self._feature_extractor.extract(day, symbol, entry_time, side, entry_price,
+                                            intraday_lookback, interday_lookback,
+                                            exit_time=exit_time,
+                                            exit_price=exit_price)

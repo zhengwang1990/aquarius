@@ -44,12 +44,21 @@ class FeatureExtractor:
     def __init__(self):
         self._data = []
 
-    def extract(self, day: DATETIME_TYPE, symbol: str, entry_time: datetime.time, exit_time: datetime.time,
-                side: str, entry_price: float, exit_price: float,
-                intraday_lookback: pd.DataFrame, interday_lookback: pd.DataFrame) -> None:
-        profit = exit_price / entry_price - 1
-        if side == 'short':
-            profit *= -1
+    def extract(self,
+                day: DATETIME_TYPE,
+                symbol: str,
+                entry_time: datetime.time,
+                side: str,
+                entry_price: float,
+                intraday_lookback: pd.DataFrame,
+                interday_lookback: pd.DataFrame,
+                exit_time: Optional[datetime.time] = None,
+                exit_price: Optional[float] = None) -> pd.DataFrame:
+        profit = None
+        if exit_price is not None:
+            profit = exit_price / entry_price - 1
+            if side == 'short':
+                profit *= -1
         interday_closes = interday_lookback['Close']
         prev_close = interday_closes[-1]
         yesterday_change = prev_close / interday_closes[-2] - 1
@@ -123,7 +132,10 @@ class FeatureExtractor:
 
         current_change_since_open = entry_price / intraday_opens[p] - 1
 
-        data = [day, symbol, entry_time, exit_time, side, profit, yesterday_change,
+        data = [day, symbol,
+                entry_time.strftime('%H:%M:%S'),
+                exit_time.strftime('%H:%M:%S') if exit_time is not None else None,
+                side, profit, yesterday_change,
                 change_5_day, change_1_month, change_1_month_low, change_1_month_high,
                 current_change_today, current_change_2_day,
                 current_change_today_low, current_change_today_high,
@@ -134,7 +146,8 @@ class FeatureExtractor:
                 current_candle_bottom_portion, prev_volume_change, prev_candle_top_portion,
                 prev_candle_middle_portion, prev_candle_bottom_portion, current_change_since_open]
         self._data.append(data)
+        return pd.DataFrame([data], columns=FEATURES)
 
-    def save(self, data_path: str):
+    def save(self, data_path: str) -> None:
         df = pd.DataFrame(self._data, columns=FEATURES)
         df.to_csv(data_path, index=False)

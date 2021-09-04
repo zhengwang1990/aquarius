@@ -6,17 +6,12 @@ from tabulate import tabulate
 from typing import Optional
 import numpy as np
 import pandas as pd
+import pickle
 
 
-def _get_data(df: pd.DataFrame,
-              start_date: Optional[DATETIME_TYPE] = None,
-              end_date: Optional[DATETIME_TYPE] = None):
-    META, X, Y, W, P = [], [], [], [], []
+def _get_X(df: pd.DataFrame):
+    X = []
     for _, row in df.iterrows():
-        if start_date is not None and pd.to_datetime(row['date']) < start_date:
-            continue
-        if end_date is not None and pd.to_datetime(row['date']) > end_date:
-            continue
         side = 1 if row['side'] == 'long' else 0
         entry_time = datetime.strptime(row['entry_time'], '%H:%M:%S').hour
         std_1_month = row['std_1_month']
@@ -25,35 +20,52 @@ def _get_data(df: pd.DataFrame,
         normalized_change_1_month = row['change_1_month'] / std_1_month
         normalized_change_1_month_low = row['change_1_month_low'] / std_1_month
         normalized_change_1_month_high = row['change_1_month_high'] / std_1_month
-        #normalized_current_change_today = row['current_change_today'] / std_1_month
-        #normalized_current_change_2_day = row['current_change_2_day'] / std_1_month
+        # normalized_current_change_today = row['current_change_today'] / std_1_month
+        # normalized_current_change_2_day = row['current_change_2_day'] / std_1_month
         normalized_current_change_today_low = row['current_change_today_low'] / std_1_month
         normalized_current_change_today_high = row['current_change_today_high'] / std_1_month
 
         dollar_volume = row['dollar_volume']
         rsi_14_window = row['rsi_14_window']
         rsi_14_window_prev1 = row['rsi_14_window_prev1']
-        #rsi_14_window_prev2 = row['rsi_14_window_prev2']
+        # rsi_14_window_prev2 = row['rsi_14_window_prev2']
         normalized_pre_market_change = row['pre_market_change'] / std_1_month
         normalized_prev_window_change = row['prev_window_change'] / std_1_month
         true_range_1_month = row['true_range_1_month']
         current_volume_change = row['current_volume_change']
-        #prev_volume_change = row['prev_volume_change']
+        # prev_volume_change = row['prev_volume_change']
 
         x = [side, entry_time, normalized_yesterday_change, normalized_change_5_day, normalized_change_1_month,
              normalized_change_1_month_low, normalized_change_1_month_high,
              normalized_current_change_today_low, normalized_current_change_today_high,
              normalized_pre_market_change, dollar_volume, rsi_14_window, rsi_14_window_prev1,
              normalized_prev_window_change, true_range_1_month, current_volume_change]
+        X.append(x)
+    return np.array(X)
+
+
+def _get_data(df: pd.DataFrame,
+              start_date: Optional[DATETIME_TYPE] = None,
+              end_date: Optional[DATETIME_TYPE] = None):
+    start_index, end_index = 0, len(df)
+    for index, row in df.iterrows():
+        if start_date is not None and pd.to_datetime(row['date']) < start_date:
+            start_index = index + 1
+        if end_date is not None and pd.to_datetime(row['date']) > end_date:
+            end_index = index
+            break
+    sub_df = df.iloc[start_index:end_index]
+
+    META, Y, W, P = [], [], [], []
+    for _, row in sub_df.iterrows():
         p = row['profit']
         y = 1 if p > 0 else 0
         w = np.abs(p)
-        X.append(x)
         Y.append(y)
         W.append(w)
         P.append(p)
         META.append((row['date'], row['symbol']))
-    return np.array(X), np.array(Y), np.array(W), np.array(P), META
+    return _get_X(sub_df), np.array(Y), np.array(W), np.array(P), META
 
 
 def _create_model():
@@ -85,8 +97,8 @@ class Model:
         X, Y, W, _, _ = _get_data(df, start_date, end_date)
         self._model = _create_model()
         self._model.fit(X, Y, W)
-        #Y_pred = self._model.predict(X)
-        #_print_metrics(Y, Y_pred)
+        # Y_pred = self._model.predict(X)
+        # _print_metrics(Y, Y_pred)
 
     def evaluate(self, data_path: str,
                  start_date: Optional[DATETIME_TYPE] = None,
@@ -101,3 +113,16 @@ class Model:
                 asset *= 1 + p
         print(f'Gain/Loss: {(asset - 1) * 100:.2f}%')
         return asset - 1
+
+    def save(self, model_path):
+        with open(model_path, 'wb') as f:
+            pickle.dump(self._model, f)
+
+    def load(self, model_path):
+        with open(model_path, 'rb') as f:
+            self._model = pickle.load(f)
+
+    def predict(self, df: pd.DataFrame):
+        X = _get_X(df)
+        Y_pred = self._model.predict(X)
+        return Y_pred

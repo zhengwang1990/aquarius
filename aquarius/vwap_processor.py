@@ -1,4 +1,6 @@
 from .common import *
+from .feature_extractor import FeatureExtractor
+from .model import Model
 from .stock_universe import StockUniverse
 from typing import List, Optional
 import datetime
@@ -21,6 +23,8 @@ class VwapProcessor(Processor):
         self._stock_unviverse.set_average_true_range_percent_filter(low=0.01)
         self._stock_unviverse.set_price_filer(low=1)
         self._hold_positions = {}
+        self._feature_extractor = FeatureExtractor()
+        self._models = {}
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return self._stock_unviverse.get_stock_universe(view_time)
@@ -82,6 +86,17 @@ class VwapProcessor(Processor):
             if context.prev_day_close > interday_closes[-2]:
                 return
 
+        feature = self._feature_extractor.extract(context.current_time,
+                                                  context.symbol,
+                                                  context.current_time.time(),
+                                                  direction,
+                                                  context.current_price,
+                                                  context.intraday_lookback,
+                                                  context.interday_lookback)
+        model = self._get_model(context.current_time)
+        y = model.predict(feature)
+        if y[0] == 0:
+            return
         self._hold_positions[context.symbol] = {'direction': direction,
                                                 'entry_time': context.current_time,
                                                 'entry_price': context.current_price}
@@ -115,6 +130,14 @@ class VwapProcessor(Processor):
                 context.current_time.time() >= datetime.time(15, 55)):
             self._hold_positions.pop(symbol)
             return action
+
+    def _get_model(self, current_time: DATETIME_TYPE) -> Model:
+        model_path = os.path.join(MODEL_ROOT, current_time.strftime('%Y-%m.pickle'))
+        if model_path not in self._models:
+            model = Model()
+            model.load(model_path)
+            self._models[model_path] = model
+        return self._models[model_path]
 
 
 class VwapProcessorFactory(ProcessorFactory):
