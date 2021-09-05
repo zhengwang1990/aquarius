@@ -14,7 +14,8 @@ class VwapProcessor(Processor):
     def __init__(self,
                  lookback_start_date: DATETIME_TYPE,
                  lookback_end_date: DATETIME_TYPE,
-                 data_source: DataSource) -> None:
+                 data_source: DataSource,
+                 enable_model: bool = False) -> None:
         super().__init__()
         self._stock_unviverse = VwapStockUniverse(start_time=lookback_start_date,
                                                   end_time=lookback_end_date,
@@ -24,6 +25,7 @@ class VwapProcessor(Processor):
         self._stock_unviverse.set_price_filer(low=1)
         self._hold_positions = {}
         self._feature_extractor = FeatureExtractor()
+        self._enable_model = enable_model
         self._models = {}
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
@@ -93,10 +95,12 @@ class VwapProcessor(Processor):
                                                   context.current_price,
                                                   context.intraday_lookback,
                                                   context.interday_lookback)
-        model = self._get_model(context.current_time)
-        y = model.predict(feature)
-        if y[0] == 0:
-            return
+
+        if self._enable_model:
+            model = self._get_model(context.current_time)
+            y = model.predict(feature)
+            if y[0] == 0:
+                return
         self._hold_positions[context.symbol] = {'direction': direction,
                                                 'entry_time': context.current_time,
                                                 'entry_price': context.current_price}
@@ -150,7 +154,7 @@ class VwapProcessorFactory(ProcessorFactory):
                lookback_end_date: DATETIME_TYPE,
                data_source: DataSource,
                *args, **kwargs) -> VwapProcessor:
-        return VwapProcessor(lookback_start_date, lookback_end_date, data_source)
+        return VwapProcessor(lookback_start_date, lookback_end_date, data_source, enable_model=True)
 
 
 class VwapStockUniverse(StockUniverse):

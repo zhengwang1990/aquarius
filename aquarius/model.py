@@ -46,7 +46,8 @@ def _get_X(df: pd.DataFrame):
 
 def _get_data(df: pd.DataFrame,
               start_date: Optional[DATETIME_TYPE] = None,
-              end_date: Optional[DATETIME_TYPE] = None):
+              end_date: Optional[DATETIME_TYPE] = None,
+              sort: bool = False):
     start_index, end_index = 0, len(df)
     for index, row in df.iterrows():
         if start_date is not None and pd.to_datetime(row['date']) < start_date:
@@ -55,6 +56,8 @@ def _get_data(df: pd.DataFrame,
             end_index = index
             break
     sub_df = df.iloc[start_index:end_index]
+    if sort:
+        sub_df = sub_df.sort_values(['date', 'entry_time'])
 
     META, Y, W, P = [], [], [], []
     for _, row in sub_df.iterrows():
@@ -64,12 +67,12 @@ def _get_data(df: pd.DataFrame,
         Y.append(y)
         W.append(w)
         P.append(p)
-        META.append((row['date'], row['symbol']))
+        META.append((row['date'], row['symbol'], row['entry_time'], row['exit_time']))
     return _get_X(sub_df), np.array(Y), np.array(W), np.array(P), META
 
 
 def _create_model():
-    hyper_parameters = {'max_depth': 5,
+    hyper_parameters = {'max_depth': 8,
                         'min_samples_leaf': 1,
                         'n_jobs': -1,
                         'random_state': 0}
@@ -97,20 +100,34 @@ class Model:
         X, Y, W, _, _ = _get_data(df, start_date, end_date)
         self._model = _create_model()
         self._model.fit(X, Y, W)
-        # Y_pred = self._model.predict(X)
+        Y_pred = self._model.predict(X)
+        #indicator, n_nodes_ptr = self._model.decision_path(X)
         # _print_metrics(Y, Y_pred)
 
     def evaluate(self, data_path: str,
                  start_date: Optional[DATETIME_TYPE] = None,
                  end_date: Optional[DATETIME_TYPE] = None):
         df = pd.read_csv(data_path)
-        X, Y, _, P, META = _get_data(df, start_date, end_date)
+        X, Y, _, P, META = _get_data(df, start_date, end_date, sort=True)
         Y_pred = self._model.predict(X)
+        Y_prob = self._model.predict_proba(X)
         _print_metrics(Y, Y_pred)
         asset = 1
-        for y, p, meta in zip(Y_pred, P, META):
-            if y == 1:
+        current_date = None
+        current_time = None
+        for y, y_prob, p, meta in zip(Y_pred, Y_prob, P, META):
+            if y_prob[1] > 0.55:
+                if current_date != meta[0]:
+                    current_date = meta[0]
+                    current_time = datetime.strptime(meta[3], '%H:%M:%S')
+                else:
+                    entry_time = datetime.strptime(meta[2], '%H:%M:%S')
+                    if entry_time < current_time:
+                        continue
+                    else:
+                        current_time = datetime.strptime(meta[3], '%H:%M:%S')
                 asset *= 1 + p
+
         print(f'Gain/Loss: {(asset - 1) * 100:.2f}%')
         return asset - 1
 
