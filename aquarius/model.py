@@ -72,7 +72,7 @@ def _get_data(df: pd.DataFrame,
 
 
 def _create_model():
-    hyper_parameters = {'max_depth': 8,
+    hyper_parameters = {'max_depth': 5,
                         'min_samples_leaf': 1,
                         'n_jobs': -1,
                         'random_state': 0}
@@ -116,7 +116,7 @@ class Model:
         current_date = None
         current_time = None
         for y, y_prob, p, meta in zip(Y_pred, Y_prob, P, META):
-            if y_prob[1] > 0.55:
+            if y == 1:
                 if current_date != meta[0]:
                     current_date = meta[0]
                     current_time = datetime.strptime(meta[3], '%H:%M:%S')
@@ -127,7 +127,6 @@ class Model:
                     else:
                         current_time = datetime.strptime(meta[3], '%H:%M:%S')
                 asset *= 1 + p
-
         print(f'Gain/Loss: {(asset - 1) * 100:.2f}%')
         return asset - 1
 

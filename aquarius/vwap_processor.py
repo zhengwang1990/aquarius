@@ -177,9 +177,7 @@ class VwapStockUniverse(StockUniverse):
         mean = np.mean(changes)
         if std < 1E-7:
             return False
-        if np.abs((changes[-1] - mean) / std) < 1.5:
-            return False
-        if np.any(np.abs((changes[-5:-1] - mean) / std) > 1):
+        if np.abs((changes[-1] - mean) / std) < 3:
             return False
         return True
 
