@@ -60,7 +60,6 @@ class StockUniverse:
                 raise ValueError(f'{view_time} is too early')
         return pd.to_datetime(prev_day)
 
-    @functools.lru_cache()
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         res = []
         prev_day = self.get_prev_day(view_time)

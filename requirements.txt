@@ -5,7 +5,9 @@ numpy
 pandas
 pandas_market_calendars
 polygon-api-client
+python-dateutil
 retrying
+scikit-learn
 ta
 tabulate
 tensorflow

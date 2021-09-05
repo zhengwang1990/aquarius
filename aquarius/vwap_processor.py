@@ -1,10 +1,15 @@
 from .common import *
-from .model import Model
 from .stock_universe import StockUniverse
+from dateutil.relativedelta import relativedelta
+from sklearn import ensemble, metrics
 from typing import List, Optional
+from tabulate import tabulate
 import datetime
+import matplotlib.pyplot as plt
 import numpy as np
+import os
 import pandas as pd
+import pickle
 import ta.momentum as momentum
 
 _WATCHING_WINDOW = 12
@@ -175,10 +180,10 @@ class VwapProcessor(Processor):
                 context.current_time.time() >= datetime.time(15, 55)):
             return _pop_position()
 
-    def _get_model(self, current_time: DATETIME_TYPE) -> Model:
-        model_path = os.path.join(MODEL_ROOT, current_time.strftime('%Y-%m.pickle'))
+    def _get_model(self, current_time: DATETIME_TYPE):
+        model_path = os.path.join(MODEL_ROOT, current_time.strftime('vwap-%Y-%m.pickle'))
         if model_path not in self._models:
-            model = Model()
+            model = VwapModel()
             model.load(model_path)
             self._models[model_path] = model
         return self._models[model_path]
@@ -191,15 +196,16 @@ class VwapProcessor(Processor):
 
 class VwapProcessorFactory(ProcessorFactory):
 
-    def __init__(self):
+    def __init__(self, enbale_model=True):
         super().__init__()
+        self._enbale_model = enbale_model
 
     def create(self,
                lookback_start_date: DATETIME_TYPE,
                lookback_end_date: DATETIME_TYPE,
                data_source: DataSource,
                *args, **kwargs) -> VwapProcessor:
-        return VwapProcessor(lookback_start_date, lookback_end_date, data_source, enable_model=True)
+        return VwapProcessor(lookback_start_date, lookback_end_date, data_source, self._enbale_model)
 
 
 class VwapStockUniverse(StockUniverse):
@@ -352,3 +358,174 @@ class VwapFeatureExtractor:
     def save(self, data_path: Optional[str]) -> None:
         df = pd.DataFrame(self._data, columns=_FEATURES + _LABELS)
         df.to_csv(data_path, index=False)
+
+
+class VwapModel:
+
+    def __init__(self):
+        self._model = None
+
+    @staticmethod
+    def _get_feature(df: pd.DataFrame) -> np.ndarray:
+        feature = []
+        for _, row in df.iterrows():
+            side = 1 if row['side'] == 'long' else 0
+            entry_time = datetime.datetime.strptime(row['entry_time'], '%H:%M:%S').hour
+            std_1_month = row['std_1_month']
+            normalized_yesterday_change = row['yesterday_change'] / std_1_month
+            normalized_change_5_day = row['change_5_day'] / std_1_month
+            normalized_change_1_month = row['change_1_month'] / std_1_month
+            normalized_change_1_month_low = row['change_1_month_low'] / std_1_month
+            normalized_change_1_month_high = row['change_1_month_high'] / std_1_month
+            # normalized_current_change_today = row['current_change_today'] / std_1_month
+            # normalized_current_change_2_day = row['current_change_2_day'] / std_1_month
+            normalized_current_change_today_low = row['current_change_today_low'] / std_1_month
+            normalized_current_change_today_high = row['current_change_today_high'] / std_1_month
+
+            dollar_volume = row['dollar_volume']
+            rsi_14_window = row['rsi_14_window']
+            rsi_14_window_prev1 = row['rsi_14_window_prev1']
+            # rsi_14_window_prev2 = row['rsi_14_window_prev2']
+            normalized_pre_market_change = row['pre_market_change'] / std_1_month
+            normalized_prev_window_change = row['prev_window_change'] / std_1_month
+            true_range_1_month = row['true_range_1_month']
+            current_volume_change = row['current_volume_change']
+            # prev_volume_change = row['prev_volume_change']
+
+            x = [side, entry_time, normalized_yesterday_change, normalized_change_5_day, normalized_change_1_month,
+                 normalized_change_1_month_low, normalized_change_1_month_high,
+                 normalized_current_change_today_low, normalized_current_change_today_high,
+                 normalized_pre_market_change, dollar_volume, rsi_14_window, rsi_14_window_prev1,
+                 normalized_prev_window_change, true_range_1_month, current_volume_change]
+            feature.append(x)
+        return np.array(feature)
+
+    @staticmethod
+    def _get_data(df: pd.DataFrame,
+                  start_date: Optional[DATETIME_TYPE] = None,
+                  end_date: Optional[DATETIME_TYPE] = None,
+                  sort: bool = False):
+        start_index, end_index = 0, len(df)
+        for index, row in df.iterrows():
+            if start_date is not None and pd.to_datetime(row['date']) < start_date:
+                start_index = index + 1
+            if end_date is not None and pd.to_datetime(row['date']) > end_date:
+                end_index = index
+                break
+        sub_df = df.iloc[start_index:end_index]
+        if sort:
+            sub_df = sub_df.sort_values(['date', 'entry_time'])
+
+        meta, label, weight, profit = [], [], [], []
+        for _, row in sub_df.iterrows():
+            p = row['profit']
+            y = 1 if p > 0 else 0
+            w = np.abs(p)
+            label.append(y)
+            weight.append(w)
+            profit.append(p)
+            meta.append((row['date'], row['symbol'], row['entry_time'], row['exit_time']))
+        return VwapModel._get_feature(sub_df), np.array(label), np.array(weight), np.array(profit), meta
+
+    @staticmethod
+    def _create_model():
+        hyper_parameters = {'max_depth': 5,
+                            'min_samples_leaf': 1,
+                            'n_jobs': -1,
+                            'random_state': 0}
+        return ensemble.RandomForestClassifier(**hyper_parameters)
+
+    @staticmethod
+    def _print_metrics(y: np.ndarray, y_pred: np.ndarray):
+        confusion_matrix_main = metrics.confusion_matrix(y, y_pred, labels=[0, 1])
+        confusion_table_main = [['', 'Predict Lose', 'Predict Win'],
+                                ['True Lose', confusion_matrix_main[0][0], confusion_matrix_main[0][1]],
+                                ['True Win', confusion_matrix_main[1][0], confusion_matrix_main[1][1]]]
+        print(tabulate(confusion_table_main, tablefmt='grid'))
+
+    def train(self,
+              data_path: str,
+              start_date: Optional[DATETIME_TYPE] = None,
+              end_date: Optional[DATETIME_TYPE] = None):
+        df = pd.read_csv(data_path)
+        x, y, w, _, _ = self._get_data(df, start_date, end_date)
+        self._model = self._create_model()
+        self._model.fit(x, y, w)
+
+    def evaluate(self,
+                 data_path: str,
+                 start_date: Optional[DATETIME_TYPE] = None,
+                 end_date: Optional[DATETIME_TYPE] = None):
+        df = pd.read_csv(data_path)
+        x, y, _, profit, meta = self._get_data(df, start_date, end_date, sort=True)
+        y_pred = self._model.predict(x)
+        self._print_metrics(y, y_pred)
+        asset = 1
+        current_date = None
+        current_time = None
+        for y, p, meta in zip(y_pred, profit, meta):
+            if y == 1:
+                if current_date != meta[0]:
+                    current_date = meta[0]
+                    current_time = datetime.datetime.strptime(meta[3], '%H:%M:%S')
+                else:
+                    entry_time = datetime.datetime.strptime(meta[2], '%H:%M:%S')
+                    if entry_time < current_time:
+                        continue
+                    else:
+                        current_time = datetime.datetime.strptime(meta[3], '%H:%M:%S')
+                asset *= 1 + p
+        print(f'Gain/Loss: {(asset - 1) * 100:.2f}%')
+        return asset - 1
+
+    def save(self, model_path):
+        with open(model_path, 'wb') as f:
+            pickle.dump(self._model, f)
+
+    def load(self, model_path):
+        with open(model_path, 'rb') as f:
+            self._model = pickle.load(f)
+
+    def predict(self, df: pd.DataFrame) -> np.ndarray:
+        x = self._get_feature(df)
+        return self._model.predict(x)
+
+
+def evaluate_model(data_path: str, save_model: bool = True):
+    os.makedirs(MODEL_ROOT, exist_ok=True)
+    df = pd.read_csv(data_path, index_col=0, parse_dates=True)
+    start_date = df.index[0] + relativedelta(months=3)
+    start_date = pd.to_datetime(f'{start_date.year}-{start_date.month}-01')
+    end_date = df.index[-1]
+    current = start_date
+    asset = 1
+    t = [current]
+    history = [asset]
+    while current <= end_date:
+        train_start = current - relativedelta(months=3)
+        train_end = current - relativedelta(days=1)
+        eval_start = current
+        eval_end = current + relativedelta(months=1) - relativedelta(days=1)
+        print(f'===[{eval_start} ~ {eval_end}]======')
+        m = VwapModel()
+        m.train(data_path, train_start, train_end)
+        profit = m.evaluate(data_path, eval_start, eval_end)
+        if save_model:
+            m.save(os.path.join(MODEL_ROOT, eval_start.strftime('vwap-%Y-%m.pickle')))
+        asset *= 1 + profit
+        current += relativedelta(months=1)
+        history.append(asset)
+        t.append(current)
+        print(f'Total Gain/Loss: {(asset - 1) * 100:.2f}%')
+    text_kwargs = {'family': 'monospace'}
+    plt.figure(figsize=(10, 4))
+    plt.plot(t, history)
+    plt.xlabel('Date', **text_kwargs)
+    plt.ylabel('Normalized Value', **text_kwargs)
+    ax = plt.gca()
+    ax.spines['right'].set_color('none')
+    ax.spines['top'].set_color('none')
+    plt.tight_layout()
+    plt.grid(linestyle='--', alpha=0.5)
+    plt.show()
+    plt.close()
