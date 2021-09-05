@@ -148,8 +148,14 @@ class Processor:
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         raise NotImplementedError('Calling parent interface')
 
-    def handle_data(self, context: Context) -> Optional[Action]:
+    def process_data(self, context: Context) -> Optional[Action]:
         raise NotImplementedError('Calling parent interface')
+
+    def setup(self) -> None:
+        return
+
+    def teardown(self, output_dir: Optional[str] = None) -> None:
+        return
 
 
 class ProcessorFactory:

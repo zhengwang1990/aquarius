@@ -1,8 +1,7 @@
 from .common import *
 from .data import load_cached_daily_data, load_tradable_history, get_header
-from .feature_extractor import FeatureExtractor
 from concurrent import futures
-from typing import Any, Dict, List, Union
+from typing import Any, List, Union
 import datetime
 import logging
 import matplotlib.pyplot as plt
@@ -32,12 +31,12 @@ class Backtesting:
         self._start_date = start_date
         self._end_date = end_date
         self._processor_factories = processor_factories
+        self._processors = []
         self._positions = []
         self._daily_equity = [1]
         self._num_win, self._num_lose = 0, 0
         self._cash = 1
         self._interday_datas = None
-        self._feature_extractor = FeatureExtractor()
 
         backtesting_output_dir = os.path.join(OUTPUT_ROOT, 'backtesting')
         os.makedirs(backtesting_output_dir, exist_ok=True)
@@ -67,27 +66,27 @@ class Backtesting:
     def _close(self):
         self._print_summary()
         self._plot_summary()
-        self._feature_extractor.save(os.path.join(self._output_dir, 'data.csv'))
+        for processor in self._processors:
+            processor.teardown(self._output_dir)
 
-    def _init_processors(self):
-        processors = []
+    def _init_processors(self) -> None:
+        self._processors = []
         for factory in self._processor_factories:
-            processors.append(factory.create(lookback_start_date=self._start_date,
-                                             lookback_end_date=self._end_date,
-                                             data_source=_DATA_SOURCE))
-        return processors
+            self._processors.append(factory.create(lookback_start_date=self._start_date,
+                                                   lookback_end_date=self._end_date,
+                                                   data_source=_DATA_SOURCE))
 
     def run(self) -> None:
         history_start = self._start_date - datetime.timedelta(days=CALENDAR_DAYS_IN_A_MONTH)
         self._interday_datas = load_tradable_history(history_start, self._end_date, _DATA_SOURCE)
-        processors = self._init_processors()
+        self._init_processors()
         for day in self._market_dates:
-            self._process_day(day, processors)
+            self._process_day(day)
         self._close()
 
-    def _process_day(self, day: DATETIME_TYPE, processors: List[Processor]) -> None:
+    def _process_day(self, day: DATETIME_TYPE) -> None:
         stock_universes = {}
-        for processor in processors:
+        for processor in self._processors:
             processor_name = type(processor).__name__
             stock_universes[processor_name] = processor.get_stock_universe(day)
 
@@ -116,7 +115,7 @@ class Backtesting:
             current_time = current_interval_start + datetime.timedelta(minutes=5)
             actions = []
             symbols = set()
-            for processor in processors:
+            for processor in self._processors:
                 processor_name = type(processor).__name__
                 stock_universe = stock_universes[processor_name]
                 for symbol in stock_universe:
@@ -151,14 +150,14 @@ class Backtesting:
                                   intraday_lookback=intraday_lookback)
                 contexts[symbol] = context
 
-            for processor in processors:
+            for processor in self._processors:
                 processor_name = type(processor).__name__
                 stock_universe = stock_universes[processor_name]
                 for symbol in stock_universe:
                     context = contexts.get(symbol)
                     if context is None:
                         continue
-                    action = processor.handle_data(context)
+                    action = processor.process_data(context)
                     if action is not None:
                         actions.append(action)
 
@@ -166,9 +165,6 @@ class Backtesting:
             executed_actions.extend(current_executed_actions)
 
             current_interval_start += datetime.timedelta(minutes=5)
-
-        self._log_day(day, executed_actions)
-        self._extract_features(day, executed_actions, intraday_datas)
 
     def _process_actions(self, current_time: datetime.time, actions: List[Action]) -> List[List[Any]]:
         action_sets = set([(action.symbol, action.type) for action in actions])
@@ -262,8 +258,8 @@ class Backtesting:
 
         if executed_actions:
             trade_info = tabulate.tabulate(executed_actions,
-                                           headers=['Symbol', 'Entry Time', 'Exit Time', 'Side', 'Qty', 'Entry Price',
-                                                    'Exit Price', 'Gain/Loss'],
+                                           headers=['Symbol', 'Entry Time', 'Exit Time', 'Side', 'Qty',
+                                                    'Entry Price', 'Exit Price', 'Gain/Loss'],
                                            tablefmt='grid')
             outputs.append('[ Trades ]')
             outputs.append(trade_info)
@@ -365,31 +361,3 @@ class Backtesting:
             dates, values = [], [1]
             current_start = i
             current_year += 1
-
-    def _extract_features(self,
-                          day: DATETIME_TYPE,
-                          executed_actions: List[List[Any]],
-                          intraday_datas: Dict[str, pd.DataFrame]) -> None:
-        for action in executed_actions:
-            symbol = action[0]
-            entry_time = action[1]
-            exit_time = action[2]
-            side = action[3]
-            entry_price = action[5]
-            exit_price = action[6]
-            interday_data = self._interday_datas[symbol]
-            interday_ind = timestamp_to_index(interday_data.index, day.date())
-            if interday_ind is None or interday_ind < DAYS_IN_A_MONTH:
-                continue
-            interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH - 1:interday_ind]
-            intraday_data = intraday_datas[symbol]
-            entry_interval_start = (pd.to_datetime(datetime.datetime.combine(day, entry_time)).tz_localize(TIME_ZONE)
-                                    - datetime.timedelta(minutes=5))
-            intraday_ind = timestamp_to_index(intraday_data.index, entry_interval_start)
-            if intraday_ind is None:
-                intraday_ind = timestamp_to_prev_index(intraday_data.index, entry_interval_start)
-            intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
-            self._feature_extractor.extract(day, symbol, entry_time, side, entry_price,
-                                            intraday_lookback, interday_lookback,
-                                            exit_time=exit_time,
-                                            exit_price=exit_price)
