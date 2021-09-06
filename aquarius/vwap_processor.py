@@ -58,19 +58,19 @@ class VwapProcessor(Processor):
                  data_source: DataSource,
                  enable_model: bool = False) -> None:
         super().__init__()
-        self._stock_unviverse = VwapStockUniverse(start_time=lookback_start_date,
-                                                  end_time=lookback_end_date,
-                                                  data_source=data_source)
-        self._stock_unviverse.set_dollar_volume_filter(low=1E7)
-        self._stock_unviverse.set_average_true_range_percent_filter(low=0.01)
-        self._stock_unviverse.set_price_filer(low=1)
+        self._stock_universe = VwapStockUniverse(start_time=lookback_start_date,
+                                                 end_time=lookback_end_date,
+                                                 data_source=data_source)
+        self._stock_universe.set_dollar_volume_filter(low=1E7)
+        self._stock_universe.set_average_true_range_percent_filter(low=0.01)
+        self._stock_universe.set_price_filer(low=1)
         self._hold_positions = {}
         self._feature_extractor = VwapFeatureExtractor()
         self._enable_model = enable_model
         self._models = {}
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
-        return self._stock_unviverse.get_stock_universe(view_time)
+        return self._stock_universe.get_stock_universe(view_time)
 
     def process_data(self, context: Context) -> Optional[Action]:
         if context.symbol in self._hold_positions:
@@ -196,16 +196,16 @@ class VwapProcessor(Processor):
 
 class VwapProcessorFactory(ProcessorFactory):
 
-    def __init__(self, enbale_model=True):
+    def __init__(self, enable_model=True):
         super().__init__()
-        self._enbale_model = enbale_model
+        self._enable_model = enable_model
 
     def create(self,
                lookback_start_date: DATETIME_TYPE,
                lookback_end_date: DATETIME_TYPE,
                data_source: DataSource,
                *args, **kwargs) -> VwapProcessor:
-        return VwapProcessor(lookback_start_date, lookback_end_date, data_source, self._enbale_model)
+        return VwapProcessor(lookback_start_date, lookback_end_date, data_source, self._enable_model)
 
 
 class VwapStockUniverse(StockUniverse):
@@ -247,8 +247,8 @@ class VwapFeatureExtractor:
     def __init__(self):
         self._data = []
 
-    def extract_feature(self,
-                        symbol: str,
+    @staticmethod
+    def extract_feature(symbol: str,
                         day: DATETIME_TYPE,
                         entry_time: datetime.time,
                         side: str,
@@ -340,7 +340,6 @@ class VwapFeatureExtractor:
                 current_volume_change, current_candle_top_portion, current_candle_middle_portion,
                 current_candle_bottom_portion, prev_volume_change, prev_candle_top_portion,
                 prev_candle_middle_portion, prev_candle_bottom_portion, current_change_since_open]
-        self._data.append(data)
         return pd.DataFrame([data], columns=_FEATURES)
 
     def extract_data(self,
@@ -352,7 +351,7 @@ class VwapFeatureExtractor:
         profit = exit_price / entry_price - 1
         if side == 'short':
             profit *= -1
-        data = feature.iloc[0].values + [exit_time.strftime('%H:%M:%S'), profit]
+        data = np.concatenate([feature.iloc[0].values, [exit_time.strftime('%H:%M:%S'), profit]])
         self._data.append(data)
 
     def save(self, data_path: Optional[str]) -> None:

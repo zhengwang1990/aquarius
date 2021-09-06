@@ -69,17 +69,17 @@ class Backtesting:
         for processor in self._processors:
             processor.teardown(self._output_dir)
 
-    def _init_processors(self) -> None:
+    def _init_processors(self, history_start) -> None:
         self._processors = []
         for factory in self._processor_factories:
-            self._processors.append(factory.create(lookback_start_date=self._start_date,
+            self._processors.append(factory.create(lookback_start_date=history_start,
                                                    lookback_end_date=self._end_date,
                                                    data_source=_DATA_SOURCE))
 
     def run(self) -> None:
         history_start = self._start_date - datetime.timedelta(days=CALENDAR_DAYS_IN_A_MONTH)
         self._interday_datas = load_tradable_history(history_start, self._end_date, _DATA_SOURCE)
-        self._init_processors()
+        self._init_processors(history_start)
         for day in self._market_dates:
             self._process_day(day)
         self._close()
@@ -165,6 +165,8 @@ class Backtesting:
             executed_actions.extend(current_executed_actions)
 
             current_interval_start += datetime.timedelta(minutes=5)
+
+        self._log_day(day, executed_actions)
 
     def _process_actions(self, current_time: datetime.time, actions: List[Action]) -> List[List[Any]]:
         action_sets = set([(action.symbol, action.type) for action in actions])
@@ -334,7 +336,7 @@ class Backtesting:
                      color='#28b4c8')
             for symbol in plot_symbols:
                 if symbol not in self._interday_datas:
-                    break
+                    continue
                 last_day_index = timestamp_to_index(self._interday_datas[symbol].index, date)
                 symbol_values = list(self._interday_datas[symbol]['Close'][
                                      last_day_index + 1 - len(dates):last_day_index + 1])

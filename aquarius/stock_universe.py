@@ -2,7 +2,6 @@ from .common import *
 from .data import load_tradable_history
 from typing import List, Optional
 import datetime
-import functools
 import numpy as np
 import pandas_market_calendars as mcal
 
@@ -10,10 +9,9 @@ import pandas_market_calendars as mcal
 class StockUniverse:
 
     def __init__(self,
-                 start_time: DATETIME_TYPE,
+                 history_start: DATETIME_TYPE,
                  end_time: DATETIME_TYPE,
                  data_source: DataSource) -> None:
-        history_start = start_time - datetime.timedelta(days=CALENDAR_DAYS_IN_A_MONTH)
         self._historical_data = load_tradable_history(history_start, end_time, data_source)
 
         nyse = mcal.get_calendar('NYSE')
@@ -58,7 +56,7 @@ class StockUniverse:
             prev_day -= datetime.timedelta(days=1)
             if prev_day < self._market_dates[0]:
                 raise ValueError(f'{view_time} is too early')
-        return pd.to_datetime(prev_day)
+        return pd.to_datetime(prev_day.strftime('%F'))
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         res = []
