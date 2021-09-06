@@ -140,7 +140,7 @@ class Backtesting:
                 if interday_ind is None:
                     interday_ind = timestamp_to_index(interday_data.index, day.date())
                     interday_ind_dict[symbol] = interday_ind
-                if interday_ind is None or interday_ind < DAYS_IN_A_MONTH:
+                if interday_ind is None or interday_ind < DAYS_IN_A_MONTH + 1:
                     continue
                 interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH - 1:interday_ind]
                 context = Context(symbol=symbol,

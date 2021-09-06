@@ -4,7 +4,7 @@ import os
 
 def main():
     bt = Backtesting(start_date='2018-01-01', end_date='2021-07-31',
-                     processor_factories=[SwingProcessorFactory()])
+                     processor_factories=[KeyLevelProcessorFactory()])
 
     bt.run()
 
