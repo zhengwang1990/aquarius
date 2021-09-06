@@ -14,16 +14,15 @@ class KeyLevelProcessor(Processor):
                  lookback_end_date: DATETIME_TYPE,
                  data_source: DataSource) -> None:
         super().__init__()
-        self._stock_unviverse = KeyLevelStockUniverse(start_time=lookback_start_date,
+        self._stock_universe = KeyLevelStockUniverse(start_time=lookback_start_date,
                                                       end_time=lookback_end_date,
                                                       data_source=data_source)
-        self._stock_unviverse.set_dollar_volume_filter(low=1E7, high=1E9)
-        self._stock_unviverse.set_average_true_range_percent_filter(low=0.05, high=0.1)
-        self._stock_unviverse.set_price_filer(low=5)
+        self._stock_universe.set_dollar_volume_filter(low=1E7, high=1E9)
+        self._stock_universe.set_average_true_range_percent_filter(low=0.05, high=0.1)
         self._hold_positions = {}
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
-        return self._stock_unviverse.get_stock_universe(view_time)
+        return self._stock_universe.get_stock_universe(view_time)
 
     def process_data(self, context: Context) -> Optional[Action]:
         if context.symbol in self._hold_positions:
@@ -72,17 +71,17 @@ class KeyLevelProcessor(Processor):
         average = np.average(intraday_closes[-_WATCHING_WINDOW:-1])
         distances = [abs(level - average) for level in levels]
         min_i = np.argmin(distances)
-        nearest_level = levels[min_i]
+        level = levels[min_i]
         threshold = 0.05 * intraday_range
 
-        if abs(context.current_price - nearest_level) < threshold:
+        if abs(context.current_price - level) < threshold:
             return
 
         for price in intraday_closes[-_WATCHING_WINDOW:-1]:
-            if abs(price - nearest_level) > threshold:
+            if abs(price - level) > threshold:
                 return
 
-        if context.current_price > nearest_level:
+        if context.current_price > level:
             action_type = ActionType.BUY_TO_OPEN
             side = 'long'
         else:
@@ -95,7 +94,7 @@ class KeyLevelProcessor(Processor):
         if side == 'short' and context.current_price > current_vwap:
             return
 
-        self._hold_positions[context.symbol] = {'current_level': nearest_level,
+        self._hold_positions[context.symbol] = {'level': level,
                                                 'side': side,
                                                 'entry_time': context.current_time,
                                                 'entry_price': context.current_price}
@@ -111,18 +110,18 @@ class KeyLevelProcessor(Processor):
         position = self._hold_positions[symbol]
         entry_time = position['entry_time']
         entry_price = position['entry_price']
-        current_level = position['current_level']
+        level = position['level']
         if position['side'] == 'long':
             action = Action(symbol, ActionType.SELL_TO_CLOSE, 1, current_price)
-            if current_price < current_level:
+            if current_price < level:
                 return _pop_position()
-            if current_price - entry_price > 2 * (entry_price - current_level):
+            if current_price - entry_price > 2 * (entry_price - level):
                 return _pop_position()
         else:
             action = Action(symbol, ActionType.BUY_TO_CLOSE, 1, current_price)
-            if current_price > current_level:
+            if current_price > level:
                 return _pop_position()
-            if entry_price - current_price > 2 * (current_level - entry_price):
+            if entry_price - current_price > 2 * (level - entry_price):
                 return _pop_position()
         if (context.current_time - entry_time >= datetime.timedelta(hours=1) or
                 context.current_time.time() >= datetime.time(15, 55)):

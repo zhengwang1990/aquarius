@@ -11,6 +11,7 @@ import pandas as pd
 import pandas_market_calendars as mcal
 import signal
 import tabulate
+import time
 
 _DATA_SOURCE = DataSource.POLYGON
 _TIME_INTERVAL = TimeInterval.FIVE_MIN
@@ -58,6 +59,13 @@ class Backtesting:
         self._market_dates = [pd.to_datetime(d.date()) for d in mcal.date_range(schedule, frequency='1D')]
         signal.signal(signal.SIGINT, self._safe_exit)
 
+        self._run_start_time = None
+        self._interday_load_time = 0
+        self._intraday_load_time = 0
+        self._stock_universe_load_time = 0
+        self._context_prep_time = 0
+        self._data_process_time = 0
+
     def _safe_exit(self, signum, frame) -> None:
         logging.info('Signal [%d] received', signum)
         self._close()
@@ -66,6 +74,7 @@ class Backtesting:
     def _close(self):
         self._print_summary()
         self._plot_summary()
+        self._print_profile()
         for processor in self._processors:
             processor.teardown(self._output_dir)
 
@@ -77,14 +86,18 @@ class Backtesting:
                                                    data_source=_DATA_SOURCE))
 
     def run(self) -> None:
+        self._run_start_time = time.time()
         history_start = self._start_date - datetime.timedelta(days=CALENDAR_DAYS_IN_A_MONTH)
         self._interday_datas = load_tradable_history(history_start, self._end_date, _DATA_SOURCE)
+        self._interday_load_time += time.time() - self._run_start_time
         self._init_processors(history_start)
         for day in self._market_dates:
             self._process_day(day)
         self._close()
 
     def _process_day(self, day: DATETIME_TYPE) -> None:
+        load_stock_universe_start = time.time()
+
         stock_universes = {}
         for processor in self._processors:
             processor_name = type(processor).__name__
@@ -95,6 +108,9 @@ class Backtesting:
             for symbol in symbols:
                 stock_universe.add(symbol)
 
+        self._stock_universe_load_time += time.time() - load_stock_universe_start
+        load_intraday_start = time.time()
+
         intraday_datas = {}
         tasks = {}
         with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
@@ -103,6 +119,8 @@ class Backtesting:
                 tasks[symbol] = t
             for symbol, t in tasks.items():
                 intraday_datas[symbol] = t.result()
+
+        self._intraday_load_time += time.time() - load_intraday_start
 
         market_open = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_OPEN)).tz_localize(TIME_ZONE)
         market_close = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_CLOSE)).tz_localize(TIME_ZONE)
@@ -120,6 +138,8 @@ class Backtesting:
                 stock_universe = stock_universes[processor_name]
                 for symbol in stock_universe:
                     symbols.add(symbol)
+
+            prep_context_start = time.time()
 
             contexts = {}
             for symbol in symbols:
@@ -150,6 +170,9 @@ class Backtesting:
                                   intraday_lookback=intraday_lookback)
                 contexts[symbol] = context
 
+            self._context_prep_time += time.time() - prep_context_start
+            data_process_start = time.time()
+
             for processor in self._processors:
                 processor_name = type(processor).__name__
                 stock_universe = stock_universes[processor_name]
@@ -160,6 +183,8 @@ class Backtesting:
                     action = processor.process_data(context)
                     if action is not None:
                         actions.append(action)
+
+            self._data_process_time += time.time() - data_process_start
 
             current_executed_actions = self._process_actions(current_time.time(), actions)
             executed_actions.extend(current_executed_actions)
@@ -363,3 +388,25 @@ class Backtesting:
             dates, values = [], [1]
             current_start = i
             current_year += 1
+
+    def _print_profile(self):
+        if self._run_start_time is None:
+            return
+        total_time = time.time() - self._run_start_time
+        outputs = [get_header('Profile')]
+        profile = [
+            ['Stage', 'Time Cost (s)', 'Percentage'],
+            ['Total', f'{total_time:.0f}', '100%'],
+            ['Interday Data Load', f'{self._interday_load_time:.0f}',
+             f'{self._interday_load_time / total_time * 100:.0f}%'],
+            ['Intraday Data Load', f'{self._intraday_load_time:.0f}',
+             f'{self._intraday_load_time / total_time * 100:.0f}%'],
+            ['Stock Universe Load', f'{self._stock_universe_load_time:.0f}',
+             f'{self._stock_universe_load_time / total_time * 100:.0f}%'],
+            ['Context Prepare', f'{self._context_prep_time:.0f}',
+             f'{self._context_prep_time / total_time * 100:.0f}%'],
+            ['Data Process', f'{self._data_process_time:.0f}',
+             f'{self._data_process_time / total_time * 100:.0f}%'],
+        ]
+        outputs.append(tabulate.tabulate(profile, tablefmt='grid'))
+        logging.info('\n'.join(outputs))
