@@ -5,6 +5,7 @@ from sklearn import ensemble, metrics
 from typing import List, Optional
 from tabulate import tabulate
 import datetime
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -49,6 +50,8 @@ _FEATURES = [
 
 _LABELS = ['exit_time', 'profit']
 
+_VWAP_CACHE_ROOT = os.path.join(CACHE_ROOT, 'vwap-stock-universe')
+
 
 class VwapProcessor(Processor):
 
@@ -68,6 +71,7 @@ class VwapProcessor(Processor):
         self._feature_extractor = VwapFeatureExtractor()
         self._enable_model = enable_model
         self._models = {}
+        os.makedirs(_VWAP_CACHE_ROOT, exist_ok=True)
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return self._stock_universe.get_stock_universe(view_time)
@@ -236,12 +240,19 @@ class VwapStockUniverse(StockUniverse):
         return True
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+        cache_file = os.path.join(_VWAP_CACHE_ROOT,
+                                  view_time.strftime('%F') + '.json')
+        if os.path.isfile(cache_file):
+            with open(cache_file, 'r') as f:
+                return json.load(f)
         prev_day = self.get_prev_day(view_time)
         symbols = super().get_stock_universe(view_time)
         res = []
         for symbol in symbols:
             if self.get_significant_change(symbol, prev_day):
                 res.append(symbol)
+        with open(cache_file, 'w') as f:
+            json.dump(res, f)
         return res
 
 
