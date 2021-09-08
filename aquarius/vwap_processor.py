@@ -12,7 +12,7 @@ import pandas as pd
 import pickle
 import ta.momentum as momentum
 
-_WATCHING_WINDOW = 12
+_WATCHING_WINDOW = 6
 
 _FEATURES = [
     'date',
@@ -79,7 +79,7 @@ class VwapProcessor(Processor):
 
     def _open_position(self, context: Context) -> Optional[Action]:
         if (context.current_time.time() >= datetime.time(15, 0)
-                or context.current_time.time() <= datetime.time(10, 00)):
+                or context.current_time.time() <= datetime.time(10, 0)):
             return
         intraday_lookback = context.intraday_lookback
         p = None
@@ -99,11 +99,6 @@ class VwapProcessor(Processor):
             vwap_distances.append(intraday_closes[-i] - vwap[-i])
 
         distance_sign = np.sign(vwap_distances[0])
-        if np.sign(vwap_distances[1]) != distance_sign:
-            return
-        for distance in vwap_distances[2:]:
-            if np.sign(distance) == distance_sign:
-                return
 
         if distance_sign > 0:
             side = 'long'
@@ -114,10 +109,18 @@ class VwapProcessor(Processor):
 
         intraday_low = np.min(intraday_lookback['Low'])
         intraday_high = np.max(intraday_lookback['High'])
-        intraday_range = intraday_high - intraday_low
+        prev_day_clsoe = context.prev_day_close
+        intraday_range = max(intraday_high - intraday_low,
+                             intraday_high - prev_day_clsoe,
+                             prev_day_clsoe - intraday_low)
 
         if np.abs(context.current_price - vwap[-1]) > min(0.01 * context.current_price, 0.1 * intraday_range):
             return
+        if vwap_distances[0] < 0.05 * intraday_range:
+            return
+        for distance in vwap_distances[1:]:
+            if abs(distance) > 0.05 * intraday_range:
+                return
 
         interday_closes = context.interday_lookback['Close']
         if len(interday_closes) < 2:

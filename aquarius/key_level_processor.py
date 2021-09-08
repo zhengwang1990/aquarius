@@ -15,8 +15,8 @@ class KeyLevelProcessor(Processor):
                  data_source: DataSource) -> None:
         super().__init__()
         self._stock_universe = KeyLevelStockUniverse(start_time=lookback_start_date,
-                                                      end_time=lookback_end_date,
-                                                      data_source=data_source)
+                                                     end_time=lookback_end_date,
+                                                     data_source=data_source)
         self._stock_universe.set_dollar_volume_filter(low=1E7, high=1E9)
         self._stock_universe.set_average_true_range_percent_filter(low=0.05, high=0.1)
         self._hold_positions = {}
@@ -30,7 +30,8 @@ class KeyLevelProcessor(Processor):
         return self._open_position(context)
 
     def _open_position(self, context: Context) -> Optional[Action]:
-        if context.current_time.time() >= datetime.time(15, 30):
+        if (context.current_time.time() >= datetime.time(15, 30)
+                or context.current_time.time() <= datetime.time(10, 0)):
             return
         intraday_lookback = context.intraday_lookback
         p = None
@@ -47,13 +48,7 @@ class KeyLevelProcessor(Processor):
 
         intraday_low = np.min(intraday_lookback['Low'])
         intraday_high = np.max(intraday_lookback['High'])
-        try:
-            prev_day_clsoe = context.prev_day_close
-        except IndexError as e:
-            print(context.current_time)
-            print(context.symbol)
-            print(context.interday_lookback)
-            raise e
+        prev_day_clsoe = context.prev_day_close
         intraday_range = max(intraday_high - intraday_low,
                              intraday_high - prev_day_clsoe,
                              prev_day_clsoe - intraday_low)
