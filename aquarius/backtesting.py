@@ -155,6 +155,8 @@ class Backtesting:
                 intraday_ind_dict[symbol] = intraday_ind + 1
                 intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
                 current_price = intraday_data['Close'][intraday_ind]
+                if symbol not in self._interday_datas:
+                    continue
                 interday_data = self._interday_datas[symbol]
                 interday_ind = interday_ind_dict.get(symbol)
                 if interday_ind is None:

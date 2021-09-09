@@ -3,7 +3,10 @@ from .data import load_tradable_history
 from typing import List, Optional
 import datetime
 import numpy as np
+import json
 import pandas_market_calendars as mcal
+
+_STOCK_UNIVERSE_CACHE_ROOT = os.path.join(CACHE_ROOT, 'stock_universe')
 
 
 class StockUniverse:
@@ -83,4 +86,50 @@ class StockUniverse:
                 if self._atrp_high is not None and atrp > self._atrp_high:
                     continue
             res.append(symbol)
+        return res
+
+
+class ThreeSigmaStockUniverse(StockUniverse):
+
+    def __init__(self,
+                 start_time: DATETIME_TYPE,
+                 end_time: DATETIME_TYPE,
+                 data_source: DataSource) -> None:
+        super().__init__(start_time, end_time, data_source)
+        self.set_dollar_volume_filter(low=1E7)
+        self.set_average_true_range_percent_filter(low=0.01)
+        self.set_price_filer(low=1)
+        self._cache_dir = os.path.join(_STOCK_UNIVERSE_CACHE_ROOT, 'three_sigma')
+        os.makedirs(self._cache_dir, exist_ok=True)
+
+    def get_significant_change(self, symbol: str, prev_day: DATETIME_TYPE) -> bool:
+        hist = self._historical_data[symbol]
+        p = timestamp_to_index(hist.index, prev_day)
+        closes = np.array(hist['Close'][max(p - DAYS_IN_A_MONTH + 1, 1):p + 1])
+        changes = np.array([np.log(closes[i + 1] / closes[i]) for i in range(len(closes) - 1)
+                            if closes[i + 1] > 0 and closes[i] > 0])
+        if not len(changes):
+            return False
+        std = np.std(changes)
+        mean = np.mean(changes)
+        if std < 1E-7:
+            return False
+        if np.abs((changes[-1] - mean) / std) < 3:
+            return False
+        return True
+
+    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+        cache_file = os.path.join(self._cache_dir,
+                                  view_time.strftime('%F') + '.json')
+        if os.path.isfile(cache_file):
+            with open(cache_file, 'r') as f:
+                return json.load(f)
+        prev_day = self.get_prev_day(view_time)
+        symbols = super().get_stock_universe(view_time)
+        res = []
+        for symbol in symbols:
+            if self.get_significant_change(symbol, prev_day):
+                res.append(symbol)
+        with open(cache_file, 'w') as f:
+            json.dump(res, f)
         return res
