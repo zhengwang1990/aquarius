@@ -62,15 +62,6 @@ class VolumeBreakoutProcessor(Processor):
         if intraday_volumes[-1] < 3 * np.max(intraday_volumes[-_WATCHING_WINDOW:-1]):
             return
 
-        intraday_low = np.min(intraday_lookback['Low'])
-        intraday_high = np.max(intraday_lookback['High'])
-        prev_day_clsoe = context.prev_day_close
-        intraday_range = max(intraday_high - intraday_low,
-                             intraday_high - prev_day_clsoe,
-                             prev_day_clsoe - intraday_low)
-        # if abs(context.current_price - vwap[-1]) > min(0.02 * context.current_price, 0.2 * intraday_range):
-        #    return
-
         self._hold_positions[context.symbol] = {'side': side,
                                                 'entry_time': context.current_time,
                                                 'entry_price': context.current_price}
