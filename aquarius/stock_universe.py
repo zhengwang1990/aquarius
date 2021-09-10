@@ -102,21 +102,19 @@ class ThreeSigmaStockUniverse(StockUniverse):
         self._cache_dir = os.path.join(_STOCK_UNIVERSE_CACHE_ROOT, 'three_sigma')
         os.makedirs(self._cache_dir, exist_ok=True)
 
-    def get_significant_change(self, symbol: str, prev_day: DATETIME_TYPE) -> bool:
+    def get_sigma_value(self, symbol: str, prev_day: DATETIME_TYPE) -> float:
         hist = self._historical_data[symbol]
         p = timestamp_to_index(hist.index, prev_day)
         closes = np.array(hist['Close'][max(p - DAYS_IN_A_MONTH + 1, 1):p + 1])
         changes = np.array([np.log(closes[i + 1] / closes[i]) for i in range(len(closes) - 1)
                             if closes[i + 1] > 0 and closes[i] > 0])
         if not len(changes):
-            return False
+            return 0
         std = np.std(changes)
         mean = np.mean(changes)
         if std < 1E-7:
-            return False
-        if np.abs((changes[-1] - mean) / std) < 3:
-            return False
-        return True
+            return 0
+        return np.abs((changes[-1] - mean) / std)
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         cache_file = os.path.join(self._cache_dir,
@@ -126,10 +124,9 @@ class ThreeSigmaStockUniverse(StockUniverse):
                 return json.load(f)
         prev_day = self.get_prev_day(view_time)
         symbols = super().get_stock_universe(view_time)
-        res = []
-        for symbol in symbols:
-            if self.get_significant_change(symbol, prev_day):
-                res.append(symbol)
+        sigma_values = [(symbol, self.get_sigma_value(symbol, prev_day)) for symbol in symbols]
+        sigma_values.sort(key=lambda s: s[1], reverse=True)
+        res = [s[0] for s in sigma_values[:50] if s[1] > 3]
         with open(cache_file, 'w') as f:
             json.dump(res, f)
         return res
