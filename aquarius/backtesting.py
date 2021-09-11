@@ -6,6 +6,7 @@ import datetime
 import logging
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import numpy as np
 import os
 import pandas as pd
 import pandas_market_calendars as mcal
@@ -327,24 +328,57 @@ class Backtesting:
         logging.info('\n'.join(outputs))
 
     def _print_summary(self) -> None:
+        def _compute_sharpe_ratio(values: List[float]) -> float:
+            profits = [values[k + 1] / values[k] - 1 for k in range(len(values) - 1)]
+            r = np.average(profits)
+            std = np.std(profits)
+            return r / std * np.sqrt(252)
+
         outputs = [get_header('Summary')]
-        summary = [['Time Range', f'{self._start_date.date()} ~ {self._end_date.date()}']]
+        n_trades = self._num_win + self._num_lose
+        success_rate = self._num_win / n_trades if n_trades > 0 else 0
+        market_dates = self._market_dates[:len(self._daily_equity) - 1]
+        summary = [['Time Range', f'{market_dates[0]} ~ {market_dates[-1]}'],
+                   ['Success Rate', f'{success_rate * 100:.2f}%'],
+                   ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)']]
+        outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
+
+        print_symbols = ['QQQ', 'SPY', 'TQQQ']
+        stats = [['', 'My Portfolio'] + print_symbols]
         current_year = self._start_date.year
         current_start = 0
-        market_dates = self._market_dates[:len(self._daily_equity) - 1]
         for i, date in enumerate(market_dates):
             if i != len(market_dates) - 1 and market_dates[i + 1].year != current_year + 1:
                 continue
             profit_pct = (self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
-            summary.append([f'{current_year} Gain/Loss',
-                            f'{profit_pct:+.2f}%'])
+            year_profit = [f'{current_year} Gain/Loss',
+                           f'{profit_pct:+.2f}%']
+            for symbol in print_symbols:
+                if symbol not in self._interday_datas:
+                    continue
+                last_day_index = timestamp_to_index(self._interday_datas[symbol].index, date)
+                symbol_values = list(self._interday_datas[symbol]['Close'][
+                                     last_day_index - (i - current_start):last_day_index + 1])
+                symbol_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
+                year_profit.append(f'{symbol_profit_pct:+.2f}%')
+            stats.append(year_profit)
             current_start = i
             current_year += 1
         total_profit_pct = (self._daily_equity[-1] / self._daily_equity[0] - 1) * 100
-        summary.append(['Total Gain/Loss', f'{total_profit_pct:+.2f}%'])
-        success_rate = self._num_win / (self._num_win + self._num_lose) if self._num_win + self._num_lose > 0 else 0
-        summary.append(['Success Rate', f'{success_rate * 100:.2f}%'])
-        outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
+        total_profit = ['Total Gain/Loss', f'{total_profit_pct:+.2f}%']
+        sharpe_ratio = _compute_sharpe_ratio(self._daily_equity)
+        sharpe_ratio = ['Sharpe Ratio', f'{sharpe_ratio:.2f}']
+        for symbol in print_symbols:
+            first_day_index = timestamp_to_index(self._interday_datas[symbol].index, market_dates[0])
+            last_day_index = timestamp_to_index(self._interday_datas[symbol].index, market_dates[-1])
+            symbol_values = self._interday_datas[symbol]['Close'][first_day_index - 1:last_day_index + 1]
+            symbol_total_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
+            total_profit.append(f'{symbol_total_profit_pct:+.2f}%')
+            symbol_sharpe_ratio = _compute_sharpe_ratio(symbol_values)
+            sharpe_ratio.append(f'{symbol_sharpe_ratio:.2f}')
+        stats.append(total_profit)
+        stats.append(sharpe_ratio)
+        outputs.append(tabulate.tabulate(stats, tablefmt='grid'))
         logging.info('\n'.join(outputs))
 
     def _plot_summary(self) -> None:
