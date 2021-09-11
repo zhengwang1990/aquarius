@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 import collections
 import datetime
 import logging
@@ -151,7 +151,7 @@ class Processor:
     def process_data(self, context: Context) -> Optional[Action]:
         raise NotImplementedError('Calling parent interface')
 
-    def setup(self) -> None:
+    def setup(self, hold_positions: Optional[Dict[str, Dict[str, Any]]] = None) -> None:
         return
 
     def teardown(self, output_dir: Optional[str] = None) -> None:

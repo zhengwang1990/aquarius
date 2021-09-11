@@ -96,6 +96,9 @@ class Backtesting:
         self._close()
 
     def _process_day(self, day: DATETIME_TYPE) -> None:
+        for processor in self._processors:
+            processor.setup()
+
         load_stock_universe_start = time.time()
 
         stock_universes = {}
@@ -194,6 +197,9 @@ class Backtesting:
             current_interval_start += datetime.timedelta(minutes=5)
 
         self._log_day(day, executed_actions)
+
+        for processor in self._processors:
+            processor.teardown(self._output_dir)
 
     def _process_actions(self, current_time: datetime.time, actions: List[Action]) -> List[List[Any]]:
         action_sets = set([(action.symbol, action.type) for action in actions])

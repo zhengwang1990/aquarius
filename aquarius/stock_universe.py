@@ -102,7 +102,7 @@ class ThreeSigmaStockUniverse(StockUniverse):
         self._cache_dir = os.path.join(_STOCK_UNIVERSE_CACHE_ROOT, 'three_sigma')
         os.makedirs(self._cache_dir, exist_ok=True)
 
-    def get_sigma_value(self, symbol: str, prev_day: DATETIME_TYPE) -> float:
+    def _get_sigma_value(self, symbol: str, prev_day: DATETIME_TYPE) -> float:
         hist = self._historical_data[symbol]
         p = timestamp_to_index(hist.index, prev_day)
         closes = np.array(hist['Close'][max(p - DAYS_IN_A_MONTH + 1, 1):p + 1])
@@ -124,9 +124,22 @@ class ThreeSigmaStockUniverse(StockUniverse):
                 return json.load(f)
         prev_day = self.get_prev_day(view_time)
         symbols = super().get_stock_universe(view_time)
-        sigma_values = [(symbol, self.get_sigma_value(symbol, prev_day)) for symbol in symbols]
+        sigma_values = [(symbol, self._get_sigma_value(symbol, prev_day)) for symbol in symbols]
         sigma_values.sort(key=lambda s: s[1], reverse=True)
         res = [s[0] for s in sigma_values[:50] if s[1] > 3]
         with open(cache_file, 'w') as f:
             json.dump(res, f)
         return res
+
+
+class PrevThreeSigmaStockUniverse(ThreeSigmaStockUniverse):
+
+    def __init__(self,
+                 start_time: DATETIME_TYPE,
+                 end_time: DATETIME_TYPE,
+                 data_source: DataSource) -> None:
+        super().__init__(start_time, end_time, data_source)
+
+    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+        prev_day = self.get_prev_day(view_time)
+        return super().get_stock_universe(prev_day)
