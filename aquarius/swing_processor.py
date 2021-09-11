@@ -1,6 +1,7 @@
 from .common import *
 from .stock_universe import PrevThreeSigmaStockUniverse
 from typing import Any, Dict, List, Optional
+import numpy as np
 
 
 class SwingProcessor(Processor):
@@ -36,7 +37,11 @@ class SwingProcessor(Processor):
 
         if context.symbol == 'TQQQ':
             self._hold_positions['TQQQ'] = {'side': 'long'}
-            return Action(context.symbol, ActionType.BUY_TO_OPEN, 1, context.current_price)
+            closes = context.interday_lookback['Close']
+            daily_gain = max(context.current_price / closes[-1] - 1, 0)
+            monthly_gain = max(context.current_price / closes[-DAYS_IN_A_MONTH] - 1, 0)
+            percent = np.clip(1 - 10 * monthly_gain ** 2 - 25 * daily_gain ** 2, 0.2, 1)
+            return Action(context.symbol, ActionType.BUY_TO_OPEN, percent, context.current_price)
 
         if context.symbol in self._prev_hold_positions:
             return

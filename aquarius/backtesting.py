@@ -1,7 +1,7 @@
 from .common import *
 from .data import load_cached_daily_data, load_tradable_history, get_header
 from concurrent import futures
-from typing import Any, List, Union
+from typing import Any, List, Tuple, Union
 import datetime
 import logging
 import matplotlib.pyplot as plt
@@ -328,22 +328,32 @@ class Backtesting:
         logging.info('\n'.join(outputs))
 
     def _print_summary(self) -> None:
-        def _compute_sharpe_ratio(values: List[float]) -> float:
+        def _compute_risks(values: List[float],
+                           m_values: List[float]) -> Tuple[Optional[float], Optional[float], float]:
             profits = [values[k + 1] / values[k] - 1 for k in range(len(values) - 1)]
             r = np.average(profits)
             std = np.std(profits)
-            return r / std * np.sqrt(252)
+            s = r / std * np.sqrt(252)
+            a, b = None, None
+            if len(values) == len(m_values):
+                market_profits = [m_values[k + 1] / m_values[k] - 1 for k in range(len(m_values) - 1)]
+                mr = np.average(market_profits)
+                mvar = np.var(market_profits)
+                b = np.cov(market_profits, profits, bias=True)[0, 1] / mvar
+                a = (r - b * mr) * np.sqrt(252)
+            return a, b, s
 
         outputs = [get_header('Summary')]
         n_trades = self._num_win + self._num_lose
         success_rate = self._num_win / n_trades if n_trades > 0 else 0
         market_dates = self._market_dates[:len(self._daily_equity) - 1]
-        summary = [['Time Range', f'{market_dates[0]} ~ {market_dates[-1]}'],
+        summary = [['Time Range', f'{market_dates[0].date()} ~ {market_dates[-1].date()}'],
                    ['Success Rate', f'{success_rate * 100:.2f}%'],
                    ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)']]
         outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
 
         print_symbols = ['QQQ', 'SPY', 'TQQQ']
+        market_symbol = 'SPY'
         stats = [['', 'My Portfolio'] + print_symbols]
         current_year = self._start_date.year
         current_start = 0
@@ -366,18 +376,30 @@ class Backtesting:
             current_year += 1
         total_profit_pct = (self._daily_equity[-1] / self._daily_equity[0] - 1) * 100
         total_profit = ['Total Gain/Loss', f'{total_profit_pct:+.2f}%']
-        sharpe_ratio = _compute_sharpe_ratio(self._daily_equity)
-        sharpe_ratio = ['Sharpe Ratio', f'{sharpe_ratio:.2f}']
+        market_first_day_index = timestamp_to_index(
+            self._interday_datas[market_symbol].index, market_dates[0])
+        market_last_day_index = timestamp_to_index(
+            self._interday_datas[market_symbol].index, market_dates[-1])
+        market_values = self._interday_datas[market_symbol]['Close'][
+                        market_first_day_index - 1:market_last_day_index + 1]
+        my_alpha, my_beta, my_sharpe_ratio = _compute_risks(self._daily_equity, market_values)
+        alpha_row = ['Alpha', f'{my_alpha * 100:.2f}%']
+        beta_row = ['Beta', f'{my_beta:.2f}']
+        sharpe_ratio_row = ['Sharpe Ratio', f'{my_sharpe_ratio:.2f}']
         for symbol in print_symbols:
             first_day_index = timestamp_to_index(self._interday_datas[symbol].index, market_dates[0])
             last_day_index = timestamp_to_index(self._interday_datas[symbol].index, market_dates[-1])
             symbol_values = self._interday_datas[symbol]['Close'][first_day_index - 1:last_day_index + 1]
             symbol_total_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
             total_profit.append(f'{symbol_total_profit_pct:+.2f}%')
-            symbol_sharpe_ratio = _compute_sharpe_ratio(symbol_values)
-            sharpe_ratio.append(f'{symbol_sharpe_ratio:.2f}')
+            symbol_alpha, symbol_beta, symbol_sharpe_ratio = _compute_risks(symbol_values, market_values)
+            alpha_row.append(f'{symbol_alpha * 100:.2f}%' if symbol_alpha is not None else None)
+            beta_row.append(f'{symbol_beta:.2f}' if symbol_beta is not None else None)
+            sharpe_ratio_row.append(f'{symbol_sharpe_ratio:.2f}')
         stats.append(total_profit)
-        stats.append(sharpe_ratio)
+        stats.append(alpha_row)
+        stats.append(beta_row)
+        stats.append(sharpe_ratio_row)
         outputs.append(tabulate.tabulate(stats, tablefmt='grid'))
         logging.info('\n'.join(outputs))
 
