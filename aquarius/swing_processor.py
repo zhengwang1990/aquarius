@@ -50,9 +50,8 @@ class SwingProcessor(Processor):
         today_change = context.current_price / interday_closes[-1] - 1
         if today_change > 0:
             return
-
         yesterday_change = interday_closes[-2] / interday_closes[-1] - 1
-        if today_change * yesterday_change < 0:
+        if yesterday_change > 0:
             return
         if abs(today_change) > abs(yesterday_change) / 5:
             return

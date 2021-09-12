@@ -343,6 +343,14 @@ class Backtesting:
                 a = (r - b * mr) * np.sqrt(252)
             return a, b, s
 
+        def _compute_drawdown(values: List[float]) -> float:
+            h = values[0]
+            d = 0
+            for v in values:
+                d = min(v / h - 1, d)
+                h = max(h, v)
+            return d
+
         outputs = [get_header('Summary')]
         n_trades = self._num_win + self._num_lose
         success_rate = self._num_win / n_trades if n_trades > 0 else 0
@@ -383,9 +391,11 @@ class Backtesting:
         market_values = self._interday_datas[market_symbol]['Close'][
                         market_first_day_index - 1:market_last_day_index + 1]
         my_alpha, my_beta, my_sharpe_ratio = _compute_risks(self._daily_equity, market_values)
+        my_drawdown = _compute_drawdown(self._daily_equity)
         alpha_row = ['Alpha', f'{my_alpha * 100:.2f}%']
         beta_row = ['Beta', f'{my_beta:.2f}']
         sharpe_ratio_row = ['Sharpe Ratio', f'{my_sharpe_ratio:.2f}']
+        drawdown_row = ['Maximum Drawdown', f'{my_drawdown * 100:+.2f}%']
         for symbol in print_symbols:
             first_day_index = timestamp_to_index(self._interday_datas[symbol].index, market_dates[0])
             last_day_index = timestamp_to_index(self._interday_datas[symbol].index, market_dates[-1])
@@ -396,10 +406,13 @@ class Backtesting:
             alpha_row.append(f'{symbol_alpha * 100:.2f}%' if symbol_alpha is not None else None)
             beta_row.append(f'{symbol_beta:.2f}' if symbol_beta is not None else None)
             sharpe_ratio_row.append(f'{symbol_sharpe_ratio:.2f}')
+            symbol_drawdown = _compute_drawdown(symbol_values)
+            drawdown_row.append(f'{symbol_drawdown * 100:+.2f}%')
         stats.append(total_profit)
         stats.append(alpha_row)
         stats.append(beta_row)
         stats.append(sharpe_ratio_row)
+        stats.append(drawdown_row)
         outputs.append(tabulate.tabulate(stats, tablefmt='grid'))
         logging.info('\n'.join(outputs))
 
