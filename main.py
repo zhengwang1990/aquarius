@@ -1,5 +1,5 @@
-from aquarius import *
 import argparse
+import aquarius
 import datetime
 import pandas_market_calendars as mcal
 
@@ -16,9 +16,9 @@ def main():
     args = parser.parse_args()
 
     processor_factories = [
-        SwingProcessorFactory(),
-        LevelBreakoutProcessorFactory(),
-        VolumeBreakoutProcessorFactory(),
+        aquarius.SwingProcessorFactory(),
+        aquarius.LevelBreakoutProcessorFactory(),
+        aquarius.VolumeBreakoutProcessorFactory(),
     ]
     today = datetime.datetime.today()
     if args.mode == 'backtest':
@@ -26,8 +26,8 @@ def main():
         default_end_date = today + datetime.timedelta(days=1)
         start_date = args.start_date or default_start_date.strftime('%F')
         end_date = args.end_date or default_end_date.strftime('%F')
-        backtesting = Backtesting(start_date=start_date, end_date=end_date,
-                                  processor_factories=processor_factories)
+        backtesting = aquarius.Backtesting(start_date=start_date, end_date=end_date,
+                                           processor_factories=processor_factories)
         backtesting.run()
     else:
         nyse = mcal.get_calendar('NYSE')
@@ -36,7 +36,7 @@ def main():
         if len(schedule) == 0:
             print(f'Market not open on [{today.strftime("%F")}]')
             return
-        trading = Trading(processor_factories=processor_factories)
+        trading = aquarius.Trading(processor_factories=processor_factories)
         trading.run()
 
 

@@ -234,10 +234,10 @@ class Trading:
             side = order.side
             try:
                 self._alpaca.cancel_order(order.id)
+                new_orders.append({'symbol': symbol, 'qty': qty, 'side': side})
             except tradeapi.rest.APIError as e:
                 logging.error('Failed to replace [%s] order for [%s]: %s', side, symbol, e)
-            finally:
-                new_orders.append({'symbol': symbol, 'qty': qty, 'side': side})
+
         orders = self._alpaca.list_orders(status='open')
         for _ in range(10):
             if not orders:
