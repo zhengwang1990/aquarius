@@ -40,6 +40,7 @@ class Trading:
         account = self._alpaca.get_account()
         self._equity = float(account.equity)
         self._cash = float(account.cash)
+        logging.info('Account updated: equity [%s]; cash [%s].', self._equity, self._cash)
 
     def _update_positions(self) -> None:
         self._positions = self._list_positions()
@@ -82,8 +83,8 @@ class Trading:
             if int(current_time.minute) % 5 == 4:
                 checkpoint_time = pd.to_datetime(
                     pd.Timestamp.combine(self._today.date(),
-                                         datetime.time(next_minute.hour,
-                                                       next_minute.minute))).tz_localize(TIME_ZONE)
+                                         datetime.time(int(next_minute.hour),
+                                                       int(next_minute.minute)))).tz_localize(TIME_ZONE)
                 trigger_seconds = 40
                 if checkpoint_time.time() == MARKET_CLOSE:
                     trigger_seconds -= 40
@@ -93,7 +94,7 @@ class Trading:
                 time.sleep(5)
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
-        logging.info('Process starts for [%s]', checkpoint_time)
+        logging.info('Process starts for [%s]', checkpoint_time.time())
         self._update_intraday_data()
 
         contexts = {}
@@ -107,6 +108,7 @@ class Trading:
                               interday_lookback=interday_lookback,
                               intraday_lookback=intraday_lookback)
             contexts[symbol] = context
+        logging.info('Contexts prepared for [%s] symbols.', len(contexts))
 
         actions = []
         for processor in self._processors:
@@ -117,6 +119,7 @@ class Trading:
                 action = processor.process_data(context)
                 if action is not None:
                     actions.append(action)
+        logging.info('Got [%d] actions to process.', len(actions))
 
         self._trade(actions)
 
@@ -164,10 +167,13 @@ class Trading:
             symbol = action.symbol
             current_position = self._get_position(symbol)
             if current_position is None:
+                logging.info('Position for [%s] does not exist. Skipping close.', symbol)
                 continue
             if action.type == ActionType.BUY_TO_CLOSE and current_position.qty > 0:
+                logging.info('Position for [%s] is already long-side. Skipping close.', symbol)
                 continue
             if action.type == ActionType.SELL_TO_CLOSE and current_position.qty < 0:
+                logging.info('Position for [%s] is already short-side. Skipping close.', symbol)
                 continue
             qty = int(abs(current_position.qty) * action.percent)
             side = 'buy' if action.type == ActionType.BUY_TO_CLOSE else 'sell'
@@ -187,10 +193,12 @@ class Trading:
             assert action.type in [ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]
             symbol = action.symbol
             if self._get_position(symbol) is not None:
+                logging.info('Position for [%s] already exists. Skipping open.', symbol)
                 continue
             cash_to_trade = min(tradable_cash / len(actions), tradable_cash * action.percent)
             qty = int(cash_to_trade / action.price)
             if qty == 0:
+                logging.info('Quantity to open [%s] is zero. Skipping open.', symbol)
                 continue
             side = 'buy' if action.type == ActionType.BUY_TO_OPEN else 'sell'
             self._order(symbol, qty, side, limit_price=action.price)
