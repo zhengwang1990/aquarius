@@ -1,4 +1,4 @@
-from common import *
+from .common import *
 from .data import load_tradable_history, HistoricalDataLoader
 from concurrent import futures
 import alpaca_trade_api as tradeapi
