@@ -17,7 +17,6 @@ import time
 _DATA_SOURCE = DataSource.POLYGON
 _TIME_INTERVAL = TimeInterval.FIVE_MIN
 _MAX_WORKERS = 20
-_EPS = 1E-7
 
 
 class Backtesting:
@@ -38,7 +37,7 @@ class Backtesting:
         self._daily_equity = [1]
         self._num_win, self._num_lose = 0, 0
         self._cash = 1
-        self._interday_datas = None
+        self._interday_data = None
 
         backtesting_output_dir = os.path.join(OUTPUT_ROOT, 'backtesting')
         os.makedirs(backtesting_output_dir, exist_ok=True)
@@ -89,7 +88,7 @@ class Backtesting:
     def run(self) -> None:
         self._run_start_time = time.time()
         history_start = self._start_date - datetime.timedelta(days=CALENDAR_DAYS_IN_A_MONTH)
-        self._interday_datas = load_tradable_history(history_start, self._end_date, _DATA_SOURCE)
+        self._interday_data = load_tradable_history(history_start, self._end_date, _DATA_SOURCE)
         self._interday_load_time += time.time() - self._run_start_time
         self._init_processors(history_start)
         for day in self._market_dates:
@@ -135,18 +134,11 @@ class Backtesting:
         interday_ind_dict = {}
         while current_interval_start < market_close:
             current_time = current_interval_start + datetime.timedelta(minutes=5)
-            actions = []
-            symbols = set()
-            for processor in self._processors:
-                processor_name = type(processor).__name__
-                stock_universe = stock_universes[processor_name]
-                for symbol in stock_universe:
-                    symbols.add(symbol)
 
             prep_context_start = time.time()
 
             contexts = {}
-            for symbol in symbols:
+            for symbol in stock_universe:
                 intraday_data = intraday_datas[symbol]
                 intraday_ind = intraday_ind_dict.get(symbol)
                 if (intraday_ind is None or intraday_ind >= len(intraday_data.index) or
@@ -159,9 +151,9 @@ class Backtesting:
                 intraday_ind_dict[symbol] = intraday_ind + 1
                 intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
                 current_price = intraday_data['Close'][intraday_ind]
-                if symbol not in self._interday_datas:
+                if symbol not in self._interday_data:
                     continue
-                interday_data = self._interday_datas[symbol]
+                interday_data = self._interday_data[symbol]
                 interday_ind = interday_ind_dict.get(symbol)
                 if interday_ind is None:
                     interday_ind = timestamp_to_index(interday_data.index, day.date())
@@ -179,10 +171,11 @@ class Backtesting:
             self._context_prep_time += time.time() - prep_context_start
             data_process_start = time.time()
 
+            actions = []
             for processor in self._processors:
                 processor_name = type(processor).__name__
-                stock_universe = stock_universes[processor_name]
-                for symbol in stock_universe:
+                processor_stock_universe = stock_universes[processor_name]
+                for symbol in processor_stock_universe:
                     context = contexts.get(symbol)
                     if context is None:
                         continue
@@ -203,15 +196,7 @@ class Backtesting:
             processor.teardown(self._output_dir)
 
     def _process_actions(self, current_time: datetime.time, actions: List[Action]) -> List[List[Any]]:
-        action_sets = set([(action.symbol, action.type) for action in actions])
-        unique_actions = []
-        for unique_action in action_sets:
-            similar_actions = [action for action in actions if (action.symbol, action.type) == unique_action]
-            action = similar_actions[0]
-            for i in range(1, len(similar_actions)):
-                if similar_actions[i].percent > action.percent:
-                    action = similar_actions[i]
-            unique_actions.append(action)
+        unique_actions = get_unique_actions(actions)
 
         close_actions = [action for action in unique_actions
                          if action.type in [ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]]
@@ -251,7 +236,7 @@ class Backtesting:
             self._pop_current_position(symbol)
             qty = current_position.qty * action.percent
             new_qty = current_position.qty - qty
-            if abs(new_qty) > _EPS:
+            if abs(new_qty) > EPSILON:
                 self._positions.append(Position(symbol, new_qty, current_position.entry_price, current_time))
             self._cash += action.price * qty
             profit_pct = (action.price - current_position.entry_price) / current_position.entry_price * 100
@@ -278,7 +263,7 @@ class Backtesting:
             if self._get_current_position(symbol) is not None:
                 continue
             cash_to_trade = min(tradable_cash / len(actions), tradable_cash * action.percent)
-            if abs(cash_to_trade) < _EPS:
+            if abs(cash_to_trade) < EPSILON:
                 cash_to_trade = 0
             qty = cash_to_trade / action.price
             if action.type == ActionType.SELL_TO_OPEN:
@@ -303,7 +288,7 @@ class Backtesting:
         if self._positions:
             position_info = []
             for position in self._positions:
-                close_price = self._interday_datas[position.symbol].loc[day]['Close']
+                close_price = self._interday_data[position.symbol].loc[day]['Close']
                 change = (close_price / position.entry_price - 1) * 100
                 position_info.append([position.symbol, position.qty, position.entry_price,
                                       close_price, f'{change:+.2f}%'])
@@ -315,7 +300,7 @@ class Backtesting:
 
         equity = self._cash
         for position in self._positions:
-            close_price = self._interday_datas[position.symbol].loc[day]['Close']
+            close_price = self._interday_data[position.symbol].loc[day]['Close']
             equity += position.qty * close_price
         profit_pct = (equity / self._daily_equity[-1] - 1) * 100 if self._daily_equity[-1] else 0
         self._daily_equity.append(equity)
@@ -372,10 +357,10 @@ class Backtesting:
             year_profit = [f'{current_year} Gain/Loss',
                            f'{profit_pct:+.2f}%']
             for symbol in print_symbols:
-                if symbol not in self._interday_datas:
+                if symbol not in self._interday_data:
                     continue
-                last_day_index = timestamp_to_index(self._interday_datas[symbol].index, date)
-                symbol_values = list(self._interday_datas[symbol]['Close'][
+                last_day_index = timestamp_to_index(self._interday_data[symbol].index, date)
+                symbol_values = list(self._interday_data[symbol]['Close'][
                                      last_day_index - (i - current_start):last_day_index + 1])
                 symbol_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
                 year_profit.append(f'{symbol_profit_pct:+.2f}%')
@@ -385,10 +370,10 @@ class Backtesting:
         total_profit_pct = (self._daily_equity[-1] / self._daily_equity[0] - 1) * 100
         total_profit = ['Total Gain/Loss', f'{total_profit_pct:+.2f}%']
         market_first_day_index = timestamp_to_index(
-            self._interday_datas[market_symbol].index, market_dates[0])
+            self._interday_data[market_symbol].index, market_dates[0])
         market_last_day_index = timestamp_to_index(
-            self._interday_datas[market_symbol].index, market_dates[-1])
-        market_values = self._interday_datas[market_symbol]['Close'][
+            self._interday_data[market_symbol].index, market_dates[-1])
+        market_values = self._interday_data[market_symbol]['Close'][
                         market_first_day_index - 1:market_last_day_index + 1]
         my_alpha, my_beta, my_sharpe_ratio = _compute_risks(self._daily_equity, market_values)
         my_drawdown = _compute_drawdown(self._daily_equity)
@@ -397,9 +382,9 @@ class Backtesting:
         sharpe_ratio_row = ['Sharpe Ratio', f'{my_sharpe_ratio:.2f}']
         drawdown_row = ['Maximum Drawdown', f'{my_drawdown * 100:+.2f}%']
         for symbol in print_symbols:
-            first_day_index = timestamp_to_index(self._interday_datas[symbol].index, market_dates[0])
-            last_day_index = timestamp_to_index(self._interday_datas[symbol].index, market_dates[-1])
-            symbol_values = self._interday_datas[symbol]['Close'][first_day_index - 1:last_day_index + 1]
+            first_day_index = timestamp_to_index(self._interday_data[symbol].index, market_dates[0])
+            last_day_index = timestamp_to_index(self._interday_data[symbol].index, market_dates[-1])
+            symbol_values = self._interday_data[symbol]['Close'][first_day_index - 1:last_day_index + 1]
             symbol_total_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
             total_profit.append(f'{symbol_total_profit_pct:+.2f}%')
             symbol_alpha, symbol_beta, symbol_sharpe_ratio = _compute_risks(symbol_values, market_values)
@@ -437,10 +422,10 @@ class Backtesting:
                      label=f'My Portfolio ({profit_pct:+.2f}%)',
                      color='#28b4c8')
             for symbol in plot_symbols:
-                if symbol not in self._interday_datas:
+                if symbol not in self._interday_data:
                     continue
-                last_day_index = timestamp_to_index(self._interday_datas[symbol].index, date)
-                symbol_values = list(self._interday_datas[symbol]['Close'][
+                last_day_index = timestamp_to_index(self._interday_data[symbol].index, date)
+                symbol_values = list(self._interday_data[symbol]['Close'][
                                      last_day_index + 1 - len(dates):last_day_index + 1])
                 for j in range(len(symbol_values) - 1, -1, -1):
                     symbol_values[j] /= symbol_values[0]

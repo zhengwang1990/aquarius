@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import List, Optional, Union
 import collections
 import datetime
 import logging
@@ -21,6 +21,7 @@ DAYS_IN_A_YEAR = 250
 MARKET_OPEN = datetime.time(9, 30)
 MARKET_CLOSE = datetime.time(16, 0)
 SHORT_RESERVE_RATIO = 1
+EPSILON = 1E-7
 
 
 class TimeInterval(Enum):
@@ -76,6 +77,19 @@ def timestamp_to_prev_index(index: pd.Index, timestamp: Union[DATETIME_TYPE, dat
             p = i - 1
             break
     return p
+
+
+def get_unique_actions(actions: List[Action]) -> List[Action]:
+    action_sets = set([(action.symbol, action.type) for action in actions])
+    unique_actions = []
+    for unique_action in action_sets:
+        similar_actions = [action for action in actions if (action.symbol, action.type) == unique_action]
+        action = similar_actions[0]
+        for i in range(1, len(similar_actions)):
+            if similar_actions[i].percent > action.percent:
+                action = similar_actions[i]
+        unique_actions.append(action)
+    return unique_actions
 
 
 def logging_config(logging_file=None, detail_info=True):
@@ -151,7 +165,7 @@ class Processor:
     def process_data(self, context: Context) -> Optional[Action]:
         raise NotImplementedError('Calling parent interface')
 
-    def setup(self, hold_positions: Optional[Dict[str, Dict[str, Any]]] = None) -> None:
+    def setup(self, hold_positions: List[Position] = ()) -> None:
         return
 
     def teardown(self, output_dir: Optional[str] = None) -> None:

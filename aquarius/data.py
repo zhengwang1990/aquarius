@@ -62,7 +62,6 @@ class HistoricalDataLoader:
         end_time = start_time + datetime.timedelta(days=1)
         return self.load_data_list(symbol, start_time, end_time)
 
-    @functools.lru_cache(maxsize=_MEMORY_CACHE_SIZE)
     def load_data_list(self,
                        symbol: str,
                        start_time: DATETIME_TYPE,

@@ -1,6 +1,6 @@
 from .common import *
 from .stock_universe import PrevThreeSigmaStockUniverse
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 import numpy as np
 
 
@@ -18,12 +18,13 @@ class SwingProcessor(Processor):
         self._prev_hold_positions = []
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
-        universe = self._stock_universe.get_stock_universe(view_time) + list(self._hold_positions.keys()) + ['TQQQ']
+        universe = self._stock_universe.get_stock_universe(view_time) + list(self._prev_hold_positions) + ['TQQQ']
         return list(set(universe))
 
-    def setup(self, hold_positions: Optional[Dict[str, Dict[str, Any]]] = None) -> None:
-        if hold_positions is not None:
-            self._hold_positions = hold_positions
+    def setup(self, hold_positions: List[Position] = ()) -> None:
+        for position in hold_positions:
+            if position.qty > 0:
+                self._hold_positions[position.symbol] = {'side': 'long'}
         self._prev_hold_positions = list(self._hold_positions.keys())
 
     def process_data(self, context: Context) -> Optional[Action]:
