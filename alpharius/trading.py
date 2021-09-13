@@ -8,7 +8,7 @@ import pandas as pd
 import retrying
 
 _DATA_SOURCE = DataSource.POLYGON
-_MAX_WORKERS = 20
+_MAX_WORKERS = 10
 
 
 class Trading:
