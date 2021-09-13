@@ -78,21 +78,22 @@ class Trading:
         processed = []
         while time.time() < self._market_close:
             current_time = pd.to_datetime(datetime.datetime.fromtimestamp(time.time())).tz_localize(TIME_ZONE)
+            next_minute = current_time + datetime.timedelta(minutes=1)
             if int(current_time.minute) % 5 == 4:
                 checkpoint_time = pd.to_datetime(
                     pd.Timestamp.combine(self._today.date(),
-                                         datetime.time(int(current_time.hour),
-                                                       int(current_time.minute) + 1))).tz_localize(TIME_ZONE)
+                                         datetime.time(next_minute.hour,
+                                                       next_minute.minute))).tz_localize(TIME_ZONE)
                 trigger_seconds = 40
                 if checkpoint_time.time() == MARKET_CLOSE:
                     trigger_seconds -= 40
                 if current_time.second > trigger_seconds and checkpoint_time not in processed:
                     self._process(checkpoint_time)
                 processed.append(checkpoint_time)
-            time.sleep(5)
+                time.sleep(5)
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
-        logging.info('Process starts')
+        logging.info('Process starts for [%s]', checkpoint_time)
         self._update_intraday_data()
 
         contexts = {}
