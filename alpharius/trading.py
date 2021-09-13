@@ -89,7 +89,7 @@ class Trading:
                     trigger_seconds -= 40
                 if current_time.second > trigger_seconds and checkpoint_time not in processed:
                     self._process(checkpoint_time)
-                processed.append(checkpoint_time)
+                    processed.append(checkpoint_time)
                 time.sleep(5)
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
