@@ -213,8 +213,10 @@ class Trading:
             logging.error('Failed to placer [%s] order for [%s]: %s', side, symbol, e)
 
     @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
-    def _wait_for_order_to_fill(self, timeout=10):
+    def _wait_for_order_to_fill(self, timeout: int = 10, replacing: bool = True):
         orders = self._alpaca.list_orders(status='open')
+        if not orders:
+            return
         wait_time = 0
         while orders:
             logging.info('Waiting for orders to fill. [%d] open orders remaining.', len(orders))
@@ -225,6 +227,9 @@ class Trading:
             orders = self._alpaca.list_orders(status='open')
         if not orders:
             logging.info('All orders are filled')
+            return
+        if not replacing:
+            logging.info('[%d] orders not filled', len(orders))
             return
 
         logging.info('Replacing [%d] remaining orders.', len(orders))
@@ -248,3 +253,4 @@ class Trading:
             orders = self._alpaca.list_orders(status='open')
         for order in new_orders:
             self._order(order['symbol'], order['qty'], order['side'])
+        self._wait_for_order_to_fill(replacing=False)
