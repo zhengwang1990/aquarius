@@ -154,7 +154,6 @@ class Email:
                                           'email.html')
         with open(html_template_path, 'r') as f:
             html_template = f.read()
-
         message.attach(MIMEText(html_template.format(
             account_html=account_html, orders_html=orders_html,
             positions_html=positions_html), 'html'))
