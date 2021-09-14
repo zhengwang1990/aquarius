@@ -141,7 +141,7 @@ class Trading:
 
     def _list_positions(self) -> List[Position]:
         alpaca_positions = self._alpaca.list_positions()
-        return [Position(position.symbol, position.qty, position.avg_entry_price, None)
+        return [Position(position.symbol, float(position.qty), float(position.avg_entry_price), None)
                 for position in alpaca_positions]
 
     def _get_position(self, symbol: str) -> Optional[Position]:
