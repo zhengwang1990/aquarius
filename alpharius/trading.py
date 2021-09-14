@@ -246,7 +246,7 @@ class Trading:
         new_orders = []
         for order in orders:
             symbol = order.symbol
-            qty = order.qty - order.filled_qty
+            qty = float(order.qty) - float(order.filled_qty)
             side = order.side
             try:
                 self._alpaca.cancel_order(order.id)
