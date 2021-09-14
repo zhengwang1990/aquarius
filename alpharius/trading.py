@@ -4,11 +4,13 @@ from concurrent import futures
 import alpaca_trade_api as tradeapi
 import datetime
 import time
+import os
 import pandas as pd
 import retrying
 
 _DATA_SOURCE = DataSource.POLYGON
 _MAX_WORKERS = 10
+_CASH_RESERVE = os.environ.get('CASH_RESERVE', 0)
 
 
 class Trading:
@@ -185,7 +187,7 @@ class Trading:
         """Opens positions instructed by input actions."""
         self._update_account()
         self._update_positions()
-        tradable_cash = self._cash
+        tradable_cash = self._cash - _CASH_RESERVE
         for position in self._positions:
             if position.qty < 0:
                 tradable_cash += position.entry_price * position.qty * (1 + SHORT_RESERVE_RATIO)
@@ -197,8 +199,8 @@ class Trading:
                 continue
             cash_to_trade = min(tradable_cash / len(actions), tradable_cash * action.percent)
             qty = int(cash_to_trade / action.price)
-            if qty == 0:
-                logging.info('Quantity to open [%s] is zero. Skipping open.', symbol)
+            if qty <= 0 or cash_to_trade < self._equity * 0.01:
+                logging.info('Quantity to open [%s] is too small. Skipping open.', symbol)
                 continue
             side = 'buy' if action.type == ActionType.BUY_TO_OPEN else 'sell'
             self._order(symbol, qty, side, limit_price=action.price)
@@ -237,7 +239,7 @@ class Trading:
             logging.info('All orders are filled')
             return
         if not replacing:
-            logging.info('[%d] orders not filled', len(orders))
+            logging.warning('[%d] orders not filled', len(orders))
             return
 
         logging.info('Replacing [%d] remaining orders.', len(orders))
