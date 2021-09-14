@@ -1,5 +1,4 @@
-from .common import TimeInterval, DataSource, logging_config
-
+from .common import TimeInterval, DataSource
 from .backtesting import Backtesting
 from .data import HistoricalDataLoader
 from .noop_processor import NoopProcessorFactory
