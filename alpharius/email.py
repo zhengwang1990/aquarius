@@ -56,6 +56,8 @@ class Email:
                                           direction='desc')
         orders_html = ''
         for order in orders:
+            if order.filled_at is None:
+                continue
             orders_html += (f'<tr><th scope="row">{order.symbol}</th>'
                             f'<td>{order.side}</td>'
                             f'<td>{order.filled_qty}</td>'
