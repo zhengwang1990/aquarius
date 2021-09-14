@@ -198,27 +198,28 @@ class Trading:
                 logging.info('Position for [%s] already exists. Skipping open.', symbol)
                 continue
             cash_to_trade = min(tradable_cash / len(actions), tradable_cash * action.percent)
-            qty = int(cash_to_trade / action.price)
-            if qty <= 0 or cash_to_trade < self._equity * 0.01:
-                logging.info('Quantity to open [%s] is too small. Skipping open.', symbol)
+            if cash_to_trade < self._equity * 0.01:
+                logging.info('Not enough cash to open [%s]. Skipping open.', symbol)
                 continue
             side = 'buy' if action.type == ActionType.BUY_TO_OPEN else 'sell'
-            self._order(symbol, qty, side, limit_price=action.price)
+            self._order(symbol, side, notional=cash_to_trade, limit_price=action.price)
 
         self._wait_for_order_to_fill()
 
     @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
-    def _order(self, symbol: str, qty: float, side: str, limit_price: Optional[float] = None):
-        if qty <= 0:
-            return
-        logging.info('Placing order for [%s]: side [%s]; qty [%s]; type [%s].',
-                     symbol, side, qty, 'market' if limit_price is None else 'limit')
+    def _order(self, symbol: str,  side: str,
+               qty: Optional[float] = None,
+               notional: Optional[float] = None,
+               limit_price: Optional[float] = None):
+        order_type = 'market' if limit_price is None else 'limit'
+        logging.info('Placing order for [%s]: side [%s]; qty [%s]; notional [%s]; type [%s].',
+                     symbol, side, qty, notional, order_type)
         try:
-            if limit_price is not None:
-                self._alpaca.submit_order(symbol, qty, side, 'limit', 'day',
-                                          limit_price=str(limit_price))
-            else:
-                self._alpaca.submit_order(symbol, qty, side, 'market', 'day')
+            self._alpaca.submit_order(symbol=symbol, qty=qty, side=side,
+                                      type=order_type,
+                                      time_in_force='day',
+                                      limit_price=limit_price,
+                                      notional=notional)
         except tradeapi.rest.APIError as e:
             logging.error('Failed to placer [%s] order for [%s]: %s', side, symbol, e)
 
