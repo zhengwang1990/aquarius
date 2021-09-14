@@ -1,5 +1,6 @@
 from .common import *
 from .data import load_tradable_history, HistoricalDataLoader
+from .email import send_email
 from concurrent import futures
 import alpaca_trade_api as tradeapi
 import datetime
@@ -94,6 +95,9 @@ class Trading:
                     self._process(checkpoint_time)
                     processed.append(checkpoint_time)
                 time.sleep(5)
+
+        # Send email
+        send_email()
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
         logging.info('Process starts for [%s]', checkpoint_time.time())
@@ -210,7 +214,7 @@ class Trading:
     def _place_order(self, symbol: str, side: str,
                      qty: Optional[float] = None,
                      notional: Optional[float] = None,
-                     limit_price: Optional[float] = None):
+                     limit_price: Optional[float] = None) -> None:
         order_type = 'market' if limit_price is None else 'limit'
         logging.info('Placing order for [%s]: side [%s]; qty [%s]; notional [%s]; type [%s].',
                      symbol, side, qty, notional, order_type)
@@ -224,7 +228,7 @@ class Trading:
             logging.error('Failed to placer [%s] order for [%s]: %s', side, symbol, e)
 
     @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
-    def _wait_for_order_to_fill(self, timeout: int = 10, replacing: bool = True):
+    def _wait_for_order_to_fill(self, timeout: int = 10, replacing: bool = True) -> None:
         orders = self._alpaca.list_orders(status='open')
         if not orders:
             return

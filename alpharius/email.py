@@ -15,8 +15,20 @@ import pandas as pd
 import pandas_market_calendars as mcal
 import smtplib
 
-_SMTP_HOST = 'smtp.live.com'
-_SMTP_PORT = 587
+_SMTP_HOST = 'smtp.163.com'
+_SMTP_PORT = 25
+_EMAIL_USERNAME = os.environ.get('EMAIL_USERNAME')
+_EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')
+_EMAIL_RECEIVER = os.environ.get('EMAIL_RECEIVER')
+
+
+def send_email():
+    if not _EMAIL_USERNAME or not _EMAIL_PASSWORD or not _EMAIL_RECEIVER:
+        return
+    email_client = Email(_EMAIL_USERNAME, _EMAIL_PASSWORD)
+    sender = f'Stock Trading System <{_EMAIL_USERNAME}@163.com>'
+    receiver = _EMAIL_RECEIVER
+    email_client.send_email(sender, receiver)
 
 
 class Email:
@@ -97,8 +109,8 @@ class Email:
 
         intraday_gain = account_equity - history.equity[-1]
         row_style = 'scope="row" class="narrow-col"'
-        account_html = (f'<tr><th {row_style}>Equity</th><td>{account.equity}</td></tr>'
-                        f'<tr><th {row_style}>Cash</th><td>{account.cash}</td></tr>'
+        account_html = (f'<tr><th {row_style}>Equity</th><td>{account_equity:.2f}</td></tr>'
+                        f'<tr><th {row_style}>Cash</th><td>{float(account.cash):.2f}</td></tr>'
                         f'<tr><th {row_style}>Gain / Loss</th>'
                         f'<td {self._get_color_style(intraday_gain)}>{intraday_gain:+.2f}'
                         f'({(account_equity / history.equity[-1] - 1) * 100:+.2f}%)</td></tr>\n'
