@@ -46,7 +46,11 @@ class Trading:
         logging.info('Account updated: equity [%s]; cash [%s].', self._equity, self._cash)
 
     def _update_positions(self) -> None:
-        self._positions = self._list_positions()
+        alpaca_positions = self._alpaca.list_positions()
+        self._positions = [Position(position.symbol, float(position.qty),
+                                    float(position.avg_entry_price), None)
+                           for position in alpaca_positions]
+        logging.info('Positions updated: [%d] open positions.', len(self._positions))
 
     def _init_processors(self, history_start: DATETIME_TYPE) -> None:
         self._processors = []
@@ -146,11 +150,6 @@ class Trading:
         logging.info('Intraday data updated for [%d] symbols. Time elapsed [%.2fs]',
                      len(self._stock_universe),
                      time.time() - update_start)
-
-    def _list_positions(self) -> List[Position]:
-        alpaca_positions = self._alpaca.list_positions()
-        return [Position(position.symbol, float(position.qty), float(position.avg_entry_price), None)
-                for position in alpaca_positions]
 
     def _get_position(self, symbol: str) -> Optional[Position]:
         for position in self._positions:
