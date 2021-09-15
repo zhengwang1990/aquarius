@@ -191,7 +191,7 @@ class Trading:
         """Opens positions instructed by input actions."""
         self._update_account()
         self._update_positions()
-        tradable_cash = self._cash - _CASH_RESERVE
+        tradable_cash = self._cash - float(_CASH_RESERVE)
         for position in self._positions:
             if position.qty < 0:
                 tradable_cash += position.entry_price * position.qty * (1 + SHORT_RESERVE_RATIO)
