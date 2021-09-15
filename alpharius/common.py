@@ -159,7 +159,7 @@ class Context:
 class Processor:
 
     def __init__(self) -> None:
-        pass
+        return
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         raise NotImplementedError('Calling parent interface')
@@ -177,7 +177,7 @@ class Processor:
 class ProcessorFactory:
 
     def __init__(self) -> None:
-        pass
+        return
 
     def create(self, *args, **kwargs) -> Processor:
         raise NotImplementedError('Calling parent interface')
