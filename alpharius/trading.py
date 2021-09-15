@@ -106,7 +106,9 @@ class Trading:
         contexts = {}
         for symbol in self._stock_universe:
             intraday_lookback = self._intraday_data[symbol]
-            interday_lookback = self._interday_data[symbol]
+            interday_lookback = self._interday_data.get(symbol)
+            if interday_lookback is None or len(interday_lookback) < DAYS_IN_A_MONTH:
+                continue
             current_price = intraday_lookback['Close'][-1]
             context = Context(symbol=symbol,
                               current_time=checkpoint_time,
@@ -122,6 +124,8 @@ class Trading:
             stock_universe = self._processor_stock_universes[processor_name]
             for symbol in stock_universe:
                 context = contexts.get(symbol)
+                if context is None:
+                    continue
                 action = processor.process_data(context)
                 if action is not None:
                     actions.append(action)

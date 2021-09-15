@@ -29,7 +29,9 @@ class TestTrading(unittest.TestCase):
         self.patch_polygon.start()
         os.environ['POLYGON_API_KEY'] = 'fake_polygon_api_key'
         os.environ['CASH_RESERVE'] = '0'
-        self.trading = alpharius.Trading(processor_factories=[FakeProcessorFactory()])
+        fake_processor_factory = FakeProcessorFactory()
+        self.fake_processor = fake_processor_factory.processor
+        self.trading = alpharius.Trading(processor_factories=[fake_processor_factory])
 
     def tearDown(self):
         self.patch_open.stop()
@@ -48,6 +50,8 @@ class TestTrading(unittest.TestCase):
         self.assertGreater(self.fake_alpaca.submit_order_call_count, 0)
         self.assertGreater(self.fake_alpaca.get_account_call_count, 0)
         self.assertGreater(self.fake_alpaca.cancel_order_call_count, 0)
+        self.assertGreater(self.fake_processor.get_stock_universe_call_count, 0)
+        self.assertGreater(self.fake_processor.process_data_call_count, 0)
 
 
 if __name__ == '__main__':

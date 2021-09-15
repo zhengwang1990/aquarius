@@ -89,6 +89,7 @@ class FakeProcess(alpharius.Processor):
         self.process_data_call_count = 0
 
     def get_stock_universe(self, view_time):
+        self.get_stock_universe_call_count += 1
         return ['QQQ', 'SPY', 'DIA']
 
     def process_data(self, context):
@@ -114,7 +115,8 @@ class FakeProcessorFactory(alpharius.ProcessorFactory):
     def __init__(self):
         super().__init__()
         self.create_call_count = 0
+        self.processor = FakeProcess()
 
     def create(self, *args, **kwargs):
         self.create_call_count += 1
-        return FakeProcess()
+        return self.processor
