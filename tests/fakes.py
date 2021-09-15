@@ -50,7 +50,7 @@ class FakeAlpaca:
 
     def list_orders(self, *args, **kwargs):
         self.list_orders_call_count += 1
-        return [Order('ORDER123', 'DIA', 'short', None, '123', None),
+        return [Order('ORDER123', 'DIA', 'short', '14', None, '0'),
                 Order('ORDER123', 'SPY', 'long', '12', None, '1')]
 
     def submit_order(self, *args, **kwargs):

@@ -206,28 +206,27 @@ class Trading:
                 logging.info('Position for [%s] already exists. Skipping open.', symbol)
                 continue
             cash_to_trade = min(tradable_cash / len(actions), tradable_cash * action.percent)
-            if cash_to_trade < self._equity * 0.01:
+            qty = int(cash_to_trade / action.price)
+            if qty <= 0 or cash_to_trade < self._equity * 0.01:
                 logging.info('Not enough cash to open [%s]. Skipping open.', symbol)
                 continue
             side = 'buy' if action.type == ActionType.BUY_TO_OPEN else 'sell'
-            self._place_order(symbol, side, notional=cash_to_trade, limit_price=action.price)
+            self._place_order(symbol, side, qty=qty, limit_price=action.price)
 
         self._wait_for_order_to_fill()
 
     @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
     def _place_order(self, symbol: str, side: str,
                      qty: Optional[float] = None,
-                     notional: Optional[float] = None,
                      limit_price: Optional[float] = None) -> None:
         order_type = 'market' if limit_price is None else 'limit'
-        logging.info('Placing order for [%s]: side [%s]; qty [%s]; notional [%s]; type [%s].',
-                     symbol, side, qty, notional, order_type)
+        logging.info('Placing order for [%s]: side [%s]; qty [%s]; type [%s].',
+                     symbol, side, qty, order_type)
         try:
             self._alpaca.submit_order(symbol=symbol, qty=qty, side=side,
                                       type=order_type,
                                       time_in_force='day',
-                                      limit_price=limit_price,
-                                      notional=notional)
+                                      limit_price=limit_price)
         except tradeapi.rest.APIError as e:
             logging.error('Failed to placer [%s] order for [%s]: %s', side, symbol, e)
 
@@ -256,11 +255,10 @@ class Trading:
         for order in orders:
             symbol = order.symbol
             qty = float(order.qty) - float(order.filled_qty) if order.qty else None
-            notional = float(order.notional) if order.notional else None
             side = order.side
             try:
                 self._alpaca.cancel_order(order.id)
-                new_orders.append({'symbol': symbol, 'side': side, 'qty': qty, 'notional': notional})
+                new_orders.append({'symbol': symbol, 'side': side, 'qty': qty})
             except tradeapi.rest.APIError as e:
                 logging.error('Failed to replace [%s] order for [%s]: %s', side, symbol, e)
 
@@ -272,6 +270,5 @@ class Trading:
             time.sleep(0.5)
             orders = self._alpaca.list_orders(status='open')
         for order in new_orders:
-            self._place_order(order['symbol'], order['side'],
-                              qty=order['qty'], notional=order['notional'])
+            self._place_order(order['symbol'], order['side'], qty=order['qty'])
         self._wait_for_order_to_fill(replacing=False)
