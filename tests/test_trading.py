@@ -1,7 +1,6 @@
 from .fakes import *
 import alpaca_trade_api as tradeapi
 import alpharius
-import collections
 import itertools
 import os
 import polygon
@@ -9,20 +8,14 @@ import time
 import unittest
 import unittest.mock as mock
 
-Clock = collections.namedtuple('Clock', ['next_open', 'next_close'])
-Asset = collections.namedtuple('Asset', ['symbol', 'tradable', 'marginable',
-                                         'shortable', 'easy_to_borrow'])
-Account = collections.namedtuple('Account', ['equity', 'cash'])
-Position = collections.namedtuple('Position', ['symbol', 'qty', 'current_price',
-                                               'market_value', 'cost_basis',
-                                               'avg_entry_price'])
-
 
 class TestTrading(unittest.TestCase):
 
     def setUp(self):
         self.patch_open = mock.patch('builtins.open', mock.mock_open())
         self.patch_open.start()
+        self.patch_isfile = mock.patch.object(os.path, 'isfile', return_value=False)
+        self.patch_isfile.start()
         self.patch_mkdirs = mock.patch.object(os, 'makedirs')
         self.patch_mkdirs.start()
         self.patch_sleep = mock.patch.object(time, 'sleep')
@@ -38,11 +31,12 @@ class TestTrading(unittest.TestCase):
 
     def tearDown(self):
         self.patch_open.stop()
+        self.patch_isfile.stop()
         self.patch_mkdirs.stop()
         self.patch_sleep.stop()
+        self.patch_time.stop()
         self.patch_alpaca.stop()
         self.patch_polygon.stop()
-        self.patch_time.stop()
 
     def test_run_success(self):
         self.trading.run()

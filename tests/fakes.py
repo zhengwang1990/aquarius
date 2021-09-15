@@ -1,6 +1,7 @@
 import alpharius
 import collections
 import datetime
+import pandas as pd
 import unittest.mock as mock
 
 Clock = collections.namedtuple('Clock', ['next_open', 'next_close'])
@@ -33,7 +34,7 @@ class FakeAlpaca:
     def list_assets(self):
         self.list_assets_call_count += 1
         return [Asset(symbol, True, True, True, True)
-                for symbol in ['QQQ', 'SPY', 'DIA']]
+                for symbol in ['QQQ', 'SPY', 'DIA', 'TQQQ']]
 
     def list_positions(self):
         self.list_positions_call_count += 1
@@ -64,12 +65,20 @@ class FakePolygon:
     def __init__(self):
         self.stocks_equities_aggregates_call_count = 0
 
-    def stocks_equities_aggregates(self, *args, **kwargs):
+    def stocks_equities_aggregates(self, ticker, multiplier, timespan, *args, **kwargs):
         self.stocks_equities_aggregates_call_count += 1
-        results = [{'t': '1616000000000', 'o': 50, 'h': 51, 'l': 49, 'c': 50.5, 'vw': 50.123, 'v': 100},
-                   {'t': '1616000300000', 'o': 51, 'h': 52, 'l': 50, 'c': 51.5, 'vw': 51.123, 'v': 110},
-                   {'t': '1616000600000', 'o': 52, 'h': 52.5, 'l': 50, 'c': 51.7, 'vw': 52.234, 'v': 120},
-                   {'t': '1616000900000', 'o': 51, 'h': 52, 'l': 50, 'c': 51.5, 'vw': 51.123, 'v': 120}]
+        results = []
+        if multiplier == 1 and timespan == 'day':
+            results = [{'t': str(t * 1000), 'o': 40, 'h': 41, 'l': 39, 'c': 40.5, 'vw': 40.123, 'v': 10}
+                       for t in range(int(pd.to_datetime('2021-02-17').timestamp()),
+                                      int(pd.to_datetime('2021-03-19').timestamp()),
+                                      86400)]
+        elif multiplier == 5 and timespan == 'minute':
+            results = [{'t': str(t * 1000), 'o': 40, 'h': 41, 'l': 39, 'c': 40.5, 'vw': 40.123, 'v': 10}
+                       for t in range(int(pd.to_datetime('2021-03-17 09:30:00-04:00').timestamp()),
+                                      int(pd.to_datetime('2021-03-17 16:05:00-04:00').timestamp()),
+                                      300)]
+
         return PolygonResponse('OK', results)
 
 
@@ -84,19 +93,19 @@ class FakeProcess(alpharius.Processor):
 
     def process_data(self, context):
         self.process_data_call_count += 1
-        if context.current_time == datetime.time(10, 0) and context.symbol == 'QQQ':
+        if context.current_time.time() == datetime.time(10, 0) and context.symbol == 'QQQ':
             return alpharius.Action('QQQ', alpharius.ActionType.BUY_TO_OPEN, 1, 51)
-        if context.current_time == datetime.time(10, 0) and context.symbol == 'DIA':
+        if context.current_time.time() == datetime.time(10, 0) and context.symbol == 'DIA':
             return alpharius.Action('DIA', alpharius.ActionType.BUY_TO_OPEN, 1, 51)
-        if context.current_time == datetime.time(11, 30) and context.symbol == 'QQQ':
+        if context.current_time.time() == datetime.time(11, 30) and context.symbol == 'QQQ':
             return alpharius.Action('QQQ', alpharius.ActionType.SELL_TO_CLOSE, 1, 52)
-        if context.current_time == datetime.time(12, 0) and context.symbol == 'DIA':
+        if context.current_time.time() == datetime.time(12, 0) and context.symbol == 'DIA':
             return alpharius.Action('DIA', alpharius.ActionType.SELL_TO_CLOSE, 1, 52)
-        if context.current_time == datetime.time(13, 0) and context.symbol == 'DIA':
+        if context.current_time.time() == datetime.time(13, 0) and context.symbol == 'DIA':
             return alpharius.Action('DIA', alpharius.ActionType.SELL_TO_OPEN, 1, 52)
-        if context.current_time == datetime.time(13, 10) and context.symbol == 'DIA':
+        if context.current_time.time() == datetime.time(13, 10) and context.symbol == 'DIA':
             return alpharius.Action('DIA', alpharius.ActionType.BUY_TO_CLOSE, 1, 50)
-        if context.current_time == datetime.time(16, 0) and context.symbol == 'SPY':
+        if context.current_time.time() == datetime.time(16, 0) and context.symbol == 'SPY':
             return alpharius.Action('SPY', alpharius.ActionType.BUY_TO_OPEN, 1, 50)
 
 
