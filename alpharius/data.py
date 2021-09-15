@@ -32,9 +32,10 @@ class HistoricalDataLoader:
             self._init_yahoo()
 
     def _init_polygon(self) -> None:
-        if not POLYGON_API_KEY:
+        polygon_api_key = os.environ.get(POLYGON_API_KEY_ENV)
+        if not polygon_api_key:
             raise DataError('Polygon API Key not provided')
-        self._polygon_client = polygon.RESTClient(auth_key=POLYGON_API_KEY, timeout=int(self._timeout))
+        self._polygon_client = polygon.RESTClient(auth_key=polygon_api_key, timeout=int(self._timeout))
         if self._time_interval == TimeInterval.FIVE_MIN:
             self._multiplier = 5
             self._timespan = 'minute'

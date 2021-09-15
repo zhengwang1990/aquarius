@@ -11,7 +11,6 @@ import retrying
 
 _DATA_SOURCE = DataSource.POLYGON
 _MAX_WORKERS = 10
-_CASH_RESERVE = os.environ.get('CASH_RESERVE', 0)
 
 
 class Trading:
@@ -21,6 +20,7 @@ class Trading:
         os.makedirs(self._output_dir, exist_ok=True)
         logging_config(os.path.join(self._output_dir, 'log.txt'), detail_info=True)
         self._equity, self._cash = 0, 0
+        self._cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         self._today = pd.to_datetime(
             pd.Timestamp.combine(datetime.datetime.today().date(), datetime.time(0, 0))).tz_localize(TIME_ZONE)
         self._processor_factories = processor_factories
@@ -191,7 +191,7 @@ class Trading:
         """Opens positions instructed by input actions."""
         self._update_account()
         self._update_positions()
-        tradable_cash = self._cash - float(_CASH_RESERVE)
+        tradable_cash = self._cash - self._cash_reserve
         for position in self._positions:
             if position.qty < 0:
                 tradable_cash += position.entry_price * position.qty * (1 + SHORT_RESERVE_RATIO)

@@ -32,6 +32,7 @@ class TestTrading(unittest.TestCase):
         self.patch_get_calendar.start()
         self.patch_date_range = mock.patch.object(mcal, 'date_range', return_value=[pd.to_datetime('2021-03-17')])
         self.patch_date_range.start()
+        os.environ['POLYGON_API_KEY'] = 'fake_polygon_api_key'
         self.trading = alpharius.Backtesting(start_date=pd.to_datetime('2021-03-17'),
                                              end_date=pd.to_datetime('2021-03-18'),
                                              processor_factories=[FakeProcessorFactory()])

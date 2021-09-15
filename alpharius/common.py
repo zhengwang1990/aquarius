@@ -7,7 +7,8 @@ import os
 import pandas as pd
 import sys
 
-POLYGON_API_KEY = os.environ.get('POLYGON_API_KEY')
+POLYGON_API_KEY_ENV = 'POLYGON_API_KEY'
+CASH_RESERVE_ENV = 'CASH_RESERVE'
 TIME_ZONE = 'America/New_York'
 CACHE_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'cache')
 OUTPUT_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'outputs')

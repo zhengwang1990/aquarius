@@ -27,6 +27,8 @@ class TestTrading(unittest.TestCase):
         self.patch_alpaca.start()
         self.patch_polygon = mock.patch.object(polygon, 'RESTClient', return_value=FakePolygon())
         self.patch_polygon.start()
+        os.environ['POLYGON_API_KEY'] = 'fake_polygon_api_key'
+        os.environ['CASH_RESERVE'] = '0'
         self.trading = alpharius.Trading(processor_factories=[FakeProcessorFactory()])
 
     def tearDown(self):
