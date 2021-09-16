@@ -1,10 +1,10 @@
 from .common import *
 from .data import HistoricalDataLoader
-from email.mime.image import MIMEImage
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 import alpaca_trade_api as tradeapi
 import datetime
+import email.mime.image as image
+import email.mime.multipart as multipart
+import email.mime.text as text
 import io
 import matplotlib
 matplotlib.use('Agg')
@@ -17,17 +17,17 @@ import smtplib
 
 _SMTP_HOST = 'smtp.163.com'
 _SMTP_PORT = 25
-_EMAIL_USERNAME = os.environ.get('EMAIL_USERNAME')
-_EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')
-_EMAIL_RECEIVER = os.environ.get('EMAIL_RECEIVER')
 
 
 def send_email():
-    if not _EMAIL_USERNAME or not _EMAIL_PASSWORD or not _EMAIL_RECEIVER:
+    username = os.environ.get('EMAIL_USERNAME')
+    password = os.environ.get('EMAIL_PASSWORD')
+    receiver = os.environ.get('EMAIL_RECEIVER')
+    if not username or not password or not receiver:
         return
-    email_client = Email(_EMAIL_USERNAME, _EMAIL_PASSWORD)
-    sender = f'Stock Trading System <{_EMAIL_USERNAME}@163.com>'
-    receiver = _EMAIL_RECEIVER
+    email_client = Email(username, password)
+    sender = f'Stock Trading System <{username}@163.com>'
+    receiver = receiver
     email_client.send_email(sender, receiver)
 
 
@@ -47,7 +47,7 @@ class Email:
 
     @staticmethod
     def _create_message(sender, receiver):
-        message = MIMEMultipart('alternative')
+        message = multipart.MIMEMultipart('alternative')
         message['From'] = sender
         message['To'] = receiver
         message['Subject'] = f'[Summary] [{datetime.datetime.today().strftime("%F")}] Trade summary of the day'
@@ -91,11 +91,16 @@ class Email:
                                '</td>\n')
 
         account = self._alpaca.get_account()
-        account_equity = float(account.equity)
+        cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
+        account_equity = float(account.equity) - cash_reserve
+        account_cash = float(account.cash) - cash_reserve
         history_length = 10
         history = self._alpaca.get_portfolio_history(date_start=market_dates[-history_length].strftime('%F'),
                                                      date_end=market_dates[-2].strftime('%F'),
                                                      timeframe='1D')
+        for i in range(len(history.equity)):
+            history.equity[i] = (history.equity[i] - cash_reserve
+                                 if history.equity[i] > cash_reserve else history.equity[i])
         historical_value = [equity / history.equity[0] for equity in history.equity]
         historical_value.append(account_equity / history.equity[0])
         historical_date = [m.date() for m in market_dates[-history_length:]]
@@ -111,7 +116,8 @@ class Email:
         intraday_gain = account_equity - history.equity[-1]
         row_style = 'scope="row" class="narrow-col"'
         account_html = (f'<tr><th {row_style}>Equity</th><td>{account_equity:.2f}</td></tr>'
-                        f'<tr><th {row_style}>Cash</th><td>{float(account.cash):.2f}</td></tr>'
+                        f'<tr><th {row_style}>Cash</th><td>{account_cash:.2f}</td></tr>'
+                        f'<tr><th {row_style}>Reserve</th><td>{cash_reserve:.2f}</td></tr>' if cash_reserve > 0 else ''
                         f'<tr><th {row_style}>Gain / Loss</th>'
                         f'<td {self._get_color_style(intraday_gain)}>{intraday_gain:+.2f}'
                         f'({(account_equity / history.equity[-1] - 1) * 100:+.2f}%)</td></tr>\n'
@@ -159,17 +165,17 @@ class Email:
         buf = io.BytesIO()
         plt.savefig(buf, format='png')
         buf.seek(0)
-        image = MIMEImage(buf.read())
-        image.add_header('Content-Disposition', "attachment; filename=history.png")
-        image.add_header('Content-ID', '<history>')
+        history_image = image.MIMEImage(buf.read())
+        history_image.add_header('Content-Disposition', "attachment; filename=history.png")
+        history_image.add_header('Content-ID', '<history>')
 
         html_template_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                           'email.html')
         with open(html_template_path, 'r') as f:
             html_template = f.read()
-        message.attach(MIMEText(html_template.format(
+        message.attach(text.MIMEText(html_template.format(
             account_html=account_html, orders_html=orders_html,
             positions_html=positions_html), 'html'))
-        message.attach(image)
+        message.attach(history_image)
         self._client.sendmail(sender, [receiver], message.as_string())
         self._client.close()

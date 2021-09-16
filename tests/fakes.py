@@ -10,9 +10,11 @@ Asset = collections.namedtuple('Asset', ['symbol', 'tradable', 'marginable',
 Account = collections.namedtuple('Account', ['equity', 'cash'])
 Position = collections.namedtuple('Position', ['symbol', 'qty', 'current_price',
                                                'market_value', 'cost_basis',
-                                               'avg_entry_price'])
-Order = collections.namedtuple('Order', ['id', 'symbol', 'side',
-                                         'qty', 'notional', 'filled_qty'])
+                                               'avg_entry_price', 'change_today',
+                                               'unrealized_plpc'])
+Order = collections.namedtuple('Order', ['id', 'symbol', 'side', 'qty', 'notional',
+                                         'filled_qty', 'filled_at', 'filled_avg_price'])
+History = collections.namedtuple('History', ['equity'])
 PolygonResponse = collections.namedtuple('PolygonResponse', ['status', 'results'])
 
 
@@ -26,6 +28,7 @@ class FakeAlpaca:
         self.list_positions_call_count = 0
         self.submit_order_call_count = 0
         self.cancel_order_call_count = 0
+        self.get_portfolio_history_call_count = 0
 
     def get_account(self):
         self.get_account_call_count += 1
@@ -38,7 +41,7 @@ class FakeAlpaca:
 
     def list_positions(self):
         self.list_positions_call_count += 1
-        return [Position('QQQ', '10', '10.0', '100.0', '99.0', '9.9')]
+        return [Position('QQQ', '10', '10.0', '100.0', '99.0', '9.9', '0.01', '0')]
 
     def get_clock(self):
         self.get_clock_call_count += 1
@@ -50,14 +53,18 @@ class FakeAlpaca:
 
     def list_orders(self, *args, **kwargs):
         self.list_orders_call_count += 1
-        return [Order('ORDER123', 'DIA', 'short', '14', None, '0'),
-                Order('ORDER123', 'SPY', 'long', '12', None, '1')]
+        return [Order('ORDER123', 'DIA', 'short', '14', None, '0', '2021-03-17 10:15', '12'),
+                Order('ORDER123', 'SPY', 'long', '12', None, '1', '2021-03-17 10:20', '13')]
 
     def submit_order(self, *args, **kwargs):
         self.submit_order_call_count += 1
 
     def cancel_order(self, *args, **kwargs):
         self.cancel_order_call_count += 1
+
+    def get_portfolio_history(self, *args, **kwargs):
+        self.get_portfolio_history_call_count += 1
+        return History([i + 100 for i in range(10)])
 
 
 class FakePolygon:
