@@ -70,7 +70,7 @@ class Email:
         for order in orders:
             if order.filled_at is None:
                 continue
-            filled_at_str = pd.to_datetime(order.filled_at).tz_localize(TIME_ZONE).strftime("%H:%M:%S")
+            filled_at_str = pd.to_datetime(order.filled_at).tz_convert(TIME_ZONE).strftime("%H:%M:%S")
             orders_html += (f'<tr><th scope="row">{order.symbol}</th>'
                             f'<td>{order.side}</td>'
                             f'<td>{order.filled_qty}</td>'

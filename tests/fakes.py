@@ -53,8 +53,8 @@ class FakeAlpaca:
 
     def list_orders(self, *args, **kwargs):
         self.list_orders_call_count += 1
-        return [Order('ORDER123', 'DIA', 'short', '14', None, '0', '2021-03-17 10:15', '12'),
-                Order('ORDER123', 'SPY', 'long', '12', None, '1', '2021-03-17 10:20', '13')]
+        return [Order('ORDER123', 'DIA', 'short', '14', None, '0', '2021-03-17T10:15:00.0Z', '12'),
+                Order('ORDER123', 'SPY', 'long', '12', None, '1', '2021-03-17T10:20:00.0Z', '13')]
 
     def submit_order(self, *args, **kwargs):
         self.submit_order_call_count += 1
