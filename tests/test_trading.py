@@ -3,7 +3,9 @@ import alpaca_trade_api as tradeapi
 import alpharius
 import itertools
 import os
+import pandas_market_calendars as mcal
 import polygon
+import smtplib
 import time
 import unittest
 import unittest.mock as mock
@@ -27,7 +29,16 @@ class TestTrading(unittest.TestCase):
         self.patch_alpaca.start()
         self.patch_polygon = mock.patch.object(polygon, 'RESTClient', return_value=FakePolygon())
         self.patch_polygon.start()
+        self.patch_get_calendar = mock.patch.object(mcal, 'get_calendar', return_value=mock.Mock())
+        self.patch_get_calendar.start()
+        self.patch_date_range = mock.patch.object(mcal, 'date_range', return_value=[pd.to_datetime('2021-03-17')])
+        self.patch_date_range.start()
+        self.patch_smtp = mock.patch.object(smtplib, 'SMTP', mock.create_autospec(smtplib.SMTP))
+        self.patch_smtp.start()
         os.environ['POLYGON_API_KEY'] = 'fake_polygon_api_key'
+        os.environ['EMAIL_USERNAME'] = 'fake_user'
+        os.environ['EMAIL_PASSWORD'] = 'fake_password'
+        os.environ['EMAIL_RECEIVER'] = 'fake_receiver'
         os.environ['CASH_RESERVE'] = '0'
         fake_processor_factory = FakeProcessorFactory()
         self.fake_processor = fake_processor_factory.processor
@@ -41,6 +52,9 @@ class TestTrading(unittest.TestCase):
         self.patch_time.stop()
         self.patch_alpaca.stop()
         self.patch_polygon.stop()
+        self.patch_get_calendar.stop()
+        self.patch_date_range.stop()
+        self.patch_smtp.stop()
 
     def test_run_success(self):
         self.trading.run()
