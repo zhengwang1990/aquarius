@@ -51,9 +51,6 @@ class TestTrading(unittest.TestCase):
         os.environ['EMAIL_PASSWORD'] = 'fake_password'
         os.environ['EMAIL_RECEIVER'] = 'fake_receiver'
         os.environ['CASH_RESERVE'] = '0'
-        fake_processor_factory = FakeProcessorFactory()
-        self.fake_processor = fake_processor_factory.processor
-        self.trading = alpharius.Trading(processor_factories=[fake_processor_factory])
 
     def tearDown(self):
         self.patch_open.stop()
@@ -70,15 +67,28 @@ class TestTrading(unittest.TestCase):
         self.patch_multipart.stop()
 
     def test_run_success(self):
-        self.trading.run()
+        fake_processor_factory = FakeProcessorFactory()
+        fake_processor = fake_processor_factory.processor
+        trading = alpharius.Trading(processor_factories=[fake_processor_factory])
+
+        trading.run()
 
         self.assertGreater(self.fake_alpaca.list_orders_call_count, 0)
         self.assertGreater(self.fake_alpaca.list_positions_call_count, 0)
         self.assertGreater(self.fake_alpaca.submit_order_call_count, 0)
         self.assertGreater(self.fake_alpaca.get_account_call_count, 0)
         self.assertGreater(self.fake_alpaca.cancel_order_call_count, 0)
-        self.assertGreater(self.fake_processor.get_stock_universe_call_count, 0)
-        self.assertGreater(self.fake_processor.process_data_call_count, 0)
+        self.assertGreater(fake_processor.get_stock_universe_call_count, 0)
+        self.assertGreater(fake_processor.process_data_call_count, 0)
+
+    def test_run_with_processors(self):
+        processor_factories = [alpharius.NoopProcessorFactory(),
+                               alpharius.VolumeBreakoutProcessorFactory(),
+                               alpharius.LevelBreakoutProcessorFactory(),
+                               alpharius.SwingProcessorFactory()]
+        trading = alpharius.Trading(processor_factories=processor_factories)
+
+        trading.run()
 
 
 if __name__ == '__main__':
