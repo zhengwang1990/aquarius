@@ -82,8 +82,7 @@ class TestTrading(unittest.TestCase):
         self.assertGreater(fake_processor.process_data_call_count, 0)
 
     def test_run_with_processors(self):
-        processor_factories = [alpharius.NoopProcessorFactory(),
-                               alpharius.VolumeBreakoutProcessorFactory(),
+        processor_factories = [alpharius.VolumeBreakoutProcessorFactory(),
                                alpharius.LevelBreakoutProcessorFactory(),
                                alpharius.SwingProcessorFactory()]
         trading = alpharius.Trading(processor_factories=processor_factories)
