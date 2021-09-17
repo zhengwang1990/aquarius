@@ -1,9 +1,8 @@
-import numpy as np
-
 from .common import *
 from .stock_universe import ThreeSigmaStockUniverse
 from typing import List, Optional
 import datetime
+import numpy as np
 
 _WATCHING_WINDOW = 12
 
@@ -13,11 +12,13 @@ class VolumeBreakoutProcessor(Processor):
     def __init__(self,
                  lookback_start_date: DATETIME_TYPE,
                  lookback_end_date: DATETIME_TYPE,
-                 data_source: DataSource) -> None:
+                 data_source: DataSource,
+                 logging_enabled: bool) -> None:
         super().__init__()
         self._stock_universe = ThreeSigmaStockUniverse(start_time=lookback_start_date,
                                                        end_time=lookback_end_date,
                                                        data_source=data_source)
+        self._logging_enabled = logging_enabled
         self._hold_positions = {}
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
@@ -57,29 +58,33 @@ class VolumeBreakoutProcessor(Processor):
 
         for i in range(2, _WATCHING_WINDOW + 1):
             if (intraday_closes[-i] - vwap[-i]) * current_distance > 0:
-                logging.debug('Skipping [%s]. Current price [%f]. Distance sign not satisfied.',
-                              context.symbol, context.current_price)
+                if self._logging_enabled:
+                    logging.info('Skipping [%s]. Current price [%f]. Distance sign not satisfied.',
+                                 context.symbol, context.current_price)
                 return
 
         current_volume = intraday_volumes[-1]
         volume_threshold = 3 * np.max(intraday_volumes[-_WATCHING_WINDOW:-1])
         if current_volume < volume_threshold:
-            logging.debug('Skipping [%s]. Current price [%f]. '
-                          'current_volume [%f] < volume_threshold [%f] not satisfied.',
-                          context.symbol, context.current_price, current_volume, volume_threshold)
+            if self._logging_enabled:
+                logging.info('Skipping [%s]. Current price [%f]. '
+                             'current_volume [%f] < volume_threshold [%f] not satisfied.',
+                             context.symbol, context.current_price, current_volume, volume_threshold)
             return
 
         self._hold_positions[context.symbol] = {'side': side,
                                                 'entry_time': context.current_time,
                                                 'entry_price': context.current_price}
-        logging.debug('Opening [%s]. Current price [%f]. Side [%s].',
-                      context.symbol, context.current_price, side)
+        if self._logging_enabled:
+            logging.info('Opening [%s]. Current price [%f]. Side [%s].',
+                         context.symbol, context.current_price, side)
         return Action(context.symbol, action_type, 1, context.current_price)
 
     def _close_position(self, context: Context) -> Optional[Action]:
         def _pop_position():
-            logging.debug('Closing [%s]. Current price [%f]. Stop loss [%f].',
-                          symbol, current_price, stop_loss)
+            if self._logging_enabled:
+                logging.info('Closing [%s]. Current price [%f]. Stop loss [%f].',
+                             symbol, current_price, stop_loss)
             self._hold_positions.pop(symbol)
             return action
 
@@ -119,5 +124,6 @@ class VolumeBreakoutProcessorFactory(ProcessorFactory):
                lookback_start_date: DATETIME_TYPE,
                lookback_end_date: DATETIME_TYPE,
                data_source: DataSource,
+               logging_enabled: bool = False,
                *args, **kwargs) -> VolumeBreakoutProcessor:
-        return VolumeBreakoutProcessor(lookback_start_date, lookback_end_date, data_source)
+        return VolumeBreakoutProcessor(lookback_start_date, lookback_end_date, data_source, logging_enabled)

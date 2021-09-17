@@ -12,11 +12,13 @@ class LevelBreakoutProcessor(Processor):
     def __init__(self,
                  lookback_start_date: DATETIME_TYPE,
                  lookback_end_date: DATETIME_TYPE,
-                 data_source: DataSource) -> None:
+                 data_source: DataSource,
+                 logging_enabled: bool) -> None:
         super().__init__()
         self._stock_universe = ThreeSigmaStockUniverse(start_time=lookback_start_date,
                                                        end_time=lookback_end_date,
                                                        data_source=data_source)
+        self._logging_enabled = logging_enabled
         self._hold_positions = {}
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
@@ -72,8 +74,9 @@ class LevelBreakoutProcessor(Processor):
             distances = prev_day_distances
 
         if not level:
-            logging.debug('Skipping [%s]. Current price [%f]. No level found.',
-                          context.symbol, context.current_price)
+            if self._logging_enabled:
+                logging.info('Skipping [%s]. Current price [%f]. No level found.',
+                             context.symbol, context.current_price)
             return
 
         if distances[0] > 0:
@@ -87,14 +90,16 @@ class LevelBreakoutProcessor(Processor):
                                                 'level': level,
                                                 'entry_time': context.current_time,
                                                 'entry_price': context.current_price}
-        logging.debug('Opening [%s]. Current price [%f]. Side [%s]. Level [%s].',
-                      context.symbol, context.current_price, side, level)
+        if self._logging_enabled:
+            logging.info('Opening [%s]. Current price [%f]. Side [%s]. Level [%s].',
+                         context.symbol, context.current_price, side, level)
         return Action(context.symbol, action_type, 1, context.current_price)
 
     def _close_position(self, context: Context) -> Optional[Action]:
         def _pop_position():
-            logging.debug('Closing [%s]. Current price [%f]. Stop loss [%f].',
-                          symbol, current_price, stop_loss)
+            if self._logging_enabled:
+                logging.info('Closing [%s]. Current price [%f]. Stop loss [%f].',
+                             symbol, current_price, stop_loss)
             self._hold_positions.pop(symbol)
             return action
 
@@ -139,5 +144,6 @@ class LevelBreakoutProcessorFactory(ProcessorFactory):
                lookback_start_date: DATETIME_TYPE,
                lookback_end_date: DATETIME_TYPE,
                data_source: DataSource,
+               logging_enabled: bool = False,
                *args, **kwargs) -> LevelBreakoutProcessor:
-        return LevelBreakoutProcessor(lookback_start_date, lookback_end_date, data_source)
+        return LevelBreakoutProcessor(lookback_start_date, lookback_end_date, data_source, logging_enabled)

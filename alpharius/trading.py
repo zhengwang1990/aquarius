@@ -18,7 +18,7 @@ class Trading:
     def __init__(self, processor_factories: List[ProcessorFactory]) -> None:
         self._output_dir = os.path.join(OUTPUT_ROOT, 'trading', datetime.datetime.now().strftime('%F'))
         os.makedirs(self._output_dir, exist_ok=True)
-        logging_config(os.path.join(self._output_dir, 'log.txt'), logging_level=logging.DEBUG, detail=True)
+        logging_config(os.path.join(self._output_dir, 'log.txt'), detail=True)
         self._equity, self._cash = 0, 0
         self._cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         self._today = pd.to_datetime(
@@ -57,7 +57,8 @@ class Trading:
         for factory in self._processor_factories:
             self._processors.append(factory.create(lookback_start_date=history_start,
                                                    lookback_end_date=self._today,
-                                                   data_source=_DATA_SOURCE))
+                                                   data_source=_DATA_SOURCE,
+                                                   logging_enabled=True))
         for processor in self._processors:
             processor.setup(self._positions)
 
