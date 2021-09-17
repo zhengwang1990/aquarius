@@ -57,18 +57,29 @@ class VolumeBreakoutProcessor(Processor):
 
         for i in range(2, _WATCHING_WINDOW + 1):
             if (intraday_closes[-i] - vwap[-i]) * current_distance > 0:
+                logging.debug('Skipping [%s]. Current price [%f]. Distance sign not satisfied.',
+                              context.symbol, context.current_price)
                 return
 
-        if intraday_volumes[-1] < 3 * np.max(intraday_volumes[-_WATCHING_WINDOW:-1]):
+        current_volume = intraday_volumes[-1]
+        volume_threshold = 3 * np.max(intraday_volumes[-_WATCHING_WINDOW:-1])
+        if current_volume < volume_threshold:
+            logging.debug('Skipping [%s]. Current price [%f]. '
+                          'current_volume [%f] < volume_threshold [%f] not satisfied.',
+                          context.symbol, context.current_price, current_volume, volume_threshold)
             return
 
         self._hold_positions[context.symbol] = {'side': side,
                                                 'entry_time': context.current_time,
                                                 'entry_price': context.current_price}
+        logging.debug('Opening [%s]. Current price [%f]. Side [%s].',
+                      context.symbol, context.current_price, side)
         return Action(context.symbol, action_type, 1, context.current_price)
 
     def _close_position(self, context: Context) -> Optional[Action]:
         def _pop_position():
+            logging.debug('Closing [%s]. Current price [%f]. Stop loss [%f].',
+                          symbol, current_price, stop_loss)
             self._hold_positions.pop(symbol)
             return action
 

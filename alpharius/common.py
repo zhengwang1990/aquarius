@@ -95,25 +95,25 @@ def get_unique_actions(actions: List[Action]) -> List[Action]:
     return unique_actions
 
 
-def logging_config(logging_file=None, detail_info=True):
+def logging_config(logging_file=None, logging_level=logging.INFO, detail=True):
     """Configuration for logging."""
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    if detail_info:
+    if detail:
         formatter = logging.Formatter(
             '[%(levelname)s] [%(asctime)s] [%(filename)s:%(lineno)d] %(message)s')
     else:
         formatter = logging.Formatter('%(message)s')
     stream_handler = logging.StreamHandler()
     if sys.stdout.isatty():
-        stream_handler.setLevel(logging.INFO)
+        stream_handler.setLevel(logging_level)
     else:
         stream_handler.setLevel(logging.WARNING)
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
     if logging_file:
         file_handler = logging.FileHandler(logging_file)
-        file_handler.setLevel(logging.INFO)
+        file_handler.setLevel(logging_level)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
     alpaca_logger = logging.getLogger('alpaca_trade_api')

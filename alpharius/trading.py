@@ -18,7 +18,7 @@ class Trading:
     def __init__(self, processor_factories: List[ProcessorFactory]) -> None:
         self._output_dir = os.path.join(OUTPUT_ROOT, 'trading', datetime.datetime.now().strftime('%F'))
         os.makedirs(self._output_dir, exist_ok=True)
-        logging_config(os.path.join(self._output_dir, 'log.txt'), detail_info=True)
+        logging_config(os.path.join(self._output_dir, 'log.txt'), logging_level=logging.DEBUG, detail=True)
         self._equity, self._cash = 0, 0
         self._cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         self._today = pd.to_datetime(
@@ -265,7 +265,7 @@ class Trading:
         for _ in range(10):
             if not orders:
                 break
-            logging.info('Wait for orders to cancel. [%d] open orders remaining.', len(orders))
+            logging.info('Waiting for orders to cancel. [%d] open orders remaining.', len(orders))
             time.sleep(0.5)
             orders = self._alpaca.list_orders(status='open')
         for order in new_orders:

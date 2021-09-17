@@ -72,6 +72,8 @@ class LevelBreakoutProcessor(Processor):
             distances = prev_day_distances
 
         if not level:
+            logging.debug('Skipping [%s]. Current price [%f]. No level found.',
+                          context.symbol, context.current_price)
             return
 
         if distances[0] > 0:
@@ -85,10 +87,14 @@ class LevelBreakoutProcessor(Processor):
                                                 'level': level,
                                                 'entry_time': context.current_time,
                                                 'entry_price': context.current_price}
+        logging.debug('Opening [%s]. Current price [%f]. Side [%s]. Level [%s].',
+                      context.symbol, context.current_price, side, level)
         return Action(context.symbol, action_type, 1, context.current_price)
 
     def _close_position(self, context: Context) -> Optional[Action]:
         def _pop_position():
+            logging.debug('Closing [%s]. Current price [%f]. Stop loss [%f].',
+                          symbol, current_price, stop_loss)
             self._hold_positions.pop(symbol)
             return action
 

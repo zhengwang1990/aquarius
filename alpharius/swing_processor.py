@@ -42,6 +42,7 @@ class SwingProcessor(Processor):
             daily_gain = max(context.current_price / closes[-1] - 1, 0)
             monthly_gain = max(context.current_price / closes[-DAYS_IN_A_MONTH] - 1, 0)
             percent = np.clip(1 - 10 * monthly_gain ** 2 - 25 * daily_gain ** 2, 0.2, 1)
+            logging.debug('Buying [TQQQ]. Current price [%f]', context.current_price)
             return Action(context.symbol, ActionType.BUY_TO_OPEN, percent, context.current_price)
 
         if context.symbol in self._prev_hold_positions:
@@ -50,16 +51,24 @@ class SwingProcessor(Processor):
         interday_closes = context.interday_lookback['Close']
         today_change = context.current_price / interday_closes[-1] - 1
         if today_change > 0:
+            logging.debug('Skipping [%s]. Current price [%f]. today_change [%f] > 0 not satisfied.',
+                          context.symbol, context.current_price, today_change)
             return
         yesterday_change = interday_closes[-2] / interday_closes[-1] - 1
         if yesterday_change > 0:
+            logging.debug('Skipping [%s]. Current price [%f]. yesterday_change [%f] > 0 not satisfied.',
+                          context.symbol, context.current_price, yesterday_change)
             return
         if abs(today_change) > abs(yesterday_change) / 5:
+            logging.debug('Skipping [%s]. Current price [%f]. abs(today_change) [%f]'
+                          '> abs(yesterday_change) / 5 [%f] not satisfied.',
+                          context.symbol, context.current_price, abs(today_change), abs(yesterday_change) / 5)
             return
         if abs(today_change) > 0.05:
             return
 
         self._hold_positions[context.symbol] = {'side': 'long'}
+        logging.debug('Buying [%s]. Current price [%f].', context.symbol, context.current_price)
         return Action(context.symbol, ActionType.BUY_TO_OPEN, 1, context.current_price)
 
     def _close_position(self, context: Context) -> Optional[Action]:
@@ -70,6 +79,7 @@ class SwingProcessor(Processor):
         side = position['side']
         assert side == 'long'
         self._hold_positions.pop(symbol)
+        logging.debug('Selling [%s]. Current price [%f].', context.symbol, context.current_price)
         return Action(symbol, ActionType.SELL_TO_CLOSE, 1, context.current_price)
 
 

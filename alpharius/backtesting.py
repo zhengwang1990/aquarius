@@ -52,7 +52,7 @@ class Backtesting:
                 break
             output_num += 1
 
-        logging_config(os.path.join(self._output_dir, 'result.txt'), detail_info=False)
+        logging_config(os.path.join(self._output_dir, 'result.txt'), detail=False)
 
         nyse = mcal.get_calendar('NYSE')
         schedule = nyse.schedule(start_date=self._start_date, end_date=self._end_date - datetime.timedelta(days=1))
