@@ -6,9 +6,6 @@ import email.mime.image as image
 import email.mime.multipart as multipart
 import email.mime.text as text
 import io
-import matplotlib
-
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import os
