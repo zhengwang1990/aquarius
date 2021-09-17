@@ -7,6 +7,7 @@ import email.mime.multipart as multipart
 import email.mime.text as text
 import io
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
@@ -116,13 +117,14 @@ class Email:
         intraday_gain = account_equity - history.equity[-1]
         row_style = 'scope="row" class="narrow-col"'
         account_html = (f'<tr><th {row_style}>Equity</th><td>{account_equity:.2f}</td></tr>'
-                        f'<tr><th {row_style}>Cash</th><td>{account_cash:.2f}</td></tr>'
-                        f'<tr><th {row_style}>Reserve</th><td>{cash_reserve:.2f}</td></tr>' if cash_reserve > 0 else ''
-                        f'<tr><th {row_style}>Gain / Loss</th>'
-                        f'<td {self._get_color_style(intraday_gain)}>{intraday_gain:+.2f}'
-                        f'({(account_equity / history.equity[-1] - 1) * 100:+.2f}%)</td></tr>\n'
-                        f'<tr><th {row_style}>Market Change</th>'
-                        '<td style="padding: 0px;"><table>')
+                        f'<tr><th {row_style}>Cash</th><td>{account_cash:.2f}</td></tr>')
+        if cash_reserve > 0:
+            account_html += f'<tr><th {row_style}>Reserve</th><td>{cash_reserve:.2f}</td></tr>'
+        account_html += (f'<tr><th {row_style}>Gain / Loss</th>'
+                         f'<td {self._get_color_style(intraday_gain)}>{intraday_gain:+.2f}'
+                         f'({(account_equity / history.equity[-1] - 1) * 100:+.2f}%)</td></tr>\n'
+                         f'<tr><th {row_style}>Market Change</th>'
+                         '<td style="padding: 0px;"><table>')
         for symbol in market_symbols:
             if symbol not in market_values:
                 continue
