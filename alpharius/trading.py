@@ -114,6 +114,8 @@ class Trading:
             interday_lookback = self._interday_data.get(symbol)
             if interday_lookback is None or len(interday_lookback) < DAYS_IN_A_MONTH:
                 continue
+            if not len(intraday_lookback):
+                continue
             current_price = intraday_lookback['Close'][-1]
             context = Context(symbol=symbol,
                               current_time=checkpoint_time,
