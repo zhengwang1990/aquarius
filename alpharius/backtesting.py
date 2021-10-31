@@ -16,6 +16,7 @@ import time
 
 _DATA_SOURCE = DataSource.POLYGON
 _TIME_INTERVAL = TimeInterval.FIVE_MIN
+_BID_ASK_SPREAD = 0
 _MAX_WORKERS = 20
 
 
@@ -238,8 +239,10 @@ class Backtesting:
             new_qty = current_position.qty - qty
             if abs(new_qty) > EPSILON:
                 self._positions.append(Position(symbol, new_qty, current_position.entry_price, current_time))
-            self._cash += action.price * qty
-            profit_pct = (action.price - current_position.entry_price) / current_position.entry_price * 100
+            spread_adjust = 1 - _BID_ASK_SPREAD if action.type == ActionType.SELL_TO_CLOSE else 1 + _BID_ASK_SPREAD
+            adjusted_action_price = action.price * spread_adjust
+            self._cash += adjusted_action_price * qty
+            profit_pct = (adjusted_action_price - current_position.entry_price) / current_position.entry_price * 100
             if action.type == ActionType.BUY_TO_CLOSE:
                 profit_pct *= -1
             if profit_pct > 0:
@@ -310,6 +313,8 @@ class Backtesting:
         outputs.append('[ Stats ]')
         outputs.append(tabulate.tabulate(stats, tablefmt='grid'))
 
+        if not executed_actions and not self._positions:
+            return
         logging.info('\n'.join(outputs))
 
     def _print_summary(self) -> None:
