@@ -84,8 +84,6 @@ class AbcdProcessor(Processor):
         for i in range(flat_start - 1, -1, -1):
             if intraday_closes[i] < flat_value:
                 flat_value = intraday_closes[i]
-            if context.current_time.time() == datetime.time(11, 25):
-                print(intraday_closes[i], flat_value + _INTRA_DAY_RANGE_PORTION * intraday_range)
             if intraday_closes[i] > flat_value + _INTRA_DAY_RANGE_PORTION * intraday_range:
                 flat_start = i + 1
                 break
