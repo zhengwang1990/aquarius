@@ -16,7 +16,6 @@ import time
 
 _DATA_SOURCE = DataSource.POLYGON
 _TIME_INTERVAL = TimeInterval.FIVE_MIN
-_BID_ASK_SPREAD = 0
 _MAX_WORKERS = 20
 
 
@@ -239,7 +238,7 @@ class Backtesting:
             new_qty = current_position.qty - qty
             if abs(new_qty) > EPSILON:
                 self._positions.append(Position(symbol, new_qty, current_position.entry_price, current_time))
-            spread_adjust = 1 - _BID_ASK_SPREAD if action.type == ActionType.SELL_TO_CLOSE else 1 + _BID_ASK_SPREAD
+            spread_adjust = 1 - BID_ASK_SPREAD if action.type == ActionType.SELL_TO_CLOSE else 1 + BID_ASK_SPREAD
             adjusted_action_price = action.price * spread_adjust
             self._cash += adjusted_action_price * qty
             profit_pct = (adjusted_action_price - current_position.entry_price) / current_position.entry_price * 100
@@ -343,10 +342,10 @@ class Backtesting:
 
         outputs = [get_header('Summary')]
         n_trades = self._num_win + self._num_lose
-        success_rate = self._num_win / n_trades if n_trades > 0 else 0
+        winning_rate = self._num_win / n_trades if n_trades > 0 else 0
         market_dates = self._market_dates[:len(self._daily_equity) - 1]
         summary = [['Time Range', f'{market_dates[0].date()} ~ {market_dates[-1].date()}'],
-                   ['Success Rate', f'{success_rate * 100:.2f}%'],
+                   ['Winning Rate', f'{winning_rate * 100:.2f}%'],
                    ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)']]
         outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
 
@@ -385,7 +384,7 @@ class Backtesting:
         alpha_row = ['Alpha', f'{my_alpha * 100:.2f}%']
         beta_row = ['Beta', f'{my_beta:.2f}']
         sharpe_ratio_row = ['Sharpe Ratio', f'{my_sharpe_ratio:.2f}']
-        drawdown_row = ['Maximum Drawdown', f'{my_drawdown * 100:+.2f}%']
+        drawdown_row = ['Drawdown', f'{my_drawdown * 100:+.2f}%']
         for symbol in print_symbols:
             first_day_index = timestamp_to_index(self._interday_data[symbol].index, market_dates[0])
             last_day_index = timestamp_to_index(self._interday_data[symbol].index, market_dates[-1])
