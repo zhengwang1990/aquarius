@@ -4,6 +4,7 @@ from concurrent import futures
 from typing import Any, Dict, List, Set, Tuple, Union
 import collections
 import datetime
+import functools
 import logging
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -134,6 +135,48 @@ class Backtesting:
         self._stock_universe_load_time += time.time() - load_stock_universe_start
         return stock_universes, stock_universe
 
+    def _process_data(self,
+                      contexts: Dict[str, Context],
+                      stock_universes: Dict[str, List[str]],
+                      processors: List[Processor]) -> List[Action]:
+        data_process_start = time.time()
+
+        actions = []
+        for processor in processors:
+            processor_name = type(processor).__name__
+            processor_stock_universe = stock_universes[processor_name]
+            processor_contexts = []
+            for symbol in processor_stock_universe:
+                context = contexts.get(symbol)
+                if context:
+                    processor_contexts.append(context)
+            actions.extend(processor.process_all_data(processor_contexts))
+
+        self._data_process_time += time.time() - data_process_start
+        return actions
+
+    @functools.lru_cache()
+    def _prepare_interday_lookback(self, day: DATETIME_TYPE, symbol: str) -> Optional[pd.DataFrame]:
+        if symbol not in self._interday_data:
+            return
+        interday_data = self._interday_data[symbol]
+        interday_ind = timestamp_to_index(interday_data.index, day)
+        if interday_ind is None or interday_ind < DAYS_IN_A_MONTH + 1:
+            return
+        interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH - 1:interday_ind]
+        return interday_lookback
+
+    def _prepare_intraday_lookback(self, current_interval_start: DATETIME_TYPE, symbol: str,
+                                   intraday_datas: Dict[str, pd.DataFrame]) -> Optional[pd.DataFrame]:
+        intraday_data = intraday_datas[symbol]
+        intraday_ind = timestamp_to_index(intraday_data.index, current_interval_start)
+        if intraday_ind is None:
+            intraday_ind = timestamp_to_prev_index(intraday_data.index, current_interval_start)
+        if intraday_ind is None:
+            return
+        intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
+        return intraday_lookback
+
     def _process_five_min(self, day: DATETIME_TYPE, processors: List[Processor]) -> List[List[Any]]:
         stock_universes, stock_universe = self._load_stock_universe(day, processors)
 
@@ -155,8 +198,6 @@ class Backtesting:
         current_interval_start = market_open
 
         executed_actions = []
-        intraday_ind_dict = {}
-        interday_ind_dict = {}
         while current_interval_start < market_close:
             current_time = current_interval_start + datetime.timedelta(minutes=5)
 
@@ -164,28 +205,13 @@ class Backtesting:
 
             contexts = {}
             for symbol in stock_universe:
-                intraday_data = intraday_datas[symbol]
-                intraday_ind = intraday_ind_dict.get(symbol)
-                if (intraday_ind is None or intraday_ind >= len(intraday_data.index) or
-                        intraday_data.index[intraday_ind] != current_interval_start):
-                    intraday_ind = timestamp_to_index(intraday_data.index, current_interval_start)
-                if intraday_ind is None:
-                    intraday_ind = timestamp_to_prev_index(intraday_data.index, current_interval_start)
-                if intraday_ind is None:
+                intraday_lookback = self._prepare_intraday_lookback(current_interval_start, symbol, intraday_datas)
+                if intraday_lookback is None:
                     continue
-                intraday_ind_dict[symbol] = intraday_ind + 1
-                intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
-                current_price = intraday_data['Close'][intraday_ind]
-                if symbol not in self._interday_data:
+                current_price = intraday_datas[symbol]['Close'].loc[current_interval_start]
+                interday_lookback = self._prepare_interday_lookback(day, symbol)
+                if interday_lookback is None:
                     continue
-                interday_data = self._interday_data[symbol]
-                interday_ind = interday_ind_dict.get(symbol)
-                if interday_ind is None:
-                    interday_ind = timestamp_to_index(interday_data.index, day.date())
-                    interday_ind_dict[symbol] = interday_ind
-                if interday_ind is None or interday_ind < DAYS_IN_A_MONTH + 1:
-                    continue
-                interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH - 1:interday_ind]
                 context = Context(symbol=symbol,
                                   current_time=current_time,
                                   current_price=current_price,
@@ -194,21 +220,8 @@ class Backtesting:
                 contexts[symbol] = context
 
             self._context_prep_time += time.time() - prep_context_start
-            data_process_start = time.time()
 
-            actions = []
-            for processor in processors:
-                processor_name = type(processor).__name__
-                processor_stock_universe = stock_universes[processor_name]
-                processor_contexts = []
-                for symbol in processor_stock_universe:
-                    context = contexts.get(symbol)
-                    if context:
-                        processor_contexts.append(context)
-                actions.extend(processor.process_all_data(processor_contexts))
-
-            self._data_process_time += time.time() - data_process_start
-
+            actions = self._process_data(contexts, stock_universes, processors)
             current_executed_actions = self._process_actions(current_time.time(), actions)
             executed_actions.extend(current_executed_actions)
 
@@ -225,14 +238,10 @@ class Backtesting:
 
         contexts = {}
         for symbol in stock_universe:
-            if symbol not in self._interday_data:
+            interday_lookback = self._prepare_interday_lookback(day, symbol)
+            if interday_lookback is None:
                 continue
-            interday_data = self._interday_data[symbol]
-            interday_ind = timestamp_to_index(interday_data.index, day.date())
-            if interday_ind is None or interday_ind < DAYS_IN_A_MONTH + 1:
-                continue
-            interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH - 1:interday_ind]
-            current_price = self._interday_data[symbol].iloc[interday_ind]['Close']
+            current_price = self._interday_data[symbol].loc[day]['Close']
             context = Context(symbol=symbol,
                               current_time=market_close,
                               current_price=current_price,
@@ -241,22 +250,10 @@ class Backtesting:
             contexts[symbol] = context
 
         self._context_prep_time += time.time() - prep_context_start
-        data_process_start = time.time()
 
-        actions = []
-        for processor in processors:
-            processor_name = type(processor).__name__
-            processor_stock_universe = stock_universes[processor_name]
-            processor_contexts = []
-            for symbol in processor_stock_universe:
-                context = contexts.get(symbol)
-                if context:
-                    processor_contexts.append(context)
-            actions.extend(processor.process_all_data(processor_contexts))
-
-        self._data_process_time += time.time() - data_process_start
-
+        actions = self._process_data(contexts, stock_universes, processors)
         executed_actions = self._process_actions(market_close.time(), actions)
+
         return executed_actions
 
     def _process_actions(self, current_time: datetime.time, actions: List[Action]) -> List[List[Any]]:
