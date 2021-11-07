@@ -5,6 +5,7 @@ numpy
 pandas
 pandas_market_calendars
 polygon-api-client
+parameterized
 python-dateutil
 retrying
 scikit-learn

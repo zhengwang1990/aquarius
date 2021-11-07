@@ -19,6 +19,9 @@ class SwingProcessor(Processor):
         self.logging_enabled = logging_enabled
         self._prev_hold_positions = []
 
+    def get_trading_frequency(self) -> TradingFrequency:
+        return TradingFrequency.CLOSE_TO_OPEN
+
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         universe = self._stock_universe.get_stock_universe(view_time) + list(self._prev_hold_positions) + ['TQQQ']
         return list(set(universe))

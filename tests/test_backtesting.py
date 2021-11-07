@@ -1,4 +1,5 @@
 from .fakes import *
+from parameterized import parameterized
 import alpaca_trade_api as tradeapi
 import alpharius
 import itertools
@@ -50,8 +51,10 @@ class TestTrading(unittest.TestCase):
         self.patch_get_calendar.stop()
         self.patch_date_range.stop()
 
-    def test_run_success(self):
-        fake_processor_factory = FakeProcessorFactory()
+    @parameterized.expand([(alpharius.TradingFrequency.FIVE_MIN,),
+                           (alpharius.TradingFrequency.CLOSE_TO_CLOSE,)])
+    def test_run_success(self, trading_frequency):
+        fake_processor_factory = FakeProcessorFactory(trading_frequency)
         fake_processor = fake_processor_factory.processor
         backtesting = alpharius.Backtesting(start_date=pd.to_datetime('2021-03-17'),
                                             end_date=pd.to_datetime('2021-03-18'),

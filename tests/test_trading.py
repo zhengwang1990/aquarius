@@ -1,4 +1,5 @@
 from .fakes import *
+from parameterized import parameterized
 import alpaca_trade_api as tradeapi
 import alpharius
 import email.mime.image as image
@@ -66,8 +67,10 @@ class TestTrading(unittest.TestCase):
         self.patch_image.stop()
         self.patch_multipart.stop()
 
-    def test_run_success(self):
-        fake_processor_factory = FakeProcessorFactory()
+    @parameterized.expand([(alpharius.TradingFrequency.FIVE_MIN,),
+                           (alpharius.TradingFrequency.CLOSE_TO_CLOSE,)])
+    def test_run_success(self, trading_frequency):
+        fake_processor_factory = FakeProcessorFactory(trading_frequency)
         fake_processor = fake_processor_factory.processor
         trading = alpharius.Trading(processor_factories=[fake_processor_factory])
 

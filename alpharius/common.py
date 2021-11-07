@@ -53,6 +53,15 @@ class ActionType(Enum):
         return self.name
 
 
+class TradingFrequency(Enum):
+    FIVE_MIN = 1
+    CLOSE_TO_CLOSE = 2
+    CLOSE_TO_OPEN = 3
+
+    def __str__(self):
+        return self.name
+
+
 Action = collections.namedtuple('Action', ['symbol', 'type', 'percent', 'price'])
 Position = collections.namedtuple('Position', ['symbol', 'qty', 'entry_price', 'entry_time'])
 
@@ -133,7 +142,7 @@ class Context:
                  current_time: DATETIME_TYPE,
                  current_price: float,
                  interday_lookback: pd.DataFrame,
-                 intraday_lookback: pd.DataFrame) -> None:
+                 intraday_lookback: Optional[pd.DataFrame]) -> None:
         self.symbol = symbol
         self.current_time = current_time
         self.current_price = current_price
@@ -169,11 +178,22 @@ class Processor:
     def process_data(self, context: Context) -> Optional[Action]:
         raise NotImplementedError('Calling parent interface')
 
+    def process_all_data(self, contexts: List[Context]) -> List[Action]:
+        actions = []
+        for context in contexts:
+            action = self.process_data(context)
+            if action:
+                actions.append(action)
+        return actions
+
     def setup(self, hold_positions: List[Position] = ()) -> None:
         return
 
     def teardown(self, output_dir: Optional[str] = None) -> None:
         return
+
+    def get_trading_frequency(self) -> TradingFrequency:
+        raise NotImplementedError('Calling parent interface')
 
 
 class ProcessorFactory:

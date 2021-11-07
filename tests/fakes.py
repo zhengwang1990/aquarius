@@ -90,10 +90,14 @@ class FakePolygon:
 
 
 class FakeProcess(alpharius.Processor):
-    def __init__(self):
+    def __init__(self, trading_frequency):
         super().__init__()
         self.get_stock_universe_call_count = 0
         self.process_data_call_count = 0
+        self.trading_frequency = trading_frequency
+
+    def get_trading_frequency(self):
+        return self.trading_frequency
 
     def get_stock_universe(self, view_time):
         self.get_stock_universe_call_count += 1
@@ -119,10 +123,10 @@ class FakeProcess(alpharius.Processor):
 
 class FakeProcessorFactory(alpharius.ProcessorFactory):
 
-    def __init__(self):
+    def __init__(self, trading_frequency: alpharius.TradingFrequency):
         super().__init__()
         self.create_call_count = 0
-        self.processor = FakeProcess()
+        self.processor = FakeProcess(trading_frequency)
 
     def create(self, *args, **kwargs):
         self.create_call_count += 1

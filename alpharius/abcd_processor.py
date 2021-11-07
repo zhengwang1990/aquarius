@@ -32,17 +32,20 @@ class AbcdProcessor(Processor):
         self._history_db_path = _history_db_path
         self._history_data = []
 
+    def get_trading_frequency(self) -> TradingFrequency:
+        return TradingFrequency.FIVE_MIN
+
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         if not self._history_db_path:
             return self._stock_universe.get_stock_universe(view_time)
         conn = sqlite3.connect(self._history_db_path)
         start_time = (view_time - datetime.timedelta(days=60)).date()
         end_time = view_time.date()
-        query = ('SELECT Symbol, AVG(Gain) AS AvgGain FROM AbcdHistory '
+        query = ('SELECT Symbol, AVG(Gain) AS Gain FROM AbcdHistory '
                  f'WHERE Date > "{start_time}" AND Date < "{end_time}" '
                  'GROUP BY Symbol')
         df = pd.read_sql_query(query, conn)
-        qualified = [(row.Symbol, row.AvgGain) for row in df.itertuples() if row.AvgGain > 0]
+        qualified = [(row.Symbol, row.Gain) for row in df.itertuples() if row.Gain > 0]
         qualified.sort(key=lambda s: s[1], reverse=True)
         return [s[0] for s in qualified[:10]]
 

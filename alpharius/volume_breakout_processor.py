@@ -21,6 +21,9 @@ class VolumeBreakoutProcessor(Processor):
         self._logging_enabled = logging_enabled
         self._hold_positions = {}
 
+    def get_trading_frequency(self) -> TradingFrequency:
+        return TradingFrequency.FIVE_MIN
+
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return self._stock_universe.get_stock_universe(view_time)
 

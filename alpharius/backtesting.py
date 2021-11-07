@@ -1,7 +1,8 @@
 from .common import *
 from .data import load_cached_daily_data, load_tradable_history, get_header
 from concurrent import futures
-from typing import Any, List, Tuple, Union
+from typing import Any, Dict, List, Set, Tuple, Union
+import collections
 import datetime
 import logging
 import matplotlib.pyplot as plt
@@ -92,17 +93,36 @@ class Backtesting:
         self._interday_load_time += time.time() - self._run_start_time
         self._init_processors(history_start)
         for day in self._market_dates:
-            self._process_day(day)
+            self._process(day)
         self._close()
 
-    def _process_day(self, day: DATETIME_TYPE) -> None:
+    def _process(self, day: DATETIME_TYPE) -> None:
         for processor in self._processors:
             processor.setup()
 
+        frequency_to_processor = collections.defaultdict(list)
+        for processor in self._processors:
+            frequency_to_processor[processor.get_trading_frequency()].append(processor)
+
+        executed_actions = []
+        five_min_actions = self._process_five_min(day, frequency_to_processor[TradingFrequency.FIVE_MIN])
+        close_to_close_actions = self._process_close_to_close(day,
+                                                              frequency_to_processor[TradingFrequency.CLOSE_TO_CLOSE])
+        executed_actions.extend(five_min_actions)
+        executed_actions.extend(close_to_close_actions)
+
+        for processor in self._processors:
+            processor.teardown(self._output_dir)
+
+        self._log_day(day, executed_actions)
+
+    def _load_stock_universe(self,
+                             day: DATETIME_TYPE,
+                             processors: List[Processor]) -> Tuple[Dict[str, List[str]], Set[str]]:
         load_stock_universe_start = time.time()
 
         stock_universes = {}
-        for processor in self._processors:
+        for processor in processors:
             processor_name = type(processor).__name__
             stock_universes[processor_name] = processor.get_stock_universe(day)
 
@@ -112,6 +132,11 @@ class Backtesting:
                 stock_universe.add(symbol)
 
         self._stock_universe_load_time += time.time() - load_stock_universe_start
+        return stock_universes, stock_universe
+
+    def _process_five_min(self, day: DATETIME_TYPE, processors: List[Processor]) -> List[List[Any]]:
+        stock_universes, stock_universe = self._load_stock_universe(day, processors)
+
         load_intraday_start = time.time()
 
         intraday_datas = {}
@@ -172,16 +197,15 @@ class Backtesting:
             data_process_start = time.time()
 
             actions = []
-            for processor in self._processors:
+            for processor in processors:
                 processor_name = type(processor).__name__
                 processor_stock_universe = stock_universes[processor_name]
+                processor_contexts = []
                 for symbol in processor_stock_universe:
                     context = contexts.get(symbol)
-                    if context is None:
-                        continue
-                    action = processor.process_data(context)
-                    if action is not None:
-                        actions.append(action)
+                    if context:
+                        processor_contexts.append(context)
+                actions.extend(processor.process_all_data(processor_contexts))
 
             self._data_process_time += time.time() - data_process_start
 
@@ -190,10 +214,50 @@ class Backtesting:
 
             current_interval_start += datetime.timedelta(minutes=5)
 
-        self._log_day(day, executed_actions)
+        return executed_actions
 
-        for processor in self._processors:
-            processor.teardown(self._output_dir)
+    def _process_close_to_close(self, day: DATETIME_TYPE, processors: List[Processor]) -> List[List[Any]]:
+        stock_universes, stock_universe = self._load_stock_universe(day, processors)
+
+        market_close = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_CLOSE)).tz_localize(TIME_ZONE)
+
+        prep_context_start = time.time()
+
+        contexts = {}
+        for symbol in stock_universe:
+            if symbol not in self._interday_data:
+                continue
+            interday_data = self._interday_data[symbol]
+            interday_ind = timestamp_to_index(interday_data.index, day.date())
+            if interday_ind is None or interday_ind < DAYS_IN_A_MONTH + 1:
+                continue
+            interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH - 1:interday_ind]
+            current_price = self._interday_data[symbol].iloc[interday_ind]['Close']
+            context = Context(symbol=symbol,
+                              current_time=market_close,
+                              current_price=current_price,
+                              interday_lookback=interday_lookback,
+                              intraday_lookback=None)
+            contexts[symbol] = context
+
+        self._context_prep_time += time.time() - prep_context_start
+        data_process_start = time.time()
+
+        actions = []
+        for processor in processors:
+            processor_name = type(processor).__name__
+            processor_stock_universe = stock_universes[processor_name]
+            processor_contexts = []
+            for symbol in processor_stock_universe:
+                context = contexts.get(symbol)
+                if context:
+                    processor_contexts.append(context)
+            actions.extend(processor.process_all_data(processor_contexts))
+
+        self._data_process_time += time.time() - data_process_start
+
+        executed_actions = self._process_actions(market_close.time(), actions)
+        return executed_actions
 
     def _process_actions(self, current_time: datetime.time, actions: List[Action]) -> List[List[Any]]:
         unique_actions = get_unique_actions(actions)

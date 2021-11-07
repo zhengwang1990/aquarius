@@ -129,13 +129,12 @@ class Trading:
         for processor in self._processors:
             processor_name = type(processor).__name__
             stock_universe = self._processor_stock_universes[processor_name]
+            processor_contexts = []
             for symbol in stock_universe:
                 context = contexts.get(symbol)
-                if context is None:
-                    continue
-                action = processor.process_data(context)
-                if action is not None:
-                    actions.append(action)
+                if context:
+                    processor_contexts.append(context)
+            actions.extend(processor.process_all_data(processor_contexts))
         logging.info('Got [%d] actions to process.', len(actions))
 
         self._trade(actions)
