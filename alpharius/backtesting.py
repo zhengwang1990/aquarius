@@ -155,7 +155,7 @@ class Backtesting:
         self._data_process_time += time.time() - data_process_start
         return actions
 
-    @functools.lru_cache()
+    @functools.lru_cache
     def _prepare_interday_lookback(self, day: DATETIME_TYPE, symbol: str) -> Optional[pd.DataFrame]:
         if symbol not in self._interday_data:
             return
