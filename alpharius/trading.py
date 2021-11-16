@@ -86,7 +86,7 @@ class Trading:
         # Process
         processed = []
         while time.time() < self._market_close:
-            current_time = pd.to_datetime(datetime.datetime.fromtimestamp(time.time())).tz_localize(TIME_ZONE)
+            current_time = pd.to_datetime(pd.Timestamp(int(time.time()), unit='s', tz=TIME_ZONE))
             next_minute = current_time + datetime.timedelta(minutes=1)
             if int(current_time.minute) % 5 == 4:
                 checkpoint_time = pd.to_datetime(
@@ -94,7 +94,7 @@ class Trading:
                                          datetime.time(int(next_minute.hour),
                                                        int(next_minute.minute)))).tz_localize(TIME_ZONE)
                 trigger_seconds = 40
-                if checkpoint_time.time() == MARKET_CLOSE:
+                if checkpoint_time.timestamp() == self._market_close:
                     trigger_seconds -= 15
                 if current_time.second > trigger_seconds and checkpoint_time not in processed:
                     self._process(checkpoint_time)
@@ -127,6 +127,14 @@ class Trading:
 
         actions = []
         for processor in self._processors:
+            frequency = processor.get_trading_frequency()
+            if frequency == TradingFrequency.CLOSE_TO_CLOSE:
+                if checkpoint_time.timestamp() != self._market_close:
+                    continue
+            elif frequency == TradingFrequency.CLOSE_TO_OPEN:
+                if (checkpoint_time.timestamp() != self._market_open and
+                        checkpoint_time.timestamp() != self._market_close):
+                    continue
             processor_name = type(processor).__name__
             stock_universe = self._processor_stock_universes[processor_name]
             processor_contexts = []

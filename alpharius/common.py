@@ -102,6 +102,7 @@ def get_unique_actions(actions: List[Action]) -> List[Action]:
             if similar_actions[i].percent > action.percent:
                 action = similar_actions[i]
         unique_actions.append(action)
+    unique_actions.sort(key=lambda action: action.symbol)
     return unique_actions
 
 
