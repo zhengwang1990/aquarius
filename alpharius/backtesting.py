@@ -351,7 +351,8 @@ class Backtesting:
         if self._positions:
             position_info = []
             for position in self._positions:
-                close_price = self._interday_data[position.symbol].loc[day]['Close']
+                interday_data = self._interday_data[position.symbol]
+                close_price = interday_data.loc[day]['Close'] if day in interday_data.index else position.entry_price
                 change = (close_price / position.entry_price - 1) * 100
                 position_info.append([position.symbol, position.qty, position.entry_price,
                                       close_price, f'{change:+.2f}%'])
@@ -363,7 +364,8 @@ class Backtesting:
 
         equity = self._cash
         for position in self._positions:
-            close_price = self._interday_data[position.symbol].loc[day]['Close']
+            interday_data = self._interday_data[position.symbol]
+            close_price = interday_data.loc[day]['Close'] if day in interday_data.index else position.entry_price
             equity += position.qty * close_price
         profit_pct = (equity / self._daily_equity[-1] - 1) * 100 if self._daily_equity[-1] else 0
         self._daily_equity.append(equity)
