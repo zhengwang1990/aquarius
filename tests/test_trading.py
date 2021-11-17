@@ -80,7 +80,6 @@ class TestTrading(unittest.TestCase):
         self.assertGreater(self.fake_alpaca.list_positions_call_count, 0)
         self.assertGreater(self.fake_alpaca.submit_order_call_count, 0)
         self.assertGreater(self.fake_alpaca.get_account_call_count, 0)
-        self.assertGreater(self.fake_alpaca.cancel_order_call_count, 0)
         self.assertGreater(fake_processor.get_stock_universe_call_count, 0)
         self.assertGreater(fake_processor.process_data_call_count, 0)
 

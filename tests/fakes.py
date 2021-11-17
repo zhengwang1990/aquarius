@@ -117,7 +117,7 @@ class FakeProcess(alpharius.Processor):
             return alpharius.Action('DIA', alpharius.ActionType.SELL_TO_OPEN, 1, 52)
         if context.current_time.time() == datetime.time(13, 10) and context.symbol == 'DIA':
             return alpharius.Action('DIA', alpharius.ActionType.BUY_TO_CLOSE, 1, 50)
-        if context.current_time.time() == datetime.time(16, 0) and context.symbol == 'SPY':
+        if context.current_time.time() == datetime.time(15, 0) and context.symbol == 'SPY':
             return alpharius.Action('SPY', alpharius.ActionType.BUY_TO_OPEN, 1, 50)
 
 
