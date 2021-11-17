@@ -120,7 +120,7 @@ class HistoricalDataLoader:
         return df[_DATA_COLUMNS]
 
 
-@functools.lru_cache
+@functools.lru_cache()
 def _get_tradable_symbols() -> List[str]:
     alpaca = tradeapi.REST()
     assets = alpaca.list_assets()
@@ -168,7 +168,7 @@ def _load_cached_symbol_history(symbol: str,
     return hist
 
 
-@functools.lru_cache
+@functools.lru_cache()
 def load_tradable_history(start_time: DATETIME_TYPE,
                           end_time: DATETIME_TYPE,
                           data_source: DataSource) -> Dict[str, pd.DataFrame]:
