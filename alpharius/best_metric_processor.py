@@ -1,7 +1,10 @@
 from .common import *
 from .constants import *
 from typing import List
+import logging
 import numpy as np
+import pandas as pd
+import tabulate
 
 
 NUM_HOLD_SYMBOLS = 10
@@ -28,7 +31,7 @@ class BestMetricProcessor(Processor):
     def __init__(self, logging_enabled: bool) -> None:
         super().__init__()
         self._hold_positions = {}
-        self.logging_enabled = logging_enabled
+        self._logging_enabled = logging_enabled
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.CLOSE_TO_CLOSE
@@ -59,6 +62,13 @@ class BestMetricProcessor(Processor):
             metrics.append((context.symbol, metric))
             current_prices[context.symbol] = context.current_price
         metrics.sort(key=lambda s: s[1], reverse=True)
+        if self._logging_enabled:
+            metric_info = []
+            for symbol, metric in metrics[:NUM_HOLD_SYMBOLS + 5]:
+                price = current_prices[symbol]
+                metric_info.append([symbol, price, metric])
+            logging.info('Metric info\n' + tabulate.tabulate(
+                metric_info, headers=['Symbol', 'Price', 'Metric'], tablefmt='grid'))
         new_symbols = [s[0] for s in metrics[:NUM_HOLD_SYMBOLS]]
         old_symbols = [symbol for symbol, info in self._hold_positions.items() if info['side'] == 'long']
         actions = []
