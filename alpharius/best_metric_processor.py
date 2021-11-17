@@ -7,14 +7,19 @@ import numpy as np
 NUM_HOLD_SYMBOLS = 10
 
 
-def _get_metric(interday_lookback: pd.DataFrame, current_price: float) -> float:
+def _get_metric(interday_lookback: pd.DataFrame, current_price: float, global_factor: float) -> float:
     values = np.append(interday_lookback['Close'], current_price)
     profits = [np.log(values[k + 1] / values[k]) for k in range(len(values) - 1)]
     r = np.average(profits)
     std = np.std(profits)
     stdc = np.std(profits[-5:])
-    ratio = std / stdc if r < 0 else stdc / std
-    metric = abs(r) * ratio
+    win_count = 0
+    for p in profits[::-1]:
+        if p <= 0:
+            break
+        win_count += 1
+    ratio = stdc / std if r > 0 else std / stdc
+    metric = abs(r) * ratio * 0.95 ** win_count * global_factor
     return metric
 
 
@@ -40,10 +45,18 @@ class BestMetricProcessor(Processor):
 
     def process_all_data(self, contexts: List[Context]) -> List[Action]:
         metrics = []
+        volumes = []
         current_prices = {}
+        volume_factors = {}
         for context in contexts:
-            sharpe_ratio = _get_metric(context.interday_lookback, context.current_price)
-            metrics.append((context.symbol, sharpe_ratio))
+            volume = np.dot(context.interday_lookback['VWAP'], context.interday_lookback['Volume'])
+            volumes.append((context.symbol, volume))
+        volumes.sort(key=lambda s: s[1], reverse=True)
+        for i, symbol in enumerate(volumes):
+            volume_factors[symbol[0]] = 1 + 0.1 * i / len(volumes)
+        for context in contexts:
+            metric = _get_metric(context.interday_lookback, context.current_price, volume_factors[context.symbol])
+            metrics.append((context.symbol, metric))
             current_prices[context.symbol] = context.current_price
         metrics.sort(key=lambda s: s[1], reverse=True)
         new_symbols = [s[0] for s in metrics[:NUM_HOLD_SYMBOLS]]
