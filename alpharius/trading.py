@@ -240,8 +240,8 @@ class Trading:
                      notional: Optional[float] = None,
                      limit_price: Optional[float] = None) -> None:
         order_type = 'market' if limit_price is None else 'limit'
-        logging.info('Placing order for [%s]: side [%s]; qty [%s]; type [%s].',
-                     symbol, side, qty, order_type)
+        logging.info('Placing order for [%s]: side [%s]; qty [%s]; notional [%s]; type [%s].',
+                     symbol, side, notional, qty, order_type)
         try:
             self._alpaca.submit_order(symbol=symbol, qty=qty, side=side,
                                       type=order_type,
