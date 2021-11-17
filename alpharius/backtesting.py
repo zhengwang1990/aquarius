@@ -166,7 +166,8 @@ class Backtesting:
         interday_lookback = interday_data.iloc[interday_ind - DAYS_IN_A_MONTH - 1:interday_ind]
         return interday_lookback
 
-    def _prepare_intraday_lookback(self, current_interval_start: DATETIME_TYPE, symbol: str,
+    @staticmethod
+    def _prepare_intraday_lookback(current_interval_start: DATETIME_TYPE, symbol: str,
                                    intraday_datas: Dict[str, pd.DataFrame]) -> Optional[pd.DataFrame]:
         intraday_data = intraday_datas[symbol]
         intraday_ind = timestamp_to_index(intraday_data.index, current_interval_start)
@@ -496,6 +497,8 @@ class Backtesting:
                                      last_day_index + 1 - len(dates):last_day_index + 1])
                 for j in range(len(symbol_values) - 1, -1, -1):
                     symbol_values[j] /= symbol_values[0]
+                if symbol == 'TQQQ' and abs(symbol_values[-1] - 1) > 2 * abs(values[-1] - 1):
+                    continue
                 plt.plot(dates, symbol_values,
                          label=f'{symbol} ({(symbol_values[-1] - 1) * 100:+.2f}%)',
                          color=color_map[symbol])

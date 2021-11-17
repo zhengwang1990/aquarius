@@ -3,6 +3,7 @@ from .data import load_tradable_history, HistoricalDataLoader
 from .email import send_email
 from concurrent import futures
 import alpaca_trade_api as tradeapi
+import collections
 import datetime
 import time
 import os
@@ -28,8 +29,9 @@ class Trading:
         self._update_account()
         self._update_positions()
         self._processors = []
+        self._frequency_to_processor = collections.defaultdict(list)
         self._processor_stock_universes = {}
-        self._stock_universe = []
+        self._stock_universe = collections.defaultdict(list)
         self._interday_data = {}
         self._intraday_data = {}
         clock = self._alpaca.get_clock()
@@ -55,21 +57,21 @@ class Trading:
     def _init_processors(self, history_start: DATETIME_TYPE) -> None:
         self._processors = []
         for factory in self._processor_factories:
-            self._processors.append(factory.create(lookback_start_date=history_start,
-                                                   lookback_end_date=self._today,
-                                                   data_source=_DATA_SOURCE,
-                                                   logging_enabled=True))
+            processor = factory.create(lookback_start_date=history_start,
+                                       lookback_end_date=self._today,
+                                       data_source=_DATA_SOURCE,
+                                       logging_enabled=True)
+            self._processors.append(processor)
+            self._frequency_to_processor[processor.get_trading_frequency()].append(processor)
         for processor in self._processors:
             processor.setup(self._positions)
 
     def _init_stock_universe(self) -> None:
-        stock_universe = []
         for processor in self._processors:
             processor_name = type(processor).__name__
             processor_stock_universe = processor.get_stock_universe(self._today)
             self._processor_stock_universes[processor_name] = processor_stock_universe
-            stock_universe.extend(processor_stock_universe)
-        self._stock_universe = list(set(stock_universe))
+            self._stock_universe[processor.get_trading_frequency()].extend(processor_stock_universe)
         logging.info('Stock universe of the day: %s', self._stock_universe)
 
     def run(self) -> None:
@@ -106,35 +108,41 @@ class Trading:
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
         logging.info('Process starts for [%s]', checkpoint_time.time())
-        self._update_intraday_data()
+        frequency_to_process = [TradingFrequency.FIVE_MIN]
+        if checkpoint_time.timestamp() == self._market_open:
+            frequency_to_process = [TradingFrequency.FIVE_MIN,
+                                    TradingFrequency.CLOSE_TO_OPEN]
+        elif checkpoint_time.timestamp() == self._market_close:
+            frequency_to_process = [TradingFrequency.FIVE_MIN,
+                                    TradingFrequency.CLOSE_TO_OPEN,
+                                    TradingFrequency.CLOSE_TO_CLOSE]
+
+        self._update_intraday_data(frequency_to_process)
 
         contexts = {}
-        for symbol in self._stock_universe:
-            intraday_lookback = self._intraday_data[symbol]
-            interday_lookback = self._interday_data.get(symbol)
-            if interday_lookback is None or len(interday_lookback) < DAYS_IN_A_MONTH:
+        for frequency, symbols in self._stock_universe.items():
+            if frequency not in frequency_to_process:
                 continue
-            if not len(intraday_lookback):
-                continue
-            current_price = intraday_lookback['Close'][-1]
-            context = Context(symbol=symbol,
-                              current_time=checkpoint_time,
-                              current_price=current_price,
-                              interday_lookback=interday_lookback,
-                              intraday_lookback=intraday_lookback)
-            contexts[symbol] = context
+            for symbol in symbols:
+                intraday_lookback = self._intraday_data[symbol]
+                interday_lookback = self._interday_data.get(symbol)
+                if interday_lookback is None or len(interday_lookback) < DAYS_IN_A_MONTH:
+                    continue
+                if not len(intraday_lookback):
+                    continue
+                current_price = intraday_lookback['Close'][-1]
+                context = Context(symbol=symbol,
+                                  current_time=checkpoint_time,
+                                  current_price=current_price,
+                                  interday_lookback=interday_lookback,
+                                  intraday_lookback=intraday_lookback)
+                contexts[symbol] = context
         logging.info('Contexts prepared for [%s] symbols.', len(contexts))
 
         actions = []
         for processor in self._processors:
-            frequency = processor.get_trading_frequency()
-            if frequency == TradingFrequency.CLOSE_TO_CLOSE:
-                if checkpoint_time.timestamp() != self._market_close:
-                    continue
-            elif frequency == TradingFrequency.CLOSE_TO_OPEN:
-                if (checkpoint_time.timestamp() != self._market_open and
-                        checkpoint_time.timestamp() != self._market_close):
-                    continue
+            if processor.get_trading_frequency() not in frequency_to_process:
+                continue
             processor_name = type(processor).__name__
             stock_universe = self._processor_stock_universes[processor_name]
             processor_contexts = []
@@ -147,18 +155,21 @@ class Trading:
 
         self._trade(actions)
 
-    def _update_intraday_data(self) -> None:
+    def _update_intraday_data(self, frequency_to_process: List[TradingFrequency]) -> None:
         update_start = time.time()
         tasks = {}
         data_loader = HistoricalDataLoader(TimeInterval.FIVE_MIN, _DATA_SOURCE)
         with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
-            for symbol in self._stock_universe:
-                t = pool.submit(data_loader.load_daily_data, symbol, self._today)
-                tasks[symbol] = t
+            for frequency, symbols in self._stock_universe.items():
+                if frequency not in frequency_to_process:
+                    continue
+                for symbol in symbols:
+                    t = pool.submit(data_loader.load_daily_data, symbol, self._today)
+                    tasks[symbol] = t
         for symbol, t in tasks.items():
             self._intraday_data[symbol] = t.result()
         logging.info('Intraday data updated for [%d] symbols. Time elapsed [%.2fs]',
-                     len(self._stock_universe),
+                     len(tasks),
                      time.time() - update_start)
 
     def _get_position(self, symbol: str) -> Optional[Position]:

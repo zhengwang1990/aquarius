@@ -1,8 +1,10 @@
 from .common import *
 from .constants import *
-from .stock_universe import StockUniverse
 from typing import List
 import numpy as np
+
+
+NUM_HOLD_SYMBOLS = 10
 
 
 def _get_metric(interday_lookback: pd.DataFrame, current_price: float) -> float:
@@ -10,25 +12,18 @@ def _get_metric(interday_lookback: pd.DataFrame, current_price: float) -> float:
     profits = [np.log(values[k + 1] / values[k]) for k in range(len(values) - 1)]
     r = np.average(profits)
     std = np.std(profits)
-    sharpe_ratio = r * r / std
-    return sharpe_ratio
+    stdc = np.std(profits[-5:])
+    ratio = std / stdc if r < 0 else stdc / std
+    metric = abs(r) * ratio
+    return metric
 
 
 class BestMetricProcessor(Processor):
 
-    def __init__(self,
-                 lookback_start_date: DATETIME_TYPE,
-                 lookback_end_date: DATETIME_TYPE,
-                 data_source: DataSource,
-                 logging_enabled: bool) -> None:
+    def __init__(self, logging_enabled: bool) -> None:
         super().__init__()
         self._hold_positions = {}
         self.logging_enabled = logging_enabled
-        self._stock_universe = StockUniverse(history_start=lookback_start_date,
-                                             end_time=lookback_end_date,
-                                             data_source=data_source)
-        self._stock_universe.set_price_filer(low=5)
-        self._stock_universe.set_dollar_volume_filter(low=1E6, high=1E8)
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.CLOSE_TO_CLOSE
@@ -51,7 +46,7 @@ class BestMetricProcessor(Processor):
             metrics.append((context.symbol, sharpe_ratio))
             current_prices[context.symbol] = context.current_price
         metrics.sort(key=lambda s: s[1], reverse=True)
-        new_symbols = [s[0] for s in metrics[:10]]
+        new_symbols = [s[0] for s in metrics[:NUM_HOLD_SYMBOLS]]
         old_symbols = [symbol for symbol, info in self._hold_positions.items() if info['side'] == 'long']
         actions = []
         for symbol in old_symbols:
@@ -76,4 +71,4 @@ class BestMetricProcessorFactory(ProcessorFactory):
                data_source: DataSource,
                logging_enabled: bool = False,
                *args, **kwargs) -> BestMetricProcessor:
-        return BestMetricProcessor(lookback_start_date, lookback_end_date, data_source, logging_enabled)
+        return BestMetricProcessor(logging_enabled)

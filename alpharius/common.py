@@ -71,13 +71,17 @@ class DataError(Exception):
 
 
 def timestamp_to_index(index: pd.Index, timestamp: Union[DATETIME_TYPE, datetime.date]) -> Optional[int]:
-    p = None
     pd_timestamp = pd.to_datetime(timestamp)
-    for i in range(len(index)):
-        if index[i] == pd_timestamp:
-            p = i
-            break
-    return p
+    left, right = 0, len(index) - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if index[mid] == pd_timestamp:
+            return mid
+        elif index[mid] < pd_timestamp:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return None
 
 
 def timestamp_to_prev_index(index: pd.Index, timestamp: Union[DATETIME_TYPE, datetime.date]) -> Optional[int]:
