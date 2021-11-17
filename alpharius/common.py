@@ -23,6 +23,10 @@ MARKET_OPEN = datetime.time(9, 30)
 MARKET_CLOSE = datetime.time(16, 0)
 SHORT_RESERVE_RATIO = 1
 EPSILON = 1E-7
+# Calendar days to lookback for data loading
+INTERDAY_LOOKBACK_LOAD = CALENDAR_DAYS_IN_A_MONTH
+# Trading days to lookback
+INTERDAY_LOOKBACK_DAYS = DAYS_IN_A_MONTH
 BID_ASK_SPREAD = 0.001
 
 

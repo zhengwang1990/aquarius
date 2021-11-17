@@ -76,7 +76,7 @@ class Trading:
 
     def run(self) -> None:
         # Initialize
-        history_start = self._today - datetime.timedelta(days=CALENDAR_DAYS_IN_A_MONTH)
+        history_start = self._today - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
         self._interday_data = load_tradable_history(history_start, self._today, _DATA_SOURCE)
         self._init_processors(history_start)
         self._init_stock_universe()
@@ -125,7 +125,7 @@ class Trading:
                 continue
             for symbol in symbols:
                 intraday_lookback = self._intraday_data[symbol]
-                interday_lookback = self._interday_data.get(symbol)
+                interday_lookback = self._interday_data.get(symbol).iloc[-INTERDAY_LOOKBACK_DAYS:]
                 if interday_lookback is None or len(interday_lookback) < DAYS_IN_A_MONTH:
                     continue
                 if not len(intraday_lookback):

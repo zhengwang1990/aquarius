@@ -59,7 +59,7 @@ class BestMetricProcessor(Processor):
             volumes.append((context.symbol, volume))
         volumes.sort(key=lambda s: s[1], reverse=True)
         for i, symbol in enumerate(volumes):
-            volume_factors[symbol[0]] = 1 + 0.1 * i / len(volumes)
+            volume_factors[symbol[0]] = 0.9 + 0.2 * i / len(volumes)
         for context in contexts:
             metric = _get_metric(context.interday_lookback, context.current_price, volume_factors[context.symbol])
             metrics.append((context.symbol, metric))
