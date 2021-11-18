@@ -161,9 +161,9 @@ class Backtesting:
             return
         interday_data = self._interday_data[symbol]
         interday_ind = timestamp_to_index(interday_data.index, day)
-        if interday_ind is None or interday_ind < INTERDAY_LOOKBACK_DAYS:
+        if interday_ind is None:
             return
-        interday_lookback = interday_data.iloc[interday_ind - INTERDAY_LOOKBACK_DAYS:interday_ind]
+        interday_lookback = interday_data.iloc[:interday_ind]
         return interday_lookback
 
     @staticmethod

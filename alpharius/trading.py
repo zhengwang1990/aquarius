@@ -125,8 +125,8 @@ class Trading:
                 continue
             for symbol in symbols:
                 intraday_lookback = self._intraday_data[symbol]
-                interday_lookback = self._interday_data.get(symbol).iloc[-INTERDAY_LOOKBACK_DAYS:]
-                if interday_lookback is None or len(interday_lookback) < DAYS_IN_A_MONTH:
+                interday_lookback = self._interday_data.get(symbol)
+                if interday_lookback is None:
                     continue
                 if not len(intraday_lookback):
                     continue

@@ -10,7 +10,9 @@ NUM_HOLD_SYMBOLS = 10
 
 
 def _get_metric(interday_lookback: pd.DataFrame, current_price: float, global_factor: float) -> float:
-    values = np.append(interday_lookback['Close'], current_price)
+    if len(interday_lookback) < DAYS_IN_A_MONTH:
+        return 0
+    values = np.append(interday_lookback['Close'][-DAYS_IN_A_MONTH:], current_price)
     for t in [1, 3, 5]:
         pt = [np.log(values[k + t] / values[k]) for k in range(len(values) - t)]
         if abs(pt[-1] - np.average(pt)) / np.std(pt) > 3:
@@ -55,7 +57,9 @@ class BestMetricProcessor(Processor):
         current_prices = {}
         volume_factors = {}
         for context in contexts:
-            volume = np.dot(context.interday_lookback['VWAP'], context.interday_lookback['Volume'])
+            lookback_len = min(DAYS_IN_A_MONTH, len(context.interday_lookback))
+            volume = np.dot(context.interday_lookback['VWAP'][-lookback_len:],
+                            context.interday_lookback['Volume'][-lookback_len:])
             volumes.append((context.symbol, volume))
         volumes.sort(key=lambda s: s[1], reverse=True)
         for i, symbol in enumerate(volumes):
@@ -72,7 +76,7 @@ class BestMetricProcessor(Processor):
                 metric_info.append([symbol, price, metric])
             logging.info('Metric info\n' + tabulate.tabulate(
                 metric_info, headers=['Symbol', 'Price', 'Metric'], tablefmt='grid'))
-        new_symbols = [s[0] for s in metrics[:NUM_HOLD_SYMBOLS]]
+        new_symbols = [s[0] for s in metrics[:NUM_HOLD_SYMBOLS] if s[1] > 0]
         old_symbols = [symbol for symbol, info in self._hold_positions.items() if info['side'] == 'long']
         actions = []
         for symbol in old_symbols:
