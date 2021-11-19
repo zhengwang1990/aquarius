@@ -9,23 +9,6 @@ import tabulate
 NUM_HOLD_SYMBOLS = 3
 
 
-def _get_metric(interday_lookback: pd.DataFrame, current_price: float, global_factor: float) -> float:
-    if len(interday_lookback) < DAYS_IN_A_YEAR:
-        return 0
-    values = np.append(interday_lookback['Close'][-DAYS_IN_A_YEAR:], current_price)
-    for t in [1, 3, 5]:
-        pt = [np.log(values[k + t] / values[k]) for k in range(len(values) - t)]
-        avg = np.average(pt)
-        std = np.std(pt)
-        for s in range(1, 11):
-            if (pt[-s] - avg) / std < -3:
-                return 0
-    profits = [np.log(values[k + 1] / values[k]) for k in range(len(values) - 1)]
-    r = np.average(profits)
-    metric = r * global_factor
-    return metric
-
-
 class BestMetricProcessor(Processor):
 
     def __init__(self, logging_enabled: bool) -> None:
@@ -66,7 +49,9 @@ class BestMetricProcessor(Processor):
         for i, symbol in enumerate(volumes):
             volume_factors[symbol[0]] = 1.2 - 0.4 * i / len(volumes)
         for context in contexts_selected:
-            metric = _get_metric(context.interday_lookback, context.current_price, volume_factors[context.symbol])
+            metric = self._get_metric(context.interday_lookback,
+                                      context.current_price,
+                                      volume_factors[context.symbol])
             metrics.append((context.symbol, metric))
         metrics.sort(key=lambda s: s[1], reverse=True)
         if self._logging_enabled:
@@ -88,6 +73,20 @@ class BestMetricProcessor(Processor):
                 actions.append(Action(symbol, ActionType.BUY_TO_OPEN, 1, current_prices[symbol]))
                 self._hold_positions[symbol] = {'side': 'long'}
         return actions
+
+    @staticmethod
+    def _get_metric(interday_lookback: pd.DataFrame, current_price: float, global_factor: float) -> float:
+        if len(interday_lookback) < DAYS_IN_A_YEAR:
+            return 0
+        values = np.append(interday_lookback['Close'][-DAYS_IN_A_YEAR:], current_price)
+        profits = [np.log(values[k + 1] / values[k]) for k in range(len(values) - 1)]
+        r = np.average(profits)
+        std = np.std(profits)
+        for t in range(1, 11):
+            if (profits[-t] - r) / std < -3:
+                return 0
+        metric = r * global_factor
+        return metric
 
 
 class BestMetricProcessorFactory(ProcessorFactory):
