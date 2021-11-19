@@ -2,6 +2,7 @@ from enum import Enum
 from typing import List, Optional, Union
 import collections
 import datetime
+import inspect
 import logging
 import os
 import pandas as pd
@@ -17,13 +18,14 @@ DATETIME_TYPE = Union[pd.Timestamp, pd.DatetimeIndex, datetime.datetime]
 DAYS_IN_A_WEEK = 5
 DAYS_IN_A_MONTH = 20
 CALENDAR_DAYS_IN_A_MONTH = 35
+CALENDAR_DAYS_IN_A_YEAR = 365
 DAYS_IN_A_QUARTER = 60
 DAYS_IN_A_YEAR = 250
 MARKET_OPEN = datetime.time(9, 30)
 MARKET_CLOSE = datetime.time(16, 0)
 SHORT_RESERVE_RATIO = 1
 EPSILON = 1E-7
-INTERDAY_LOOKBACK_LOAD = CALENDAR_DAYS_IN_A_MONTH
+INTERDAY_LOOKBACK_LOAD = CALENDAR_DAYS_IN_A_YEAR
 BID_ASK_SPREAD = 0.001
 
 
@@ -195,11 +197,18 @@ class Processor:
     def setup(self, hold_positions: List[Position] = ()) -> None:
         return
 
-    def teardown(self, output_dir: Optional[str] = None) -> None:
+    def teardown(self, output_dir: str) -> None:
         return
 
     def get_trading_frequency(self) -> TradingFrequency:
         raise NotImplementedError('Calling parent interface')
+
+    def snapshot(self, output_dir: str) -> None:
+        source_file = inspect.getfile(self.__class__)
+        snapshot_file = os.path.join(output_dir, os.path.basename(source_file))
+        with open(snapshot_file, 'w') as f_snapshot:
+            with open(source_file, 'r') as f_source:
+                f_snapshot.write(f_source.read())
 
 
 class ProcessorFactory:

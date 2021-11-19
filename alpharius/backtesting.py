@@ -83,9 +83,11 @@ class Backtesting:
     def _init_processors(self, history_start) -> None:
         self._processors = []
         for factory in self._processor_factories:
-            self._processors.append(factory.create(lookback_start_date=history_start,
-                                                   lookback_end_date=self._end_date,
-                                                   data_source=_DATA_SOURCE))
+            processor = factory.create(lookback_start_date=history_start,
+                                       lookback_end_date=self._end_date,
+                                       data_source=_DATA_SOURCE)
+            processor.snapshot(self._output_dir)
+            self._processors.append(processor)
 
     def run(self) -> None:
         self._run_start_time = time.time()

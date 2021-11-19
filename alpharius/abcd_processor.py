@@ -173,8 +173,8 @@ class AbcdProcessor(Processor):
                 context.current_time.time() >= datetime.time(15, 55)):
             return _pop_position()
 
-    def teardown(self, output_dir: Optional[str] = None) -> None:
-        if self._history_db_path or not output_dir:
+    def teardown(self, output_dir: str) -> None:
+        if self._history_db_path:
             return
         history_db_path = os.path.join(output_dir, 'history.db')
         conn = sqlite3.connect(history_db_path)
