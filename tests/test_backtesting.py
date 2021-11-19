@@ -69,7 +69,7 @@ class TestTrading(unittest.TestCase):
         processor_factories = [alpharius.VolumeBreakoutProcessorFactory(),
                                alpharius.LevelBreakoutProcessorFactory(),
                                alpharius.SwingProcessorFactory(),
-                               alpharius.BestMetricProcessorFactory()]
+                               alpharius.MetricRankingProcessorFactory()]
         backtesting = alpharius.Backtesting(start_date=pd.to_datetime('2021-03-17'),
                                             end_date=pd.to_datetime('2021-03-18'),
                                             processor_factories=processor_factories)

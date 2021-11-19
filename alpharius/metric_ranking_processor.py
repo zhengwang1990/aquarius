@@ -9,7 +9,7 @@ import tabulate
 NUM_HOLD_SYMBOLS = 3
 
 
-class BestMetricProcessor(Processor):
+class MetricRankingProcessor(Processor):
 
     def __init__(self, logging_enabled: bool) -> None:
         super().__init__()
@@ -89,7 +89,7 @@ class BestMetricProcessor(Processor):
         return metric
 
 
-class BestMetricProcessorFactory(ProcessorFactory):
+class MetricRankingProcessorFactory(ProcessorFactory):
 
     def __init__(self):
         super().__init__()
@@ -99,5 +99,5 @@ class BestMetricProcessorFactory(ProcessorFactory):
                lookback_end_date: DATETIME_TYPE,
                data_source: DataSource,
                logging_enabled: bool = False,
-               *args, **kwargs) -> BestMetricProcessor:
-        return BestMetricProcessor(logging_enabled)
+               *args, **kwargs) -> MetricRankingProcessor:
+        return MetricRankingProcessor(logging_enabled)

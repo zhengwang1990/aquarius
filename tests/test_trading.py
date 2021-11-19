@@ -87,7 +87,7 @@ class TestTrading(unittest.TestCase):
         processor_factories = [alpharius.VolumeBreakoutProcessorFactory(),
                                alpharius.LevelBreakoutProcessorFactory(),
                                alpharius.SwingProcessorFactory(),
-                               alpharius.BestMetricProcessorFactory()]
+                               alpharius.MetricRankingProcessorFactory()]
         trading = alpharius.Trading(processor_factories=processor_factories)
 
         trading.run()

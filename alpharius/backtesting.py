@@ -17,7 +17,6 @@ import tabulate
 import time
 
 _DATA_SOURCE = DataSource.POLYGON
-_TIME_INTERVAL = TimeInterval.FIVE_MIN
 _MAX_WORKERS = 20
 
 
@@ -189,7 +188,7 @@ class Backtesting:
         tasks = {}
         with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
             for symbol in stock_universe:
-                t = pool.submit(load_cached_daily_data, symbol, day, _TIME_INTERVAL, _DATA_SOURCE)
+                t = pool.submit(load_cached_daily_data, symbol, day, TimeInterval.FIVE_MIN, _DATA_SOURCE)
                 tasks[symbol] = t
             for symbol, t in tasks.items():
                 intraday_datas[symbol] = t.result()
