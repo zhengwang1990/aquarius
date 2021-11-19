@@ -16,7 +16,7 @@ NASDAQ100_SYMBOLS = [
 
 def get_nasdaq100(view_time):
     nasdaq_set = set(NASDAQ100_SYMBOLS)
-    view_date = view_time.date()
+    view_date = pd.Timestamp(view_time.date())
     if view_date < pd.to_datetime('2021-08-26'):
         nasdaq_set.remove('CRWD')
     if view_date < pd.to_datetime('2021-07-21'):
