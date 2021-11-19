@@ -205,7 +205,7 @@ class Trading:
             if action.type == ActionType.SELL_TO_CLOSE and current_position.qty < 0:
                 logging.info('Position for [%s] is already short-side. Skipping close.', symbol)
                 continue
-            qty = int(abs(current_position.qty) * action.percent)
+            qty = abs(current_position.qty) * action.percent
             side = 'buy' if action.type == ActionType.BUY_TO_CLOSE else 'sell'
             self._place_order(symbol, side, qty=qty)
 
@@ -241,7 +241,7 @@ class Trading:
                      limit_price: Optional[float] = None) -> None:
         order_type = 'market' if limit_price is None else 'limit'
         logging.info('Placing order for [%s]: side [%s]; qty [%s]; notional [%s]; type [%s].',
-                     symbol, side, notional, qty, order_type)
+                     symbol, side, qty, notional, order_type)
         try:
             self._alpaca.submit_order(symbol=symbol, qty=qty, side=side,
                                       type=order_type,
