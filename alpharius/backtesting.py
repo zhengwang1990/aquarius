@@ -355,14 +355,19 @@ class Backtesting:
             position_info = []
             for position in self._positions:
                 interday_data = self._interday_data[position.symbol]
-                close_price = interday_data.loc[day]['Close'] if day in interday_data.index else position.entry_price
+                interday_ind = timestamp_to_index(interday_data.index, day)
+                close_price, daily_change = None, None
+                if interday_ind is not None:
+                    close_price = interday_data['Close'][interday_ind]
+                    if interday_ind > 0:
+                        daily_change = (close_price / interday_data['Close'][interday_ind-1] - 1) * 100
                 change = (close_price / position.entry_price - 1) * 100
                 position_info.append([position.symbol, position.qty, position.entry_price,
-                                      close_price, f'{change:+.2f}%'])
-
+                                      close_price, f'{daily_change:+.2f}%', f'{change:+.2f}%'])
             outputs.append('[ Positions ]')
             outputs.append(tabulate.tabulate(position_info,
-                                             headers=['Symbol', 'Qty', 'Entry Price', 'Current Price', 'Change'],
+                                             headers=['Symbol', 'Qty', 'Entry Price', 'Current Price',
+                                                      'Daily Change', 'Change'],
                                              tablefmt='grid'))
 
         equity = self._cash
