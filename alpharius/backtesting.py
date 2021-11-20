@@ -435,7 +435,7 @@ class Backtesting:
                     continue
                 last_day_index = timestamp_to_index(self._interday_data[symbol].index, date)
                 symbol_values = list(self._interday_data[symbol]['Close'][
-                                     last_day_index - (i - current_start):last_day_index + 1])
+                                     last_day_index - (i - current_start) - 1:last_day_index + 1])
                 symbol_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
                 year_profit.append(f'{symbol_profit_pct:+.2f}%')
             stats.append(year_profit)
