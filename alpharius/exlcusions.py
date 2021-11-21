@@ -62,7 +62,7 @@ SHORTS = ['BIS', 'CROC', 'DDG', 'DOG', 'DPK', 'DRIP', 'DUG', 'DUST', 'DXD',
           'DLBR', 'DLBS', 'DRR', 'DSLV', 'DTUS', 'DTYS', 'DWT', 'EXIV', 'FLAT',
           'FNGD', 'FNGZ', 'GNAF', 'KNAB', 'NRGD', 'NRGZ', 'TAPR', 'WTID',
           'XXVFF', 'YGRN', 'ZIV', 'BZQ', 'TVIX', 'UVXY', 'EPV', 'FTSD', 'VIXY',
-          'UVXY', 'SKF', 'HDGE']
+          'UVXY', 'SKF', 'HDGE', 'VXX']
 
 HISTORY_NOT_FOUND = ['STSB', 'NBAC', 'OTTR', 'ANDAR', 'GRNVR', 'VTAQR', 'BRLIR',
                      'BREZR', 'NBACR', 'ESSCR', 'AGBAR', 'ALACR', 'COMS']

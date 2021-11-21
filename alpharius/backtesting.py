@@ -360,9 +360,11 @@ class Backtesting:
                     close_price = interday_data['Close'][interday_ind]
                     if interday_ind > 0:
                         daily_change = (close_price / interday_data['Close'][interday_ind-1] - 1) * 100
-                change = (close_price / position.entry_price - 1) * 100
+                change = (close_price / position.entry_price - 1) * 100 if close_price is not None else None
                 position_info.append([position.symbol, position.qty, position.entry_price,
-                                      close_price, f'{daily_change:+.2f}%', f'{change:+.2f}%'])
+                                      close_price,
+                                      f'{daily_change:+.2f}%' if daily_change is not None else None,
+                                      f'{change:+.2f}%' if change is not None else None])
             outputs.append('[ Positions ]')
             outputs.append(tabulate.tabulate(position_info,
                                              headers=['Symbol', 'Qty', 'Entry Price', 'Current Price',
