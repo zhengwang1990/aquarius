@@ -68,9 +68,10 @@ class MetricRankingProcessor(Processor):
             if symbol not in new_symbols and symbol in current_prices:
                 actions.append(Action(symbol, ActionType.SELL_TO_CLOSE, 1, current_prices[symbol]))
                 self._hold_positions.pop(symbol)
+        percent = max(1 / (1 + NUM_HOLD_SYMBOLS - len(new_symbols)), 0)
         for symbol in new_symbols:
             if symbol not in old_symbols:
-                actions.append(Action(symbol, ActionType.BUY_TO_OPEN, 1, current_prices[symbol]))
+                actions.append(Action(symbol, ActionType.BUY_TO_OPEN, percent, current_prices[symbol]))
                 self._hold_positions[symbol] = {'side': 'long'}
         return actions
 
