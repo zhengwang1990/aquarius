@@ -26,7 +26,7 @@ class SwingProcessor(Processor):
         universe = self._stock_universe.get_stock_universe(view_time) + list(self._prev_hold_positions) + ['TQQQ']
         return list(set(universe))
 
-    def setup(self, hold_positions: List[Position] = ()) -> None:
+    def setup(self, hold_positions: List[Position]) -> None:
         for position in hold_positions:
             if position.qty > 0:
                 self._hold_positions[position.symbol] = {'side': 'long'}

@@ -26,12 +26,9 @@ class MetricRankingProcessor(Processor):
         stock_universe = list(set(self._nasdaq_100 + self._prev_hold_positions))
         return stock_universe
 
-    def setup(self, hold_positions: List[Position] = ()) -> None:
-        for position in hold_positions:
-            if position.qty > 0:
-                self._hold_positions[position.symbol] = {'side': 'long'}
-            else:
-                self._hold_positions[position.symbol] = {'side': 'short'}
+    def setup(self, hold_positions: List[Position]) -> None:
+        self._hold_positions = {position.symbol: position
+                                for position in hold_positions}
         self._prev_hold_positions = list(self._hold_positions.keys())
 
     def process_all_data(self, contexts: List[Context]) -> List[Action]:
@@ -62,7 +59,7 @@ class MetricRankingProcessor(Processor):
             logging.info('Metric info\n' + tabulate.tabulate(
                 metric_info, headers=['Symbol', 'Price', 'Metric'], tablefmt='grid'))
         new_symbols = [s[0] for s in metrics[:NUM_HOLD_SYMBOLS] if s[1] > 0]
-        old_symbols = [symbol for symbol, info in self._hold_positions.items() if info['side'] == 'long']
+        old_symbols = [symbol for symbol, position in self._hold_positions.items() if position.qty > 0]
         actions = []
         for symbol in old_symbols:
             if symbol not in new_symbols and symbol in current_prices:
@@ -72,7 +69,6 @@ class MetricRankingProcessor(Processor):
         for symbol in new_symbols:
             if symbol not in old_symbols:
                 actions.append(Action(symbol, ActionType.BUY_TO_OPEN, percent, current_prices[symbol]))
-                self._hold_positions[symbol] = {'side': 'long'}
         return actions
 
     @staticmethod

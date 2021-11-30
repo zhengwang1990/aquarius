@@ -194,7 +194,7 @@ class Processor:
                 actions.append(action)
         return actions
 
-    def setup(self, hold_positions: List[Position] = ()) -> None:
+    def setup(self, hold_positions: List[Position]) -> None:
         return
 
     def teardown(self, output_dir: str) -> None:
