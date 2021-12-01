@@ -327,15 +327,22 @@ class Backtesting:
         for action in actions:
             assert action.type in [ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]
             symbol = action.symbol
-            if self._get_current_position(symbol) is not None:
-                continue
             cash_to_trade = min(tradable_cash / len(actions), tradable_cash * action.percent)
             if abs(cash_to_trade) < EPSILON:
                 cash_to_trade = 0
             qty = cash_to_trade / action.price
             if action.type == ActionType.SELL_TO_OPEN:
                 qty = -qty
-            new_position = Position(symbol, qty, action.price, current_time)
+            old_position = self._get_current_position(symbol)
+            if old_position is None:
+                entry_price = action.price
+                new_qty = qty
+            else:
+                self._pop_current_position(symbol)
+                entry_price = (old_position.entry_price * old_position.qty +
+                               action.price * qty) / (old_position.qty + qty)
+                new_qty = qty + old_position.qty
+            new_position = Position(symbol, new_qty, entry_price, current_time)
             self._positions.append(new_position)
             self._cash -= action.price * qty
 
@@ -361,7 +368,7 @@ class Backtesting:
                 if interday_ind is not None:
                     close_price = interday_data['Close'][interday_ind]
                     if interday_ind > 0:
-                        daily_change = (close_price / interday_data['Close'][interday_ind-1] - 1) * 100
+                        daily_change = (close_price / interday_data['Close'][interday_ind - 1] - 1) * 100
                 change = (close_price / position.entry_price - 1) * 100 if close_price is not None else None
                 value = close_price * position.qty if close_price is not None else None
                 position_info.append([position.symbol, position.qty, position.entry_price,

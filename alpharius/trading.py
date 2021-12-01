@@ -222,9 +222,6 @@ class Trading:
         for action in actions:
             assert action.type in [ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]
             symbol = action.symbol
-            if self._get_position(symbol) is not None:
-                logging.info('Position for [%s] already exists. Skipping open.', symbol)
-                continue
             cash_to_trade = min(tradable_cash / len(actions), tradable_cash * action.percent)
             if cash_to_trade < self._equity * 0.01:
                 logging.info('Not enough cash to open [%s]. Skipping open.', symbol)

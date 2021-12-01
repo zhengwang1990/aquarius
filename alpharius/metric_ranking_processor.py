@@ -1,6 +1,6 @@
 from .common import *
 from .constants import *
-from typing import List
+from typing import Dict, List
 import logging
 import numpy as np
 import pandas as pd
@@ -64,11 +64,32 @@ class MetricRankingProcessor(Processor):
         for symbol in old_symbols:
             if symbol not in new_symbols and symbol in current_prices:
                 actions.append(Action(symbol, ActionType.SELL_TO_CLOSE, 1, current_prices[symbol]))
-                self._hold_positions.pop(symbol)
         percent = max(1 / (1 + NUM_HOLD_SYMBOLS - len(new_symbols)), 0)
         for symbol in new_symbols:
             if symbol not in old_symbols:
                 actions.append(Action(symbol, ActionType.BUY_TO_OPEN, percent, current_prices[symbol]))
+        if (not actions and contexts and
+                contexts[0].current_time.date().month % 3 == 1 and
+                contexts[0].current_time.date().day == 1):
+            return self._rebalance(current_prices)
+        return actions
+
+    def _rebalance(self, current_prices: Dict[str, float]) -> List[Action]:
+        if self._logging_enabled:
+            logging.info('Rebalancing portfolio')
+        equity = 0
+        for symbol, position in self._hold_positions.items():
+            if symbol not in current_prices:
+                return []
+            equity += position.qty * current_prices[symbol]
+        actions = []
+        for symbol, position in self._hold_positions.items():
+            stock_value = position.qty * current_prices[symbol]
+            percent = (stock_value - equity / len(self._hold_positions)) / stock_value
+            if percent > 0:
+                actions.append(Action(symbol, ActionType.SELL_TO_CLOSE, percent, current_prices[symbol]))
+            else:
+                actions.append(Action(symbol, ActionType.BUY_TO_OPEN, 1, current_prices[symbol]))
         return actions
 
     @staticmethod
