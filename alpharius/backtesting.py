@@ -425,10 +425,10 @@ class Backtesting:
 
         outputs = [get_header('Summary')]
         n_trades = self._num_win + self._num_lose
-        winning_rate = self._num_win / n_trades if n_trades > 0 else 0
+        win_rate = self._num_win / n_trades if n_trades > 0 else 0
         market_dates = self._market_dates[:len(self._daily_equity) - 1]
         summary = [['Time Range', f'{market_dates[0].date()} ~ {market_dates[-1].date()}'],
-                   ['Winning Rate', f'{winning_rate * 100:.2f}%'],
+                   ['Win Rate', f'{win_rate * 100:.2f}%'],
                    ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)']]
         outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
 
