@@ -24,6 +24,7 @@ class StockUniverse:
         self._price_low, self._price_high = None, None
         self._dvolume_low, self._dvolume_high = None, None
         self._atrp_low, self._atrp_high = None, None
+        self._cache_dir = None
 
     def set_price_filer(self, low: Optional[float] = None, high: Optional[float] = None) -> None:
         self._price_low = low
@@ -61,7 +62,25 @@ class StockUniverse:
                 raise ValueError(f'{view_time} is too early')
         return pd.to_datetime(prev_day.strftime('%F'))
 
+    def set_cache_dir(self, cache_dir):
+        self._cache_dir = os.path.join(_STOCK_UNIVERSE_CACHE_ROOT, cache_dir)
+        os.makedirs(self._cache_dir, exist_ok=True)
+
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+        cache_file = None
+        if self._cache_dir:
+            cache_file = os.path.join(self._cache_dir,
+                                      view_time.strftime('%F') + '.json')
+            if os.path.isfile(cache_file):
+                with open(cache_file, 'r') as f:
+                    return json.load(f)
+        stock_universe = self.get_stock_universe_impl(view_time)
+        if cache_file:
+            with open(cache_file, 'w') as f:
+                json.dump(stock_universe, f)
+        return stock_universe
+
+    def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
         res = []
         prev_day = self.get_prev_day(view_time)
         for symbol, hist in self._historical_data.items():
