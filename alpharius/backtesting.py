@@ -277,7 +277,7 @@ class Backtesting:
                     continue
                 current_price = self._interday_data[symbol].loc[day][status]
                 context = Context(symbol=symbol,
-                                  current_time=market_close,
+                                  current_time=current_time,
                                   current_price=current_price,
                                   interday_lookback=interday_lookback,
                                   intraday_lookback=None)
