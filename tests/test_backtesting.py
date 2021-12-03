@@ -52,7 +52,8 @@ class TestTrading(unittest.TestCase):
         self.patch_date_range.stop()
 
     @parameterized.expand([(alpharius.TradingFrequency.FIVE_MIN,),
-                           (alpharius.TradingFrequency.CLOSE_TO_CLOSE,)])
+                           (alpharius.TradingFrequency.CLOSE_TO_CLOSE,),
+                           (alpharius.TradingFrequency.CLOSE_TO_OPEN,)])
     def test_run_success(self, trading_frequency):
         fake_processor_factory = FakeProcessorFactory(trading_frequency)
         fake_processor = fake_processor_factory.processor

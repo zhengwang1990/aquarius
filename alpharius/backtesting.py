@@ -110,8 +110,11 @@ class Backtesting:
         five_min_actions = self._process_five_min(day, frequency_to_processor[TradingFrequency.FIVE_MIN])
         close_to_close_actions = self._process_close_to_close(day,
                                                               frequency_to_processor[TradingFrequency.CLOSE_TO_CLOSE])
+        close_to_open_actions = self._process_close_to_open(day,
+                                                            frequency_to_processor[TradingFrequency.CLOSE_TO_OPEN])
         executed_actions.extend(five_min_actions)
         executed_actions.extend(close_to_close_actions)
+        executed_actions.extend(close_to_open_actions)
 
         for processor in self._processors:
             processor.teardown(self._output_dir)
@@ -255,6 +258,35 @@ class Backtesting:
 
         actions = self._process_data(contexts, stock_universes, processors)
         executed_actions = self._process_actions(market_close.time(), actions)
+
+        return executed_actions
+
+    def _process_close_to_open(self, day: DATETIME_TYPE, processors: List[Processor]) -> List[List[Any]]:
+        stock_universes, stock_universe = self._load_stock_universe(day, processors)
+
+        market_open = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_OPEN)).tz_localize(TIME_ZONE)
+        market_close = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_CLOSE)).tz_localize(TIME_ZONE)
+        executed_actions = []
+
+        for status, current_time in [('Open', market_open), ('Close', market_close)]:
+            prep_context_start = time.time()
+            contexts = {}
+            for symbol in stock_universe:
+                interday_lookback = self._prepare_interday_lookback(day, symbol)
+                if interday_lookback is None:
+                    continue
+                current_price = self._interday_data[symbol].loc[day][status]
+                context = Context(symbol=symbol,
+                                  current_time=market_close,
+                                  current_price=current_price,
+                                  interday_lookback=interday_lookback,
+                                  intraday_lookback=None)
+                contexts[symbol] = context
+            self._context_prep_time += time.time() - prep_context_start
+
+            actions = self._process_data(contexts, stock_universes, processors)
+            current_executed_actions = self._process_actions(current_time.time(), actions)
+            executed_actions.extend(current_executed_actions)
 
         return executed_actions
 
