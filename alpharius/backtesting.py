@@ -98,46 +98,19 @@ class Backtesting:
             self._process(day)
         self._close()
 
-    def _process(self, day: DATETIME_TYPE) -> None:
-        for processor in self._processors:
-            processor.setup(self._positions)
-
-        frequency_to_processor = collections.defaultdict(list)
-        for processor in self._processors:
-            frequency_to_processor[processor.get_trading_frequency()].append(processor)
-
-        executed_actions = []
-        five_min_actions = self._process_five_min(day, frequency_to_processor[TradingFrequency.FIVE_MIN])
-        close_to_close_actions = self._process_close_to_close(day,
-                                                              frequency_to_processor[TradingFrequency.CLOSE_TO_CLOSE])
-        close_to_open_actions = self._process_close_to_open(day,
-                                                            frequency_to_processor[TradingFrequency.CLOSE_TO_OPEN])
-        executed_actions.extend(five_min_actions)
-        executed_actions.extend(close_to_close_actions)
-        executed_actions.extend(close_to_open_actions)
-
-        for processor in self._processors:
-            processor.teardown(self._output_dir)
-
-        self._log_day(day, executed_actions)
-
     def _load_stock_universe(self,
-                             day: DATETIME_TYPE,
-                             processors: List[Processor]) -> Tuple[Dict[str, List[str]], Set[str]]:
+                             day: DATETIME_TYPE) -> Tuple[Dict[str, List[str]],
+                                                          Dict[TradingFrequency, Set[str]]]:
         load_stock_universe_start = time.time()
-
-        stock_universes = {}
-        for processor in processors:
+        processor_stock_universes = dict()
+        stock_universe = collections.defaultdict(set)
+        for processor in self._processors:
             processor_name = type(processor).__name__
-            stock_universes[processor_name] = processor.get_stock_universe(day)
-
-        stock_universe = set()
-        for _, symbols in stock_universes.items():
-            for symbol in symbols:
-                stock_universe.add(symbol)
-
+            processor_stock_universe = processor.get_stock_universe(day)
+            processor_stock_universes[processor_name] = processor_stock_universe
+            stock_universe[processor.get_trading_frequency()].update(processor_stock_universe)
         self._stock_universe_load_time += time.time() - load_stock_universe_start
-        return stock_universes, stock_universe
+        return processor_stock_universes, stock_universe
 
     def _process_data(self,
                       contexts: Dict[str, Context],
@@ -176,27 +149,45 @@ class Backtesting:
         intraday_data = intraday_datas[symbol]
         intraday_ind = timestamp_to_index(intraday_data.index, current_interval_start)
         if intraday_ind is None:
-            intraday_ind = timestamp_to_prev_index(intraday_data.index, current_interval_start)
-        if intraday_ind is None:
             return
         intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
         return intraday_lookback
 
-    def _process_five_min(self, day: DATETIME_TYPE, processors: List[Processor]) -> List[List[Any]]:
-        stock_universes, stock_universe = self._load_stock_universe(day, processors)
+    @staticmethod
+    def _adjust_split(intraday_lookback: pd.DataFrame, interday_lookback: pd.DataFrame) -> pd.DataFrame:
+        prev_close = interday_lookback['Close'][-1]
+        intraday_open = intraday_lookback['Open'][0]
+        split_factor = np.round(intraday_open / prev_close)
+        if split_factor > 1:
+            intraday_lookback = intraday_lookback.apply(lambda x: x / split_factor)
+            intraday_lookback['Volume'] = intraday_lookback['Volume'].apply(lambda x: x * split_factor ** 2)
+        return intraday_lookback
 
+    def _load_intraday_data(self,
+                            day: DATETIME_TYPE,
+                            stock_universe: Dict[TradingFrequency, Set[str]]) -> Dict[str, pd.DataFrame]:
         load_intraday_start = time.time()
-
-        intraday_datas = {}
-        tasks = {}
+        intraday_datas = dict()
+        tasks = dict()
+        unique_stock_universe = set()
+        for _, symbols in stock_universe.items():
+            unique_stock_universe.update(symbols)
         with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
-            for symbol in stock_universe:
+            for symbol in unique_stock_universe:
                 t = pool.submit(load_cached_daily_data, symbol, day, TimeInterval.FIVE_MIN, _DATA_SOURCE)
                 tasks[symbol] = t
             for symbol, t in tasks.items():
                 intraday_datas[symbol] = t.result()
-
         self._intraday_load_time += time.time() - load_intraday_start
+        return intraday_datas
+
+    def _process(self, day: DATETIME_TYPE) -> None:
+        for processor in self._processors:
+            processor.setup(self._positions)
+
+        processor_stock_universes, stock_universe = self._load_stock_universe(day)
+
+        intraday_datas = self._load_intraday_data(day, stock_universe)
 
         market_open = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_OPEN)).tz_localize(TIME_ZONE)
         market_close = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_CLOSE)).tz_localize(TIME_ZONE)
@@ -206,89 +197,52 @@ class Backtesting:
         while current_interval_start < market_close:
             current_time = current_interval_start + datetime.timedelta(minutes=5)
 
-            prep_context_start = time.time()
+            frequency_to_process = [TradingFrequency.FIVE_MIN]
+            if current_interval_start == market_open:
+                frequency_to_process = [TradingFrequency.FIVE_MIN,
+                                        TradingFrequency.CLOSE_TO_OPEN]
+            elif current_time == market_close:
+                frequency_to_process = [TradingFrequency.FIVE_MIN,
+                                        TradingFrequency.CLOSE_TO_OPEN,
+                                        TradingFrequency.CLOSE_TO_CLOSE]
 
-            contexts = {}
-            for symbol in stock_universe:
+            prep_context_start = time.time()
+            contexts = dict()
+            unique_symbols = set()
+            for frequency, symbols in stock_universe.items():
+                if frequency in frequency_to_process:
+                    unique_symbols.update(symbols)
+            for symbol in unique_symbols:
                 intraday_lookback = self._prepare_intraday_lookback(current_interval_start, symbol, intraday_datas)
-                if intraday_lookback is None:
+                if intraday_lookback is None or len(intraday_lookback) == 0:
                     continue
-                current_price = intraday_datas[symbol]['Close'].loc[current_interval_start]
                 interday_lookback = self._prepare_interday_lookback(day, symbol)
-                if interday_lookback is None:
+                if interday_lookback is None or len(interday_lookback) == 0:
                     continue
+                intraday_lookback = self._adjust_split(intraday_lookback, interday_lookback)
+                current_price = intraday_lookback['Close'][-1]
                 context = Context(symbol=symbol,
                                   current_time=current_time,
                                   current_price=current_price,
                                   interday_lookback=interday_lookback,
                                   intraday_lookback=intraday_lookback)
                 contexts[symbol] = context
-
             self._context_prep_time += time.time() - prep_context_start
 
-            actions = self._process_data(contexts, stock_universes, processors)
+            processors = []
+            for processor in self._processors:
+                if processor.get_trading_frequency() in frequency_to_process:
+                    processors.append(processor)
+            actions = self._process_data(contexts, processor_stock_universes, processors)
             current_executed_actions = self._process_actions(current_time.time(), actions)
             executed_actions.extend(current_executed_actions)
 
             current_interval_start += datetime.timedelta(minutes=5)
 
-        return executed_actions
+        for processor in self._processors:
+            processor.teardown(self._output_dir)
 
-    def _process_close_to_close(self, day: DATETIME_TYPE, processors: List[Processor]) -> List[List[Any]]:
-        stock_universes, stock_universe = self._load_stock_universe(day, processors)
-
-        market_close = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_CLOSE)).tz_localize(TIME_ZONE)
-
-        prep_context_start = time.time()
-
-        contexts = {}
-        for symbol in stock_universe:
-            interday_lookback = self._prepare_interday_lookback(day, symbol)
-            if interday_lookback is None:
-                continue
-            current_price = self._interday_data[symbol].loc[day]['Close']
-            context = Context(symbol=symbol,
-                              current_time=market_close,
-                              current_price=current_price,
-                              interday_lookback=interday_lookback,
-                              intraday_lookback=None)
-            contexts[symbol] = context
-
-        self._context_prep_time += time.time() - prep_context_start
-
-        actions = self._process_data(contexts, stock_universes, processors)
-        executed_actions = self._process_actions(market_close.time(), actions)
-
-        return executed_actions
-
-    def _process_close_to_open(self, day: DATETIME_TYPE, processors: List[Processor]) -> List[List[Any]]:
-        stock_universes, stock_universe = self._load_stock_universe(day, processors)
-
-        market_open = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_OPEN)).tz_localize(TIME_ZONE)
-        market_close = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_CLOSE)).tz_localize(TIME_ZONE)
-        executed_actions = []
-
-        for status, current_time in [('Open', market_open), ('Close', market_close)]:
-            prep_context_start = time.time()
-            contexts = {}
-            for symbol in stock_universe:
-                interday_lookback = self._prepare_interday_lookback(day, symbol)
-                if interday_lookback is None:
-                    continue
-                current_price = self._interday_data[symbol].loc[day][status]
-                context = Context(symbol=symbol,
-                                  current_time=current_time,
-                                  current_price=current_price,
-                                  interday_lookback=interday_lookback,
-                                  intraday_lookback=None)
-                contexts[symbol] = context
-            self._context_prep_time += time.time() - prep_context_start
-
-            actions = self._process_data(contexts, stock_universes, processors)
-            current_executed_actions = self._process_actions(current_time.time(), actions)
-            executed_actions.extend(current_executed_actions)
-
-        return executed_actions
+        self._log_day(day, executed_actions)
 
     def _process_actions(self, current_time: datetime.time, actions: List[Action]) -> List[List[Any]]:
         unique_actions = get_unique_actions(actions)

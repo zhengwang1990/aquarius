@@ -30,10 +30,10 @@ class Trading:
         self._update_positions()
         self._processors = []
         self._frequency_to_processor = collections.defaultdict(list)
-        self._processor_stock_universes = {}
-        self._stock_universe = collections.defaultdict(list)
-        self._interday_data = {}
-        self._intraday_data = {}
+        self._processor_stock_universes = dict()
+        self._stock_universe = collections.defaultdict(set)
+        self._interday_data = dict()
+        self._intraday_data = dict()
         clock = self._alpaca.get_clock()
         self._market_open = clock.next_open.timestamp()
         self._market_close = clock.next_close.timestamp()
@@ -71,7 +71,7 @@ class Trading:
             processor_name = type(processor).__name__
             processor_stock_universe = processor.get_stock_universe(self._today)
             self._processor_stock_universes[processor_name] = processor_stock_universe
-            self._stock_universe[processor.get_trading_frequency()].extend(processor_stock_universe)
+            self._stock_universe[processor.get_trading_frequency()].update(processor_stock_universe)
         logging.info('Stock universe of the day: %s', self._stock_universe)
 
     def run(self) -> None:
@@ -109,7 +109,7 @@ class Trading:
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
         logging.info('Process starts for [%s]', checkpoint_time.time())
         frequency_to_process = [TradingFrequency.FIVE_MIN]
-        if checkpoint_time.timestamp() == self._market_open:
+        if checkpoint_time.timestamp() == self._market_open + 300:
             frequency_to_process = [TradingFrequency.FIVE_MIN,
                                     TradingFrequency.CLOSE_TO_OPEN]
         elif checkpoint_time.timestamp() == self._market_close:
@@ -119,7 +119,7 @@ class Trading:
 
         self._update_intraday_data(frequency_to_process)
 
-        contexts = {}
+        contexts = dict()
         for frequency, symbols in self._stock_universe.items():
             if frequency not in frequency_to_process:
                 continue
@@ -157,7 +157,7 @@ class Trading:
 
     def _update_intraday_data(self, frequency_to_process: List[TradingFrequency]) -> None:
         update_start = time.time()
-        tasks = {}
+        tasks = dict()
         data_loader = HistoricalDataLoader(TimeInterval.FIVE_MIN, _DATA_SOURCE)
         with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
             for frequency, symbols in self._stock_universe.items():
