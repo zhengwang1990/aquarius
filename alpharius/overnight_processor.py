@@ -4,8 +4,9 @@ from typing import List
 import numpy as np
 
 NUM_UNIVERSE_SYMBOLS = 100
-NUM_DIRECTIONAL_SYMBOLS = 10
+NUM_DIRECTIONAL_SYMBOLS = 5
 
+_EXCLUDE = ['GOOGL']
 
 class OvernightProcessor(Processor):
 
@@ -29,7 +30,7 @@ class OvernightProcessor(Processor):
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         hold_symbols = [position.symbol for position in self._hold_positions]
         self._universe_symbols = self._stock_universe.get_stock_universe(view_time)
-        return list(set(hold_symbols + self._universe_symbols))
+        return list(set(hold_symbols + self._universe_symbols).difference(_EXCLUDE))
 
     def process_all_data(self, contexts: List[Context]) -> List[Action]:
         current_prices = {context.symbol: context.current_price for context in contexts}
@@ -37,7 +38,8 @@ class OvernightProcessor(Processor):
             actions = []
             for position in self._hold_positions:
                 action_type = ActionType.SELL_TO_CLOSE if position.qty >= 0 else ActionType.BUY_TO_CLOSE
-                actions.append(Action(position.symbol, action_type, 1, current_prices[position.symbol]))
+                actions.append(Action(position.symbol, action_type, 1,
+                                      current_prices.get(position.symbol, position.entry_price)))
             return actions
 
         contexts_selected = [context for context in contexts if context.symbol in self._universe_symbols]
@@ -45,11 +47,8 @@ class OvernightProcessor(Processor):
         for context in contexts_selected:
             performances.append((context.symbol, self._get_performance(context)))
         performances.sort(key=lambda s: s[1])
-        short_symbols = [s[0] for s in performances[:NUM_DIRECTIONAL_SYMBOLS]]
-        long_symbols = [s[0] for s in performances[-NUM_DIRECTIONAL_SYMBOLS:]]
+        long_symbols = [s[0] for s in performances[-NUM_DIRECTIONAL_SYMBOLS:] if s[1] > 0]
         actions = []
-        for symbol in short_symbols:
-            actions.append(Action(symbol, ActionType.SELL_TO_OPEN, 1, current_prices[symbol]))
         for symbol in long_symbols:
             actions.append(Action(symbol, ActionType.BUY_TO_OPEN, 1, current_prices[symbol]))
         return actions
@@ -69,7 +68,7 @@ class OvernightProcessor(Processor):
         today_open = intraday_lookback['Open'][p]
         opens = np.append(interday_lookback['Open'][-DAYS_IN_A_YEAR + 1:], today_open)
         performance = 0
-        for close_price, open_price in (closes, opens):
+        for close_price, open_price in zip(closes, opens):
             performance += np.log(open_price / close_price)
         return performance
 
