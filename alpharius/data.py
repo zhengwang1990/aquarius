@@ -127,7 +127,8 @@ def _get_tradable_symbols() -> List[str]:
     tradable = [asset.symbol for asset in assets
                 if re.match('^[A-Z]*$', asset.symbol)
                 and asset.tradable and asset.marginable
-                and asset.shortable and asset.easy_to_borrow]
+                and asset.shortable and asset.easy_to_borrow
+                and asset.fractionable]
     tradable = sorted(list(set(tradable).difference(EXCLUSIONS)))
     return tradable
 

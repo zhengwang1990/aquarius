@@ -2,11 +2,11 @@ from .common import *
 from .stock_universe import StockUniverse
 from typing import List
 import numpy as np
+import pandas as pd
 
-NUM_UNIVERSE_SYMBOLS = 100
+NUM_UNIVERSE_SYMBOLS = 200
 NUM_DIRECTIONAL_SYMBOLS = 5
 
-_EXCLUDE = ['GOOGL']
 
 class OvernightProcessor(Processor):
 
@@ -30,7 +30,7 @@ class OvernightProcessor(Processor):
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         hold_symbols = [position.symbol for position in self._hold_positions]
         self._universe_symbols = self._stock_universe.get_stock_universe(view_time)
-        return list(set(hold_symbols + self._universe_symbols).difference(_EXCLUDE))
+        return list(set(hold_symbols + self._universe_symbols))
 
     def process_all_data(self, contexts: List[Context]) -> List[Action]:
         current_prices = {context.symbol: context.current_price for context in contexts}
@@ -94,14 +94,21 @@ class OvernightStockUniverse(StockUniverse):
                  lookback_end_date: DATETIME_TYPE,
                  data_source: DataSource):
         super().__init__(lookback_start_date, lookback_end_date, data_source)
+        df = pd.read_csv(os.path.join(DATA_ROOT, 'nasdaq_screener.csv'))
+        self._stock_symbols = set(df['Symbol'])
 
     def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
         prev_day = self.get_prev_day(view_time)
         dollar_volumes = []
         for symbol, hist in self._historical_data.items():
+            if symbol not in self._stock_symbols:
+                continue
             if prev_day not in hist.index:
                 continue
             prev_day_ind = timestamp_to_index(hist.index, prev_day)
+            prev_close = hist['Close'][prev_day_ind]
+            if prev_close < 5:
+                continue
             dollar_volumes.append((symbol, self._get_dollar_volume(symbol, prev_day_ind)))
         dollar_volumes.sort(key=lambda s: s[1], reverse=True)
         return [s[0] for s in dollar_volumes[:NUM_UNIVERSE_SYMBOLS]]

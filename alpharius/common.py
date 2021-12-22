@@ -13,6 +13,7 @@ CASH_RESERVE_ENV = 'CASH_RESERVE'
 TIME_ZONE = 'America/New_York'
 CACHE_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'cache')
 OUTPUT_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'outputs')
+DATA_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data')
 MODEL_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'models')
 DATETIME_TYPE = Union[pd.Timestamp, pd.DatetimeIndex, datetime.datetime]
 DAYS_IN_A_WEEK = 5

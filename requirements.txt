@@ -1,4 +1,5 @@
 alpaca-trade-api
+bs4
 matplotlib
 mplfinance
 numpy
@@ -7,6 +8,7 @@ pandas_market_calendars
 polygon-api-client
 parameterized
 python-dateutil
+requests
 retrying
 scikit-learn
 ta
