@@ -60,6 +60,13 @@ class OvernightProcessor(Processor):
         if len(interday_lookback) < DAYS_IN_A_YEAR:
             return 0
         closes = interday_lookback['Close'][-DAYS_IN_A_YEAR:]
+        values = np.append(closes, context.current_price)
+        profits = [np.log(values[k + 1] / values[k]) for k in range(len(values) - 1)]
+        r = np.average(profits)
+        std = np.std(profits)
+        for t in range(1, 11):
+            if (profits[-t] - r) / std < -3:
+                return 0
         p = None
         for i in range(len(intraday_lookback)):
             if intraday_lookback.index[i].time() >= MARKET_OPEN:
@@ -67,9 +74,11 @@ class OvernightProcessor(Processor):
                 break
         today_open = intraday_lookback['Open'][p]
         opens = np.append(interday_lookback['Open'][-DAYS_IN_A_YEAR + 1:], today_open)
-        performance = 0
+        overnight_returns = []
         for close_price, open_price in zip(closes, opens):
-            performance += np.log(open_price / close_price)
+            overnight_returns.append(np.log(open_price / close_price))
+        overnight_returns.sort()
+        performance = float(np.sum(overnight_returns[DAYS_IN_A_MONTH:-DAYS_IN_A_MONTH]))
         return performance
 
 
@@ -106,6 +115,8 @@ class OvernightStockUniverse(StockUniverse):
             if prev_day not in hist.index:
                 continue
             prev_day_ind = timestamp_to_index(hist.index, prev_day)
+            if prev_day_ind < DAYS_IN_A_MONTH:
+                continue
             prev_close = hist['Close'][prev_day_ind]
             if prev_close < 5:
                 continue
