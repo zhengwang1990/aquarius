@@ -1,10 +1,11 @@
 from .common import *
-from .stock_universe import ThreeSigmaStockUniverse
+from .stock_universe import ThreeSigmaStockUniverse, StockUniverse
 from typing import List, Optional
 import datetime
 import numpy as np
 
-_WATCHING_WINDOW = 12
+_WATCHING_WINDOW = 6
+NUM_UNIVERSE_SYMBOLS = 200
 
 
 class VolumeBreakoutProcessor(Processor):
@@ -15,9 +16,9 @@ class VolumeBreakoutProcessor(Processor):
                  data_source: DataSource,
                  logging_enabled: bool) -> None:
         super().__init__()
-        self._stock_universe = ThreeSigmaStockUniverse(start_time=lookback_start_date,
-                                                       end_time=lookback_end_date,
-                                                       data_source=data_source)
+        self._stock_universe = VolumeBreakoutStockUniverse(lookback_start_date=lookback_start_date,
+                                                           lookback_end_date=lookback_end_date,
+                                                           data_source=data_source)
         self._logging_enabled = logging_enabled
         self._hold_positions = {}
 
@@ -52,22 +53,26 @@ class VolumeBreakoutProcessor(Processor):
 
         vwap = context.vwap
         current_distance = context.current_price - vwap[-1]
-        if current_distance > 0:
+        if current_distance > 0 and context.current_price > intraday_closes[-2] > intraday_closes[-3]:
             side = 'long'
             action_type = ActionType.BUY_TO_OPEN
-        else:
+            volume_lookback = 2
+        elif current_distance < 0 and context.current_price < intraday_closes[-2] < intraday_closes[-3]:
             side = 'short'
             action_type = ActionType.SELL_TO_OPEN
+            volume_lookback = 3
+        else:
+            return
 
-        for i in range(2, _WATCHING_WINDOW + 1):
-            if (intraday_closes[-i] - vwap[-i]) * current_distance > 0:
-                if self._logging_enabled:
-                    logging.info('Skipping [%s]. Current price [%f]. Distance sign not satisfied.',
-                                 context.symbol, context.current_price)
-                return
+        # for i in range(2, _WATCHING_WINDOW + 1):
+        #     if (intraday_closes[-i] - vwap[-i]) * current_distance > 0:
+        #         if self._logging_enabled:
+        #             logging.info('Skipping [%s]. Current price [%f]. Distance sign not satisfied.',
+        #                          context.symbol, context.current_price)
+        #         return
 
-        current_volume = intraday_volumes[-1]
-        volume_threshold = 3 * np.max(intraday_volumes[-_WATCHING_WINDOW:-1])
+        current_volume = np.min(intraday_volumes[-volume_lookback:])
+        volume_threshold = 2 * np.max(intraday_volumes[:-volume_lookback])
         if current_volume < volume_threshold:
             if self._logging_enabled:
                 logging.info('Skipping [%s]. Current price [%f]. '
@@ -94,25 +99,18 @@ class VolumeBreakoutProcessor(Processor):
         symbol = context.symbol
         position = self._hold_positions[symbol]
         entry_time = position['entry_time']
-        prev_close = context.intraday_lookback['Close'][-1]
-        prev_open = context.intraday_lookback['Open'][-1]
         current_price = context.current_price
-        entry_price = position['entry_price']
         side = position['side']
         stop_loss = context.vwap[-1]
         if side == 'long':
             action = Action(symbol, ActionType.SELL_TO_CLOSE, 1, current_price)
-            if current_price < stop_loss * 0.99:
-                return _pop_position()
-            if current_price > entry_price * 1.01 and prev_close < prev_open:
+            if current_price < stop_loss * 0.98:
                 return _pop_position()
         else:
             action = Action(symbol, ActionType.BUY_TO_CLOSE, 1, current_price)
-            if current_price > stop_loss * 1.01:
+            if current_price > stop_loss * 1.02:
                 return _pop_position()
-            if current_price < entry_price * 0.99 and prev_close > prev_open:
-                return _pop_position()
-        if (context.current_time - entry_time >= datetime.timedelta(hours=1) or
+        if (context.current_time - entry_time >= datetime.timedelta(hours=2) or
                 context.current_time.time() >= datetime.time(15, 55)):
             return _pop_position()
 
@@ -130,3 +128,33 @@ class VolumeBreakoutProcessorFactory(ProcessorFactory):
                logging_enabled: bool = False,
                *args, **kwargs) -> VolumeBreakoutProcessor:
         return VolumeBreakoutProcessor(lookback_start_date, lookback_end_date, data_source, logging_enabled)
+
+
+class VolumeBreakoutStockUniverse(StockUniverse):
+
+    def __init__(self,
+                 lookback_start_date: DATETIME_TYPE,
+                 lookback_end_date: DATETIME_TYPE,
+                 data_source: DataSource):
+        super().__init__(lookback_start_date, lookback_end_date, data_source)
+        df = pd.read_csv(os.path.join(DATA_ROOT, 'nasdaq_screener.csv'))
+        self._stock_symbols = set(df['Symbol'])
+
+    def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
+        prev_day = self.get_prev_day(view_time)
+        dollar_volumes = []
+        for symbol, hist in self._historical_data.items():
+            if symbol not in self._stock_symbols:
+                continue
+            if prev_day not in hist.index:
+                continue
+            prev_day_ind = timestamp_to_index(hist.index, prev_day)
+            if prev_day_ind < DAYS_IN_A_MONTH:
+                continue
+            prev_close = hist['Close'][prev_day_ind]
+            if prev_close < 5:
+                continue
+            dollar_volume = self._get_dollar_volume(symbol, prev_day_ind)
+            dollar_volumes.append((symbol, dollar_volume))
+        dollar_volumes.sort(key=lambda s: s[1], reverse=True)
+        return [s[0] for s in dollar_volumes[:NUM_UNIVERSE_SYMBOLS]]
