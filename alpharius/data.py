@@ -1,5 +1,6 @@
 from .common import *
 from .exlcusions import EXCLUSIONS
+from alpaca_trade_api.rest import REST, TimeFrame, TimeFrameUnit
 from concurrent import futures
 from tqdm import tqdm
 from typing import Dict, List
@@ -30,6 +31,8 @@ class HistoricalDataLoader:
             self._init_polygon()
         elif data_source == DataSource.YAHOO:
             self._init_yahoo()
+        elif data_source == DataSource.ALPACA:
+            self._init_alpaca()
 
     def _init_polygon(self) -> None:
         polygon_api_key = os.environ.get(POLYGON_API_KEY_ENV)
@@ -54,6 +57,15 @@ class HistoricalDataLoader:
         elif self._time_interval == TimeInterval.DAY:
             self._interval = '1d'
 
+    def _init_alpaca(self) -> None:
+        self._alpaca = REST()
+        if self._time_interval == TimeInterval.FIVE_MIN:
+            self._time_frame = TimeFrame(5, TimeFrameUnit.Minute)
+        elif self._time_interval == TimeInterval.HOUR:
+            self._time_frame = TimeFrame(1, TimeFrameUnit.Hour)
+        elif self._time_interval == TimeInterval.DAY:
+            self._time_frame = TimeFrame(1, TimeFrameUnit.Day)
+
     def load_data_point(self, symbol: str, time_point: DATETIME_TYPE) -> pd.DataFrame:
         return self.load_data_list(symbol, time_point, time_point)
 
@@ -77,6 +89,8 @@ class HistoricalDataLoader:
             res = self._polygon_load_data_list(symbol, start_time, end_time)
         if self._data_source == DataSource.YAHOO:
             res = self._yahoo_load_data_list(symbol, start_time, end_time)
+        if self._data_source == DataSource.ALPACA:
+            res = self._alpaca_load_data_list(symbol, start_time, end_time)
         if res is None:
             raise DataError(f'{self._data_source} is not supported')
 
@@ -89,7 +103,7 @@ class HistoricalDataLoader:
                                 start_time: DATETIME_TYPE,
                                 end_time: DATETIME_TYPE) -> pd.DataFrame:
         from_ = int(start_time.timestamp() * 1000)
-        to = int(end_time.timestamp() * 1000 - 1)
+        to = int(end_time.timestamp() * 1000)
         response = self._polygon_client.stocks_equities_aggregates(
             symbol, self._multiplier, self._timespan, from_=from_, to=to, limit=50000)
         if response.status != 'OK':
@@ -118,6 +132,27 @@ class HistoricalDataLoader:
         df = t.history(start=start_time, end=end_time, interval=self._interval)
         df['VWAP'] = df.apply(lambda row: (row['High'] + row['Low'] + row['Close']) / 3, axis=1)
         return df[_DATA_COLUMNS]
+
+    @retrying.retry(stop_max_attempt_number=10, wait_exponential_multiplier=1000)
+    def _alpaca_load_data_list(self,
+                               symbol: str,
+                               start_time: DATETIME_TYPE,
+                               end_time: DATETIME_TYPE) -> pd.DataFrame:
+        bars = self._alpaca.get_bars(symbol,
+                                     self._time_frame,
+                                     start_time.isoformat(),
+                                     end_time.isoformat(),
+                                     adjustment='split')
+        if self._time_interval == TimeInterval.DAY:
+            index = [pd.to_datetime(bar.t).tz_convert(TIME_ZONE).date()
+                     for bar in bars]
+        else:
+            index = [pd.to_datetime(bar.t).tz_convert(TIME_ZONE)
+                     for bar in bars]
+        df = pd.DataFrame([[bar.o, bar.h, bar.l, bar.c, bar.v, bar.vw] for bar in bars],
+                          index=index,
+                          columns=_DATA_COLUMNS)
+        return df
 
 
 @functools.lru_cache()

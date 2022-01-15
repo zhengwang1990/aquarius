@@ -42,6 +42,7 @@ class TimeInterval(Enum):
 class DataSource(Enum):
     POLYGON = 1
     YAHOO = 2
+    ALPACA = 3
 
     def __str__(self):
         return self.name
