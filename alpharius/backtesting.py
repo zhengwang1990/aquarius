@@ -325,8 +325,11 @@ class Backtesting:
                 new_qty = qty
             else:
                 self._pop_current_position(symbol)
-                entry_price = (old_position.entry_price * old_position.qty +
-                               action.price * qty) / (old_position.qty + qty)
+                if old_position.qty == 0:
+                    entry_price = action.price
+                else:
+                    entry_price = (old_position.entry_price * old_position.qty +
+                                   action.price * qty) / (old_position.qty + qty)
                 new_qty = qty + old_position.qty
             new_position = Position(symbol, new_qty, entry_price, current_time)
             self._positions.append(new_position)

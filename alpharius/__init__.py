@@ -8,6 +8,7 @@ from .swing_processor import SwingProcessorFactory
 from .metric_ranking_processor import MetricRankingProcessorFactory
 from .overnight_processor import OvernightProcessorFactory
 from .moving_momentum import MovingMomentumProcessorFactory
+from .qqq_processor import QqqProcessorFactory
 from .trading import Trading
 
 __version__ = '1.0.0'
