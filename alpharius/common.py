@@ -29,6 +29,9 @@ EPSILON = 1E-7
 INTERDAY_LOOKBACK_LOAD = CALENDAR_DAYS_IN_A_YEAR
 BID_ASK_SPREAD = 0.001
 
+alpaca_logger = logging.getLogger('alpaca_trade_api')
+alpaca_logger.setLevel(logging.ERROR)
+
 
 class TimeInterval(Enum):
     FIVE_MIN = 1
@@ -116,9 +119,9 @@ def get_unique_actions(actions: List[Action]) -> List[Action]:
     return unique_actions
 
 
-def logging_config(logging_file=None, detail=True):
+def logging_config(logging_file=None, detail=True, name=None) -> logging.Logger:
     """Configuration for logging."""
-    logger = logging.getLogger()
+    logger = logging.getLogger(name=name)
     logger.setLevel(logging.DEBUG)
     if detail:
         formatter = logging.Formatter(
@@ -137,8 +140,7 @@ def logging_config(logging_file=None, detail=True):
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-    alpaca_logger = logging.getLogger('alpaca_trade_api')
-    alpaca_logger.setLevel(logging.ERROR)
+    return logger
 
 
 def get_header(title):

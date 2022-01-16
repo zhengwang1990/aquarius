@@ -7,6 +7,7 @@ from typing import Dict, List
 import alpaca_trade_api as tradeapi
 import datetime
 import functools
+import numpy as np
 import pandas as pd
 import polygon
 import re
@@ -111,11 +112,13 @@ class HistoricalDataLoader:
         if not hasattr(response, 'results'):
             return pd.DataFrame([], columns=['Open', 'High', 'Low', 'Close', 'Volume'])
         if self._time_interval == TimeInterval.DAY:
-            index = [pd.to_datetime(pd.to_datetime(int(res['t']), unit='ms', utc=True).tz_convert(TIME_ZONE).date())
-                     for res in response.results]
+            index = pd.DatetimeIndex(
+                [pd.to_datetime(pd.to_datetime(int(res['t']), unit='ms', utc=True).tz_convert(TIME_ZONE).date())
+                 for res in response.results])
         else:
-            index = [pd.to_datetime(int(res['t']), unit='ms', utc=True).tz_convert(TIME_ZONE)
-                     for res in response.results]
+            index = pd.DatetimeIndex(
+                [pd.to_datetime(int(res['t']), unit='ms', utc=True).tz_convert(TIME_ZONE)
+                 for res in response.results])
         df = pd.DataFrame([[res['o'], res['h'], res['l'], res['c'], res['v'],
                             res['vw'] if 'vw' in res else res['c']] for res in response.results],
                           index=index,
@@ -138,20 +141,48 @@ class HistoricalDataLoader:
                                symbol: str,
                                start_time: DATETIME_TYPE,
                                end_time: DATETIME_TYPE) -> pd.DataFrame:
+        def adjust_split(value, prev_value, post_value):
+            if value == 0 or prev_value == 0 or post_value == 0:
+                return value
+            if np.round(prev_value / post_value) != 1:
+                return value
+            split_factor = np.round((prev_value + post_value) / 2 / value)
+            if split_factor > 1:
+                return value * split_factor
+            reverse_split_factor = np.round(value * 2 / (prev_value + post_value))
+            if reverse_split_factor > 1:
+                return value / reverse_split_factor
+            return value
+
         bars = self._alpaca.get_bars(symbol,
                                      self._time_frame,
                                      start_time.isoformat(),
                                      end_time.isoformat(),
                                      adjustment='split')
         if self._time_interval == TimeInterval.DAY:
-            index = [pd.to_datetime(bar.t).tz_convert(TIME_ZONE).date()
-                     for bar in bars]
+            index = pd.DatetimeIndex([pd.to_datetime(bar.t).tz_convert(TIME_ZONE).date()
+                                      for bar in bars])
         else:
-            index = [pd.to_datetime(bar.t).tz_convert(TIME_ZONE)
-                     for bar in bars]
-        df = pd.DataFrame([[bar.o, bar.h, bar.l, bar.c, bar.v, bar.vw] for bar in bars],
-                          index=index,
-                          columns=_DATA_COLUMNS)
+            index = pd.DatetimeIndex([pd.to_datetime(bar.t).tz_convert(TIME_ZONE)
+                                      for bar in bars])
+        data = []
+        for i, bar in enumerate(bars):
+            if self._time_interval == TimeInterval.DAY and 0 < i < len(bars) - 1:
+                prev_bar = bars[i - 1]
+                post_bar = bars[i + 1]
+                o = adjust_split(bar.o, prev_bar.o, post_bar.o)
+                h = adjust_split(bar.h, prev_bar.h, post_bar.h)
+                l = adjust_split(bar.l, prev_bar.l, post_bar.l)
+                c = adjust_split(bar.c, prev_bar.c, post_bar.c)
+                vw = adjust_split(bar.vw, prev_bar.vw, post_bar.vw)
+            else:
+                o = bar.o
+                h = bar.h
+                l = bar.l
+                c = bar.c
+                vw = bar.vw
+            data.append([o, h, l, c, bar.v, vw])
+        df = pd.DataFrame(data, index=index, columns=_DATA_COLUMNS)
         return df
 
 

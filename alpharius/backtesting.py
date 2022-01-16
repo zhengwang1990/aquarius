@@ -53,7 +53,9 @@ class Backtesting:
                 break
             output_num += 1
 
-        logging_config(os.path.join(self._output_dir, 'result.txt'), detail=False)
+        self._details_log = logging_config(os.path.join(self._output_dir, 'details.txt'), detail=False, name='details')
+        self._summary_log = logging_config(os.path.join(self._output_dir, 'summary.txt'), detail=False, name='summary')
+        self._profile_log = logging_config(os.path.join(self._output_dir, 'profile.txt'), detail=False, name='profile')
 
         nyse = mcal.get_calendar('NYSE')
         schedule = nyse.schedule(start_date=self._start_date, end_date=self._end_date - datetime.timedelta(days=1))
@@ -94,8 +96,13 @@ class Backtesting:
         self._interday_data = load_tradable_history(history_start, self._end_date, _DATA_SOURCE)
         self._interday_load_time += time.time() - self._run_start_time
         self._init_processors(history_start)
+        all_processor_c2c = np.all([processor.get_trading_frequency() == TradingFrequency.CLOSE_TO_CLOSE
+                                    for processor in self._processors])
         for day in self._market_dates:
-            self._process(day)
+            if all_processor_c2c:
+                self._process_c2c(day)
+            else:
+                self._process(day)
         self._close()
 
     def _load_stock_universe(self,
@@ -244,6 +251,32 @@ class Backtesting:
 
         self._log_day(day, executed_actions)
 
+    def _process_c2c(self, day: DATETIME_TYPE) -> None:
+        for processor in self._processors:
+            processor.setup(self._positions)
+
+        processor_stock_universes, stock_universe = self._load_stock_universe(day)
+        market_close = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_CLOSE)).tz_localize(TIME_ZONE)
+
+        prep_context_start = time.time()
+        contexts = {}
+        for symbol in stock_universe[TradingFrequency.CLOSE_TO_CLOSE]:
+            interday_lookback = self._prepare_interday_lookback(day, symbol)
+            if interday_lookback is None:
+                continue
+            current_price = self._interday_data[symbol].loc[day]['Close']
+            context = Context(symbol=symbol,
+                              current_time=market_close,
+                              current_price=current_price,
+                              interday_lookback=interday_lookback,
+                              intraday_lookback=None)
+            contexts[symbol] = context
+        self._context_prep_time += time.time() - prep_context_start
+
+        actions = self._process_data(contexts, processor_stock_universes, self._processors)
+        executed_actions = self._process_actions(market_close.time(), actions)
+        self._log_day(day, executed_actions)
+
     def _process_actions(self, current_time: datetime.time, actions: List[Action]) -> List[List[Any]]:
         unique_actions = get_unique_actions(actions)
 
@@ -386,7 +419,7 @@ class Backtesting:
 
         if not executed_actions and not self._positions:
             return
-        logging.info('\n'.join(outputs))
+        self._details_log.info('\n'.join(outputs))
 
     def _print_summary(self) -> None:
         def _compute_risks(values: List[float],
@@ -429,9 +462,15 @@ class Backtesting:
         for i, date in enumerate(market_dates):
             if i != len(market_dates) - 1 and market_dates[i + 1].year != current_year + 1:
                 continue
+            year_market_last_day_index = timestamp_to_index(self._interday_data[market_symbol].index, date)
+            year_market_values = self._interday_data[market_symbol]['Close'][
+                                 year_market_last_day_index - (i - current_start) - 1:year_market_last_day_index + 1]
             profit_pct = (self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
             year_profit = [f'{current_year} Gain/Loss',
                            f'{profit_pct:+.2f}%']
+            _, _, year_sharpe_ratio = _compute_risks(self._daily_equity[current_start: i + 2], year_market_values)
+            year_sharpe = [f'{current_year} Sharpe Ratio',
+                           f'{year_sharpe_ratio:.2f}']
             for symbol in print_symbols:
                 if symbol not in self._interday_data:
                     continue
@@ -439,8 +478,11 @@ class Backtesting:
                 symbol_values = list(self._interday_data[symbol]['Close'][
                                      last_day_index - (i - current_start) - 1:last_day_index + 1])
                 symbol_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
+                _, _, symbol_sharpe = _compute_risks(symbol_values, year_market_values)
                 year_profit.append(f'{symbol_profit_pct:+.2f}%')
+                year_sharpe.append(f'{symbol_sharpe:.2f}')
             stats.append(year_profit)
+            stats.append(year_sharpe)
             current_start = i
             current_year += 1
         total_profit_pct = (self._daily_equity[-1] / self._daily_equity[0] - 1) * 100
@@ -475,7 +517,7 @@ class Backtesting:
         stats.append(sharpe_ratio_row)
         stats.append(drawdown_row)
         outputs.append(tabulate.tabulate(stats, tablefmt='grid'))
-        logging.info('\n'.join(outputs))
+        self._summary_log.info('\n'.join(outputs))
 
     def _plot_summary(self) -> None:
         pd.plotting.register_matplotlib_converters()
@@ -549,4 +591,4 @@ class Backtesting:
              f'{self._data_process_time / total_time * 100:.0f}%'],
         ]
         outputs.append(tabulate.tabulate(profile, tablefmt='grid'))
-        logging.info('\n'.join(outputs))
+        self._profile_log.info('\n'.join(outputs))

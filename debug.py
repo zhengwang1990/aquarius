@@ -22,8 +22,8 @@ def vwap(df):
 
 
 def plot(date, symbol):
-    intraday_loader = HistoricalDataLoader(TimeInterval.FIVE_MIN, DataSource.POLYGON)
-    interday_loader = HistoricalDataLoader(TimeInterval.DAY, DataSource.POLYGON)
+    intraday_loader = HistoricalDataLoader(TimeInterval.FIVE_MIN, DataSource.ALPACA)
+    interday_loader = HistoricalDataLoader(TimeInterval.DAY, DataSource.ALPACA)
     current_date = pd.to_datetime(date)
     intraday_data = intraday_loader.load_daily_data(symbol, current_date)
     interday_data = interday_loader.load_data_list(symbol,
