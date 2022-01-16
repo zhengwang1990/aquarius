@@ -17,7 +17,6 @@ class MetricRankingProcessor(Processor):
         self._logging_enabled = logging_enabled
         self._candidates = []
         self._prev_hold_positions = []
-        self._rebalanced_month = set()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.CLOSE_TO_CLOSE
@@ -69,16 +68,15 @@ class MetricRankingProcessor(Processor):
         for symbol in new_symbols:
             if symbol not in old_symbols:
                 actions.append(Action(symbol, ActionType.BUY_TO_OPEN, percent, current_prices[symbol]))
-        if contexts and contexts[0].current_time.date().month % 3 == 1:
-            month_str = contexts[0].current_time.date().strftime('%Y-%m')
-            if month_str not in self._rebalanced_month:
-                self._rebalanced_month.add(month_str)
+        if contexts:
+            today = contexts[0].current_time.date()
+            if today.day == 10 or (today.day in [11, 12] and today.isoweekday() == 1):
                 return self._rebalance(current_prices, actions)
         return actions
 
-    def _rebalance(self, current_prices: Dict[str, float], existing_actions: List[Action]) -> List[Action]:
-        if self._logging_enabled:
-            logging.info('Rebalancing portfolio')
+    def _rebalance(self,
+                   current_prices: Dict[str, float],
+                   existing_actions: List[Action]) -> List[Action]:
         transacted_symbols = [action.symbol for action in existing_actions]
         equity = 0
         for symbol, position in self._hold_positions.items():
