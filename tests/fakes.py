@@ -6,7 +6,7 @@ import unittest.mock as mock
 
 Clock = collections.namedtuple('Clock', ['next_open', 'next_close'])
 Asset = collections.namedtuple('Asset', ['symbol', 'tradable', 'marginable',
-                                         'shortable', 'easy_to_borrow'])
+                                         'shortable', 'easy_to_borrow', 'fractionable'])
 Account = collections.namedtuple('Account', ['equity', 'cash'])
 Position = collections.namedtuple('Position', ['symbol', 'qty', 'current_price',
                                                'market_value', 'cost_basis',
@@ -36,7 +36,7 @@ class FakeAlpaca:
 
     def list_assets(self):
         self.list_assets_call_count += 1
-        return [Asset(symbol, True, True, True, True)
+        return [Asset(symbol, True, True, True, True, True)
                 for symbol in ['QQQ', 'SPY', 'DIA', 'TQQQ']]
 
     def list_positions(self):
