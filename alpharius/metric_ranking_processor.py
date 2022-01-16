@@ -15,15 +15,16 @@ class MetricRankingProcessor(Processor):
         super().__init__()
         self._hold_positions = {}
         self._logging_enabled = logging_enabled
-        self._nasdaq_100 = []
+        self._candidates = []
         self._prev_hold_positions = []
+        self._rebalanced_month = set()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.CLOSE_TO_CLOSE
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
-        self._nasdaq_100 = get_nasdaq100(view_time)
-        stock_universe = list(set(self._nasdaq_100 + self._prev_hold_positions))
+        self._candidates = get_sp500(view_time)
+        stock_universe = list(set(self._candidates + self._prev_hold_positions))
         return stock_universe
 
     def setup(self, hold_positions: List[Position]) -> None:
@@ -36,7 +37,7 @@ class MetricRankingProcessor(Processor):
         volumes = []
         current_prices = {context.symbol: context.current_price for context in contexts}
         volume_factors = {}
-        contexts_selected = [context for context in contexts if context.symbol in self._nasdaq_100]
+        contexts_selected = [context for context in contexts if context.symbol in self._candidates]
         for context in contexts_selected:
             lookback_len = min(DAYS_IN_A_MONTH, len(context.interday_lookback))
             volume = np.dot(context.interday_lookback['VWAP'][-lookback_len:],
@@ -68,15 +69,17 @@ class MetricRankingProcessor(Processor):
         for symbol in new_symbols:
             if symbol not in old_symbols:
                 actions.append(Action(symbol, ActionType.BUY_TO_OPEN, percent, current_prices[symbol]))
-        if (not actions and contexts and
-                contexts[0].current_time.date().month % 3 == 1 and
-                contexts[0].current_time.date().day == 1):
-            return self._rebalance(current_prices)
+        if contexts and contexts[0].current_time.date().month % 3 == 1:
+            month_str = contexts[0].current_time.date().strftime('%Y-%m')
+            if month_str not in self._rebalanced_month:
+                self._rebalanced_month.add(month_str)
+                return self._rebalance(current_prices, actions)
         return actions
 
-    def _rebalance(self, current_prices: Dict[str, float]) -> List[Action]:
+    def _rebalance(self, current_prices: Dict[str, float], existing_actions: List[Action]) -> List[Action]:
         if self._logging_enabled:
             logging.info('Rebalancing portfolio')
+        transacted_symbols = [action.symbol for action in existing_actions]
         equity = 0
         for symbol, position in self._hold_positions.items():
             if symbol not in current_prices:
@@ -84,13 +87,15 @@ class MetricRankingProcessor(Processor):
             equity += position.qty * current_prices[symbol]
         actions = []
         for symbol, position in self._hold_positions.items():
+            if symbol in transacted_symbols:
+                continue
             stock_value = position.qty * current_prices[symbol]
             percent = (stock_value - equity / len(self._hold_positions)) / stock_value
             if percent > 0:
                 actions.append(Action(symbol, ActionType.SELL_TO_CLOSE, percent, current_prices[symbol]))
             else:
                 actions.append(Action(symbol, ActionType.BUY_TO_OPEN, 1, current_prices[symbol]))
-        return actions
+        return actions + existing_actions
 
     @staticmethod
     def _get_metric(interday_lookback: pd.DataFrame, current_price: float, global_factor: float) -> float:
