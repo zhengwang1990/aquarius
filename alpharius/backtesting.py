@@ -16,7 +16,7 @@ import signal
 import tabulate
 import time
 
-_DATA_SOURCE = DataSource.POLYGON
+_DATA_SOURCE = DataSource.ALPACA
 _MAX_WORKERS = 20
 
 

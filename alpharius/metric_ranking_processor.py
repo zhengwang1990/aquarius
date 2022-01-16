@@ -59,7 +59,7 @@ class MetricRankingProcessor(Processor):
             logging.info('Metric info\n' + tabulate.tabulate(
                 metric_info, headers=['Symbol', 'Price', 'Metric'], tablefmt='grid'))
         new_symbols = [s[0] for s in metrics[:NUM_HOLD_SYMBOLS] if s[1] > 0]
-        old_symbols = [symbol for symbol, position in self._hold_positions.items() if position.qty > 0]
+        old_symbols = [symbol for symbol, position in self._hold_positions.items() if position.qty >= 0]
         actions = []
         for symbol in old_symbols:
             if symbol not in new_symbols and symbol in current_prices:

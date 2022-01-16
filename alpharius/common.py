@@ -76,13 +76,14 @@ class DataError(Exception):
 
 
 def timestamp_to_index(index: pd.Index, timestamp: DATETIME_TYPE) -> Optional[int]:
-    pd_timestamp = pd.to_datetime(timestamp)
+    pd_timestamp = pd.to_datetime(timestamp).timestamp()
     left, right = 0, len(index) - 1
     while left <= right:
         mid = (left + right) // 2
-        if index[mid] == pd_timestamp:
+        mid_timestamp = pd.to_datetime(index[mid]).timestamp()
+        if mid_timestamp == pd_timestamp:
             return mid
-        elif index[mid] < pd_timestamp:
+        elif mid_timestamp < pd_timestamp:
             left = mid + 1
         else:
             right = mid - 1
@@ -93,9 +94,9 @@ def timestamp_to_prev_index(index: pd.Index, timestamp: DATETIME_TYPE) -> Option
     if len(index) == 0:
         return None
     p = len(index) - 1
-    pd_timestamp = pd.to_datetime(timestamp)
+    pd_timestamp = pd.to_datetime(timestamp).timestamp()
     for i in range(len(index)):
-        if index[i] > pd_timestamp:
+        if pd.to_datetime(index[i]).timestamp() > pd_timestamp:
             p = i - 1
             break
     return p
