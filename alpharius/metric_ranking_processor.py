@@ -1,28 +1,36 @@
 from .common import *
-from .constants import *
+from .stock_universe import TopVolumeUniverse
 from typing import Dict, List
 import logging
 import numpy as np
 import pandas as pd
 import tabulate
 
-NUM_HOLD_SYMBOLS = 3
+NUM_HOLD_SYMBOLS = 5
 
 
 class MetricRankingProcessor(Processor):
 
-    def __init__(self, logging_enabled: bool) -> None:
+    def __init__(self,
+                 lookback_start_date: DATETIME_TYPE,
+                 lookback_end_date: DATETIME_TYPE,
+                 data_source: DataSource,
+                 logging_enabled: bool) -> None:
         super().__init__()
         self._hold_positions = {}
         self._logging_enabled = logging_enabled
         self._candidates = []
         self._prev_hold_positions = []
+        self._stock_universe = TopVolumeUniverse(lookback_start_date,
+                                                 lookback_end_date,
+                                                 data_source,
+                                                 num_stocks=100)
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.CLOSE_TO_CLOSE
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
-        self._candidates = get_sp500(view_time)
+        self._candidates = self._stock_universe.get_stock_universe(view_time)
         stock_universe = list(set(self._candidates + self._prev_hold_positions))
         return stock_universe
 
@@ -35,16 +43,17 @@ class MetricRankingProcessor(Processor):
         metrics = []
         volumes = []
         current_prices = {context.symbol: context.current_price for context in contexts}
-        volume_factors = {}
+        volume_factors = dict()
         contexts_selected = [context for context in contexts if context.symbol in self._candidates]
         for context in contexts_selected:
-            lookback_len = min(DAYS_IN_A_MONTH, len(context.interday_lookback))
-            volume = np.dot(context.interday_lookback['VWAP'][-lookback_len:],
-                            context.interday_lookback['Volume'][-lookback_len:])
+            lookback = context.interday_lookback
+            lookback_len = min(DAYS_IN_A_MONTH, len(lookback))
+            volume = np.dot(lookback['VWAP'][-lookback_len:],
+                            lookback['Volume'][-lookback_len:])
             volumes.append((context.symbol, volume))
         volumes.sort(key=lambda s: s[1], reverse=True)
         for i, symbol in enumerate(volumes):
-            volume_factors[symbol[0]] = 1.2 - 0.4 * i / len(volumes)
+            volume_factors[symbol[0]] = 1.3 - 0.6 * i / len(volumes)
         for context in contexts_selected:
             metric = self._get_metric(context.interday_lookback,
                                       context.current_price,
@@ -121,4 +130,4 @@ class MetricRankingProcessorFactory(ProcessorFactory):
                data_source: DataSource,
                logging_enabled: bool = False,
                *args, **kwargs) -> MetricRankingProcessor:
-        return MetricRankingProcessor(logging_enabled)
+        return MetricRankingProcessor(lookback_start_date, lookback_end_date, data_source, logging_enabled)
