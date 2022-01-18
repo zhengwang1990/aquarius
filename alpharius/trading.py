@@ -104,7 +104,7 @@ class Trading:
                 time.sleep(5)
 
         # Send email
-        send_email()
+        send_email(_DATA_SOURCE)
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
         self._logger.info('Process starts for [%s]', checkpoint_time.time())

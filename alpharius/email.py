@@ -17,22 +17,22 @@ _SMTP_HOST = 'smtp.163.com'
 _SMTP_PORT = 25
 
 
-def send_email():
+def send_email(data_source: DataSource):
     username = os.environ.get('EMAIL_USERNAME')
     password = os.environ.get('EMAIL_PASSWORD')
     receiver = os.environ.get('EMAIL_RECEIVER')
     if not username or not password or not receiver:
         return
-    email_client = Email(username, password)
+    email_client = Email(username, password, data_source)
     sender = f'Stock Trading System <{username}@163.com>'
     receiver = receiver
     email_client.send_email(sender, receiver)
 
 
 class Email:
-    def __init__(self, username: str, password: str):
+    def __init__(self, username: str, password: str, data_source: DataSource) -> None:
         self._alpaca = tradeapi.REST()
-        self._data_loader = HistoricalDataLoader(TimeInterval.DAY, DataSource.POLYGON)
+        self._data_loader = HistoricalDataLoader(TimeInterval.DAY, data_source)
         self._client = self._create_client(username, password)
 
     @staticmethod
