@@ -1,7 +1,6 @@
 from .common import *
 from .stock_universe import TopVolumeUniverse
 from typing import Dict, List
-import logging
 import numpy as np
 import pandas as pd
 import tabulate

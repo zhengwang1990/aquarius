@@ -186,7 +186,7 @@ class Processor:
         raise NotImplementedError('Calling parent interface')
 
     def process_data(self, context: Context) -> Optional[Action]:
-        raise NotImplementedError('Calling parent interface')
+        return None
 
     def process_all_data(self, contexts: List[Context]) -> List[Action]:
         actions = []
