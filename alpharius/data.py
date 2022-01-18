@@ -98,7 +98,7 @@ class HistoricalDataLoader:
         res.index.rename('Time', inplace=True)
         return res
 
-    @retrying.retry(stop_max_attempt_number=10, wait_exponential_multiplier=1000)
+    @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
     def _polygon_load_data_list(self,
                                 symbol: str,
                                 start_time: DATETIME_TYPE,
@@ -136,7 +136,7 @@ class HistoricalDataLoader:
         df['VWAP'] = df.apply(lambda row: (row['High'] + row['Low'] + row['Close']) / 3, axis=1)
         return df[_DATA_COLUMNS]
 
-    @retrying.retry(stop_max_attempt_number=10, wait_exponential_multiplier=1000)
+    @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
     def _alpaca_load_data_list(self,
                                symbol: str,
                                start_time: DATETIME_TYPE,
