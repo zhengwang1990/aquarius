@@ -74,7 +74,7 @@ class MetricRankingProcessor(Processor):
         self._logger.debug(header + '\n' + tabulate.tabulate(
             metric_info, headers=['Symbol', 'Price', 'Metric'], tablefmt='grid'))
 
-        new_symbols = [s[0] for s in metrics[:NUM_HOLD_SYMBOLS] if s[1] > 0]
+        new_symbols = [s[0] for s in metrics[:NUM_HOLD_SYMBOLS]]
         old_symbols = [symbol for symbol, position in self._hold_positions.items() if position.qty >= 0]
         actions = []
         for symbol in old_symbols:
