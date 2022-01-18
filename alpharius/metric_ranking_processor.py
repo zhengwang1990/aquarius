@@ -15,16 +15,19 @@ class MetricRankingProcessor(Processor):
                  lookback_start_date: DATETIME_TYPE,
                  lookback_end_date: DATETIME_TYPE,
                  data_source: DataSource,
-                 logging_enabled: bool) -> None:
+                 output_dir: str) -> None:
         super().__init__()
         self._hold_positions = {}
-        self._logging_enabled = logging_enabled
+        self._output_dir = output_dir
         self._candidates = []
         self._prev_hold_positions = []
         self._stock_universe = TopVolumeUniverse(lookback_start_date,
                                                  lookback_end_date,
                                                  data_source,
                                                  num_stocks=100)
+        self._logger = logging_config(os.path.join(self._output_dir, 'metric_ranking_processor.txt'),
+                                      detail=True,
+                                      name='metric_ranking_processor')
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.CLOSE_TO_CLOSE
@@ -40,6 +43,9 @@ class MetricRankingProcessor(Processor):
         self._prev_hold_positions = list(self._hold_positions.keys())
 
     def process_all_data(self, contexts: List[Context]) -> List[Action]:
+        if not contexts:
+            return []
+
         metrics = []
         volumes = []
         current_prices = {context.symbol: context.current_price for context in contexts}
@@ -60,13 +66,15 @@ class MetricRankingProcessor(Processor):
                                       volume_factors[context.symbol])
             metrics.append((context.symbol, metric))
         metrics.sort(key=lambda s: s[1], reverse=True)
-        if self._logging_enabled:
-            metric_info = []
-            for symbol, metric in metrics[:NUM_HOLD_SYMBOLS + 5]:
-                price = current_prices[symbol]
-                metric_info.append([symbol, price, metric])
-            logging.info('Metric info\n' + tabulate.tabulate(
-                metric_info, headers=['Symbol', 'Price', 'Metric'], tablefmt='grid'))
+
+        metric_info = []
+        for symbol, metric in metrics[:NUM_HOLD_SYMBOLS + 5]:
+            price = current_prices[symbol]
+            metric_info.append([symbol, price, metric])
+        header = get_header(f'Metric Info {contexts[0].current_time.date()}')
+        self._logger.debug(header + '\n' + tabulate.tabulate(
+            metric_info, headers=['Symbol', 'Price', 'Metric'], tablefmt='grid'))
+
         new_symbols = [s[0] for s in metrics[:NUM_HOLD_SYMBOLS] if s[1] > 0]
         old_symbols = [symbol for symbol, position in self._hold_positions.items() if position.qty >= 0]
         actions = []
@@ -77,10 +85,10 @@ class MetricRankingProcessor(Processor):
         for symbol in new_symbols:
             if symbol not in old_symbols:
                 actions.append(Action(symbol, ActionType.BUY_TO_OPEN, percent, current_prices[symbol]))
-        if contexts:
-            today = contexts[0].current_time.date()
-            if today.day == 10 or (today.day in [11, 12] and today.isoweekday() == 1):
-                return self._rebalance(current_prices, actions)
+
+        today = contexts[0].current_time.date()
+        if today.day == 10 or (today.day in [11, 12] and today.isoweekday() == 1):
+            return self._rebalance(current_prices, actions)
         return actions
 
     def _rebalance(self,
@@ -128,6 +136,6 @@ class MetricRankingProcessorFactory(ProcessorFactory):
                lookback_start_date: DATETIME_TYPE,
                lookback_end_date: DATETIME_TYPE,
                data_source: DataSource,
-               logging_enabled: bool = False,
+               output_dir: str,
                *args, **kwargs) -> MetricRankingProcessor:
-        return MetricRankingProcessor(lookback_start_date, lookback_end_date, data_source, logging_enabled)
+        return MetricRankingProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)

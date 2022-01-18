@@ -29,9 +29,6 @@ EPSILON = 1E-7
 INTERDAY_LOOKBACK_LOAD = CALENDAR_DAYS_IN_A_YEAR
 BID_ASK_SPREAD = 0.001
 
-alpaca_logger = logging.getLogger('alpaca_trade_api')
-alpaca_logger.setLevel(logging.ERROR)
-
 
 class TimeInterval(Enum):
     FIVE_MIN = 1
@@ -125,7 +122,7 @@ def logging_config(logging_file=None, detail=True, name=None) -> logging.Logger:
     logger.setLevel(logging.DEBUG)
     if detail:
         formatter = logging.Formatter(
-            '[%(levelname)s] [%(asctime)s] [%(filename)s:%(lineno)d] %(message)s')
+            '[%(levelname)s] [%(asctime)s] [%(filename)s:%(lineno)d]\n%(message)s')
     else:
         formatter = logging.Formatter('%(message)s')
     stream_handler = logging.StreamHandler()
@@ -137,7 +134,7 @@ def logging_config(logging_file=None, detail=True, name=None) -> logging.Logger:
     logger.addHandler(stream_handler)
     if logging_file:
         file_handler = logging.FileHandler(logging_file)
-        file_handler.setLevel(logging.INFO)
+        file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
     return logger
@@ -202,7 +199,7 @@ class Processor:
     def setup(self, hold_positions: List[Position]) -> None:
         return
 
-    def teardown(self, output_dir: str) -> None:
+    def teardown(self) -> None:
         return
 
     def get_trading_frequency(self) -> TradingFrequency:

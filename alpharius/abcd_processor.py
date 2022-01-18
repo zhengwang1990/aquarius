@@ -173,15 +173,6 @@ class AbcdProcessor(Processor):
                 context.current_time.time() >= datetime.time(15, 55)):
             return _pop_position()
 
-    def teardown(self, output_dir: str) -> None:
-        if self._history_db_path:
-            return
-        history_db_path = os.path.join(output_dir, 'history.db')
-        conn = sqlite3.connect(history_db_path)
-        df = pd.DataFrame(self._history_data, columns=_HISTORY_DATA_COLUMNS)
-        df.to_sql('AbcdHistory', conn, if_exists='append')
-        conn.close()
-
 
 class AbcdProcessorFactory(ProcessorFactory):
 

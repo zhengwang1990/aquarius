@@ -19,7 +19,7 @@ class Trading:
     def __init__(self, processor_factories: List[ProcessorFactory]) -> None:
         self._output_dir = os.path.join(OUTPUT_ROOT, 'trading', datetime.datetime.now().strftime('%F'))
         os.makedirs(self._output_dir, exist_ok=True)
-        logging_config(os.path.join(self._output_dir, 'log.txt'), detail=True)
+        self._logger = logging_config(os.path.join(self._output_dir, 'log.txt'), detail=True, name='trading')
         self._equity, self._cash = 0, 0
         self._cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         self._today = pd.to_datetime(
@@ -45,14 +45,14 @@ class Trading:
         account = self._alpaca.get_account()
         self._equity = float(account.equity)
         self._cash = float(account.cash)
-        logging.info('Account updated: equity [%s]; cash [%s].', self._equity, self._cash)
+        self._logger.info('Account updated: equity [%s]; cash [%s].', self._equity, self._cash)
 
     def _update_positions(self) -> None:
         alpaca_positions = self._alpaca.list_positions()
         self._positions = [Position(position.symbol, float(position.qty),
                                     float(position.avg_entry_price), None)
                            for position in alpaca_positions]
-        logging.info('Positions updated: [%d] open positions.', len(self._positions))
+        self._logger.info('Positions updated: [%d] open positions.', len(self._positions))
 
     def _init_processors(self, history_start: DATETIME_TYPE) -> None:
         self._processors = []
@@ -60,7 +60,7 @@ class Trading:
             processor = factory.create(lookback_start_date=history_start,
                                        lookback_end_date=self._today,
                                        data_source=_DATA_SOURCE,
-                                       logging_enabled=True)
+                                       output_dir=self._output_dir)
             self._processors.append(processor)
             self._frequency_to_processor[processor.get_trading_frequency()].append(processor)
         for processor in self._processors:
@@ -72,7 +72,7 @@ class Trading:
             processor_stock_universe = processor.get_stock_universe(self._today)
             self._processor_stock_universes[processor_name] = processor_stock_universe
             self._stock_universe[processor.get_trading_frequency()].update(processor_stock_universe)
-        logging.info('Stock universe of the day: %s', self._stock_universe)
+        self._logger.info('Stock universe of the day: %s', self._stock_universe)
 
     def run(self) -> None:
         # Initialize
@@ -107,7 +107,7 @@ class Trading:
         send_email()
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
-        logging.info('Process starts for [%s]', checkpoint_time.time())
+        self._logger.info('Process starts for [%s]', checkpoint_time.time())
         frequency_to_process = [TradingFrequency.FIVE_MIN]
         if checkpoint_time.timestamp() == self._market_open + 300:
             frequency_to_process = [TradingFrequency.FIVE_MIN,
@@ -137,7 +137,7 @@ class Trading:
                                   interday_lookback=interday_lookback,
                                   intraday_lookback=intraday_lookback)
                 contexts[symbol] = context
-        logging.info('Contexts prepared for [%s] symbols.', len(contexts))
+        self._logger.info('Contexts prepared for [%s] symbols.', len(contexts))
 
         actions = []
         for processor in self._processors:
@@ -151,7 +151,7 @@ class Trading:
                 if context:
                     processor_contexts.append(context)
             actions.extend(processor.process_all_data(processor_contexts))
-        logging.info('Got [%d] actions to process.', len(actions))
+        self._logger.info('Got [%d] actions to process.', len(actions))
 
         self._trade(actions)
 
@@ -168,7 +168,7 @@ class Trading:
                     tasks[symbol] = t
         for symbol, t in tasks.items():
             self._intraday_data[symbol] = t.result()
-        logging.info('Intraday data updated for [%d] symbols. Time elapsed [%.2fs]',
+        self._logger.info('Intraday data updated for [%d] symbols. Time elapsed [%.2fs]',
                      len(tasks),
                      time.time() - update_start)
 
@@ -197,13 +197,13 @@ class Trading:
             symbol = action.symbol
             current_position = self._get_position(symbol)
             if current_position is None:
-                logging.info('Position for [%s] does not exist. Skipping close.', symbol)
+                self._logger.info('Position for [%s] does not exist. Skipping close.', symbol)
                 continue
             if action.type == ActionType.BUY_TO_CLOSE and current_position.qty > 0:
-                logging.info('Position for [%s] is already long-side. Skipping close.', symbol)
+                self._logger.info('Position for [%s] is already long-side. Skipping close.', symbol)
                 continue
             if action.type == ActionType.SELL_TO_CLOSE and current_position.qty < 0:
-                logging.info('Position for [%s] is already short-side. Skipping close.', symbol)
+                self._logger.info('Position for [%s] is already short-side. Skipping close.', symbol)
                 continue
             qty = abs(current_position.qty) * action.percent
             side = 'buy' if action.type == ActionType.BUY_TO_CLOSE else 'sell'
@@ -224,7 +224,7 @@ class Trading:
             symbol = action.symbol
             cash_to_trade = min(tradable_cash / len(actions), tradable_cash * action.percent)
             if cash_to_trade < self._equity * 0.01:
-                logging.info('Not enough cash to open [%s]. Skipping open.', symbol)
+                self._logger.info('Not enough cash to open [%s]. Skipping open.', symbol)
                 continue
             side = 'buy' if action.type == ActionType.BUY_TO_OPEN else 'sell'
             self._place_order(symbol, side, notional=cash_to_trade)
@@ -237,7 +237,7 @@ class Trading:
                      notional: Optional[float] = None,
                      limit_price: Optional[float] = None) -> None:
         order_type = 'market' if limit_price is None else 'limit'
-        logging.info('Placing order for [%s]: side [%s]; qty [%s]; notional [%s]; type [%s].',
+        self._logger.info('Placing order for [%s]: side [%s]; qty [%s]; notional [%s]; type [%s].',
                      symbol, side, qty, notional, order_type)
         try:
             self._alpaca.submit_order(symbol=symbol, qty=qty, side=side,
@@ -246,7 +246,7 @@ class Trading:
                                       notional=notional,
                                       limit_price=limit_price)
         except tradeapi.rest.APIError as e:
-            logging.error('Failed to placer [%s] order for [%s]: %s', side, symbol, e)
+            self._logger.error('Failed to placer [%s] order for [%s]: %s', side, symbol, e)
 
     @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
     def _wait_for_order_to_fill(self, timeout: int = 10) -> None:
@@ -255,13 +255,13 @@ class Trading:
             return
         wait_time = 0
         while orders:
-            logging.info('Waiting for orders to fill. [%d] open orders remaining.', len(orders))
+            self._logger.info('Waiting for orders to fill. [%d] open orders remaining.', len(orders))
             time.sleep(2)
             wait_time += 2
             if wait_time >= timeout:
                 break
             orders = self._alpaca.list_orders(status='open')
         if not orders:
-            logging.info('All orders are filled')
+            self._logger.info('All orders are filled')
         else:
-            logging.warning('[%d] orders not filled', len(orders))
+            self._logger.warning('[%d] orders not filled', len(orders))

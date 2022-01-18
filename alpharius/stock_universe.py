@@ -1,4 +1,5 @@
 from .common import *
+from .constants import COMPANY_SYMBOLS
 from .data import load_tradable_history
 from typing import List, Optional
 import datetime
@@ -172,8 +173,7 @@ class TopVolumeUniverse(StockUniverse):
                  data_source: DataSource,
                  num_stocks: int = 100):
         super().__init__(lookback_start_date, lookback_end_date, data_source)
-        df = pd.read_csv(os.path.join(DATA_ROOT, 'nasdaq_screener.csv'))
-        self._stock_symbols = set(df['Symbol'])
+        self._stock_symbols = set(COMPANY_SYMBOLS)
         self._num_stocks = num_stocks
 
     def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:

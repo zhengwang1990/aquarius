@@ -1,5 +1,6 @@
 from .common import *
-from .stock_universe import ThreeSigmaStockUniverse, StockUniverse
+from .constants import COMPANY_SYMBOLS
+from .stock_universe import StockUniverse
 from typing import List, Optional
 import datetime
 import numpy as np
@@ -137,8 +138,7 @@ class VolumeBreakoutStockUniverse(StockUniverse):
                  lookback_end_date: DATETIME_TYPE,
                  data_source: DataSource):
         super().__init__(lookback_start_date, lookback_end_date, data_source)
-        df = pd.read_csv(os.path.join(DATA_ROOT, 'nasdaq_screener.csv'))
-        self._stock_symbols = set(df['Symbol'])
+        self._stock_symbols = set(COMPANY_SYMBOLS)
 
     def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
         prev_day = self.get_prev_day(view_time)

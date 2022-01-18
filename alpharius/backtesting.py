@@ -79,14 +79,15 @@ class Backtesting:
         self._plot_summary()
         self._print_profile()
         for processor in self._processors:
-            processor.teardown(self._output_dir)
+            processor.teardown()
 
     def _init_processors(self, history_start) -> None:
         self._processors = []
         for factory in self._processor_factories:
             processor = factory.create(lookback_start_date=history_start,
                                        lookback_end_date=self._end_date,
-                                       data_source=_DATA_SOURCE)
+                                       data_source=_DATA_SOURCE,
+                                       output_dir=self._output_dir)
             processor.snapshot(self._output_dir)
             self._processors.append(processor)
 
@@ -247,7 +248,7 @@ class Backtesting:
             current_interval_start += datetime.timedelta(minutes=5)
 
         for processor in self._processors:
-            processor.teardown(self._output_dir)
+            processor.teardown()
 
         self._log_day(day, executed_actions)
 
