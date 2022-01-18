@@ -120,6 +120,7 @@ def logging_config(logging_file=None, detail=True, name=None) -> logging.Logger:
     """Configuration for logging."""
     logger = logging.getLogger(name=name)
     logger.setLevel(logging.DEBUG)
+    logger.propagate = False
     if detail:
         formatter = logging.Formatter(
             '[%(levelname)s] [%(asctime)s] [%(filename)s:%(lineno)d]\n%(message)s')
