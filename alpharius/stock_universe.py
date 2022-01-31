@@ -193,3 +193,45 @@ class TopVolumeUniverse(StockUniverse):
             dollar_volumes.append((symbol, self._get_dollar_volume(symbol, prev_day_ind)))
         dollar_volumes.sort(key=lambda s: s[1], reverse=True)
         return [s[0] for s in dollar_volumes[:self._num_stocks]]
+
+
+class IntradayRangeStockUniverse(StockUniverse):
+
+    def __init__(self,
+                 lookback_start_date: DATETIME_TYPE,
+                 lookback_end_date: DATETIME_TYPE,
+                 data_source: DataSource,
+                 num_stocks: int = 100):
+        super().__init__(lookback_start_date, lookback_end_date, data_source)
+        self._stock_symbols = set(COMPANY_SYMBOLS)
+        self._num_stocks = num_stocks
+
+    def _get_intraday_range(self, symbol: str, prev_day_ind: int) -> float:
+        hist = self._historical_data[symbol]
+        res = []
+        for i in range(max(prev_day_ind - DAYS_IN_A_MONTH + 1, 1), prev_day_ind + 1):
+            h = hist['High'][i]
+            l = hist['Low'][i]
+            c = hist['Close'][i - 1]
+            res.append((h - l) / c)
+        return np.average(res) if res else 0
+
+    def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
+        prev_day = self.get_prev_day(view_time)
+        intraday_ranges = []
+        for symbol, hist in self._historical_data.items():
+            if symbol not in self._stock_symbols:
+                continue
+            if prev_day not in hist.index:
+                continue
+            prev_day_ind = timestamp_to_index(hist.index, prev_day)
+            if prev_day_ind < DAYS_IN_A_MONTH:
+                continue
+            dollar_volume = self._get_dollar_volume(symbol, prev_day_ind)
+            if dollar_volume < 1E7:
+                continue
+            intraday_range = self._get_intraday_range(symbol, prev_day_ind)
+            intraday_ranges.append((symbol, intraday_range))
+
+        intraday_ranges.sort(key=lambda s: s[1], reverse=True)
+        return [s[0] for s in intraday_ranges[:self._num_stocks]]

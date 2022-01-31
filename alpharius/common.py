@@ -177,6 +177,15 @@ class Context:
             res.append(total_dolloar / total_volume)
         return res
 
+    @property
+    def today_open(self) -> float:
+        p = None
+        for i in range(len(self.intraday_lookback)):
+            if self.intraday_lookback.index[i].time() >= MARKET_OPEN:
+                p = i
+                break
+        return self.intraday_lookback['Open'][p] if p is not None else None
+
 
 class Processor:
 
