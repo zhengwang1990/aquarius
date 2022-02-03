@@ -17,6 +17,7 @@ def main():
 
     processor_factories = [
         alpharius.IntradayReversalProcessorFactory(),
+        alpharius.OvernightProcessorFactory(),
     ]
     today = datetime.datetime.today()
     if args.mode == 'backtest':
