@@ -22,7 +22,7 @@ class IntradayReversalProcessor(Processor):
         self._stock_universe = IntradayRangeStockUniverse(lookback_start_date,
                                                           lookback_end_date,
                                                           data_source,
-                                                          num_stocks=20)
+                                                          num_stocks=25)
         self._output_dir = output_dir
         self._logger = logging_config(os.path.join(self._output_dir, 'intraday_reversal_processor.txt'),
                                       detail=True,
@@ -45,17 +45,26 @@ class IntradayReversalProcessor(Processor):
             return self._close_position(context)
         if context.symbol in self._intraday_history:
             return
-
         current_time = context.current_time.time()
         if current_time < datetime.time(10, 30) or current_time > datetime.time(15, 0):
+            return
+        vwap = context.vwap
+        if context.current_price >= vwap[-1]:
             return
         interday_closes = context.interday_lookback['Close']
         if context.current_price < interday_closes[-5]:
             return
-        closes = context.intraday_lookback['Close']
-        lows = context.intraday_lookback['Low']
-        opens = context.intraday_lookback['Open']
-        volumes = context.intraday_lookback['Volume']
+        p = None
+        for i in range(len(context.intraday_lookback)):
+            if context.intraday_lookback.index[i].time() >= MARKET_OPEN:
+                p = i
+                break
+        if p is None:
+            return
+        closes = context.intraday_lookback['Close'][p:]
+        lows = context.intraday_lookback['Low'][p:]
+        opens = context.intraday_lookback['Open'][p:]
+        volumes = context.intraday_lookback['Volume'][p:]
         if len(closes) < N_TD + 4:
             return
         for i in range(-N_TD, 0):
@@ -77,8 +86,10 @@ class IntradayReversalProcessor(Processor):
 
     def _close_position(self, context: Context) -> Optional[Action]:
         position = self._intraday_positions[context.symbol]
+        vwap = context.vwap
         if (context.current_price >= position['take_profit'] or context.current_price <= position['stop_loss']
-                or context.current_time.time() >= datetime.time(15, 30)):
+                or context.current_time.time() >= datetime.time(15, 30)
+                or context.current_price >= vwap[-1]):
             self._intraday_positions.pop(context.symbol)
             self._intraday_history.add(context.symbol)
             return Action(context.symbol, ActionType.SELL_TO_CLOSE, 1, context.current_price)
