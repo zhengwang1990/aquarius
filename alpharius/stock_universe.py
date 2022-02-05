@@ -228,7 +228,10 @@ class IntradayRangeStockUniverse(StockUniverse):
             if prev_day_ind < DAYS_IN_A_MONTH:
                 continue
             dollar_volume = self._get_dollar_volume(symbol, prev_day_ind)
-            if dollar_volume < 1E7:
+            if dollar_volume < 1E7 or dollar_volume > 1E9:
+                continue
+            closes = hist['Close']
+            if closes[prev_day_ind] < closes[prev_day_ind - 5]:
                 continue
             intraday_range = self._get_intraday_range(symbol, prev_day_ind)
             intraday_ranges.append((symbol, intraday_range))
