@@ -1,8 +1,8 @@
 from .common import *
-from .constants import COMPANY_SYMBOLS
-from .stock_universe import StockUniverse
+from .stock_universe import TopVolumeUniverse
 from typing import List
 import numpy as np
+import tabulate
 
 NUM_UNIVERSE_SYMBOLS = 200
 NUM_DIRECTIONAL_SYMBOLS = 5
@@ -14,12 +14,16 @@ class OvernightProcessor(Processor):
                  lookback_start_date: DATETIME_TYPE,
                  lookback_end_date: DATETIME_TYPE,
                  data_source: DataSource,
-                 logging_enabled: bool) -> None:
+                 output_dir: str) -> None:
         super().__init__()
-        self._stock_universe = OvernightStockUniverse(lookback_start_date, lookback_end_date, data_source)
-        self._logging_enabled = logging_enabled
+        self._stock_universe = TopVolumeUniverse(lookback_start_date, lookback_end_date, data_source,
+                                                 num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._universe_symbols = []
         self._hold_positions = []
+        self._output_dir = output_dir
+        self._logger = logging_config(os.path.join(self._output_dir, 'overnight_processor.txt'),
+                                      detail=True,
+                                      name='overnight_processor')
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.CLOSE_TO_OPEN
@@ -34,7 +38,10 @@ class OvernightProcessor(Processor):
 
     def process_all_data(self, contexts: List[Context]) -> List[Action]:
         current_prices = {context.symbol: context.current_price for context in contexts}
-        if contexts and contexts[0].current_time.time() < datetime.time(10, 0):
+        if not contexts:
+            return []
+        current_time = contexts[0].current_time
+        if current_time.time() < datetime.time(10, 0):
             actions = []
             for position in self._hold_positions:
                 action_type = ActionType.SELL_TO_CLOSE if position.qty >= 0 else ActionType.BUY_TO_CLOSE
@@ -48,10 +55,22 @@ class OvernightProcessor(Processor):
             performances.append((context.symbol, self._get_performance(context)))
         performances.sort(key=lambda s: s[1])
         long_symbols = [s[0] for s in performances[-NUM_DIRECTIONAL_SYMBOLS:] if s[1] > 0]
+
+        self._logging(performances, current_prices, current_time)
+
         actions = []
         for symbol in long_symbols:
             actions.append(Action(symbol, ActionType.BUY_TO_OPEN, 1, current_prices[symbol]))
         return actions
+
+    def _logging(self, performances, current_prices, current_time):
+        performance_info = []
+        for symbol, metric in performances[:NUM_DIRECTIONAL_SYMBOLS + 5]:
+            price = current_prices[symbol]
+            performance_info.append([symbol, price, metric])
+        header = get_header(f'Metric Info {current_time.date()}')
+        self._logger.debug(header + '\n' + tabulate.tabulate(
+            performance_info, headers=['Symbol', 'Price', 'Performance'], tablefmt='grid'))
 
     @staticmethod
     def _get_performance(context: Context) -> float:
@@ -91,34 +110,6 @@ class OvernightProcessorFactory(ProcessorFactory):
                lookback_start_date: DATETIME_TYPE,
                lookback_end_date: DATETIME_TYPE,
                data_source: DataSource,
-               logging_enabled: bool = False,
+               output_dir: str,
                *args, **kwargs) -> OvernightProcessor:
-        return OvernightProcessor(lookback_start_date, lookback_end_date, data_source, logging_enabled)
-
-
-class OvernightStockUniverse(StockUniverse):
-
-    def __init__(self,
-                 lookback_start_date: DATETIME_TYPE,
-                 lookback_end_date: DATETIME_TYPE,
-                 data_source: DataSource):
-        super().__init__(lookback_start_date, lookback_end_date, data_source)
-        self._stock_symbols = set(COMPANY_SYMBOLS)
-
-    def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
-        prev_day = self.get_prev_day(view_time)
-        dollar_volumes = []
-        for symbol, hist in self._historical_data.items():
-            if symbol not in self._stock_symbols:
-                continue
-            if prev_day not in hist.index:
-                continue
-            prev_day_ind = timestamp_to_index(hist.index, prev_day)
-            if prev_day_ind < DAYS_IN_A_MONTH:
-                continue
-            prev_close = hist['Close'][prev_day_ind]
-            if prev_close < 5:
-                continue
-            dollar_volumes.append((symbol, self._get_dollar_volume(symbol, prev_day_ind)))
-        dollar_volumes.sort(key=lambda s: s[1], reverse=True)
-        return [s[0] for s in dollar_volumes[:NUM_UNIVERSE_SYMBOLS]]
+        return OvernightProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)

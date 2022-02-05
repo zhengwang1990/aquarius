@@ -104,6 +104,7 @@ class Trading:
                 time.sleep(5)
 
         # Send email
+        self._logger.info('Sending email')
         send_email(_DATA_SOURCE)
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:

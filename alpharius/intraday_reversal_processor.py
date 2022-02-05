@@ -82,6 +82,8 @@ class IntradayReversalProcessor(Processor):
         self._intraday_positions[context.symbol] = {'side': 'long', 'entry_price': context.current_price,
                                                     'entry_time': current_time, 'take_profit': take_profit,
                                                     'stop_loss': stop_loss}
+        self._logger.debug('Enter long position of [%s]. Info: %s',
+                           context.symbol, self._intraday_positions[context.symbol])
         return Action(context.symbol, ActionType.BUY_TO_OPEN, 1, context.current_price)
 
     def _close_position(self, context: Context) -> Optional[Action]:
