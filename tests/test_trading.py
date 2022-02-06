@@ -40,7 +40,7 @@ class TestTrading(unittest.TestCase):
             return_value=[pd.to_datetime('2021-03-08') + datetime.timedelta(days=i) for i in range(10)])
         self.patch_date_range.start()
         self.patch_smtp = mock.patch.object(smtplib, 'SMTP', autospec=True)
-        self.patch_smtp.start()
+        self.mock_smtp = self.patch_smtp.start()
         self.patch_savefig = mock.patch.object(plt, 'savefig')
         self.patch_savefig.start()
         self.patch_image = mock.patch.object(image, 'MIMEImage', autospec=True)
@@ -83,6 +83,7 @@ class TestTrading(unittest.TestCase):
         self.assertGreater(self.fake_alpaca.get_account_call_count, 0)
         self.assertGreater(fake_processor.get_stock_universe_call_count, 0)
         self.assertGreater(fake_processor.process_data_call_count, 0)
+        self.mock_smtp.assert_called_once()
 
     def test_run_with_processors(self):
         processor_factories = [alpharius.OvernightProcessorFactory(),
@@ -90,6 +91,8 @@ class TestTrading(unittest.TestCase):
         trading = alpharius.Trading(processor_factories=processor_factories)
 
         trading.run()
+
+        self.mock_smtp.assert_called_once()
 
 
 if __name__ == '__main__':
