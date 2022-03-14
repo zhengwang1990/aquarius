@@ -16,8 +16,9 @@ def main():
     args = parser.parse_args()
 
     processor_factories = [
-        alpharius.IntradayReversalProcessorFactory(),
+        #alpharius.IntradayReversalProcessorFactory(),
         alpharius.OvernightProcessorFactory(),
+        #alpharius.IntradayMomentumProcessorFactory(),
     ]
     today = datetime.datetime.today()
     if args.mode == 'backtest':

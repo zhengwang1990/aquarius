@@ -65,7 +65,7 @@ class OvernightProcessor(Processor):
 
     def _logging(self, performances, current_prices, current_time):
         performance_info = []
-        for symbol, metric in performances[:NUM_DIRECTIONAL_SYMBOLS + 5]:
+        for symbol, metric in performances[-NUM_DIRECTIONAL_SYMBOLS - 5:]:
             price = current_prices[symbol]
             performance_info.append([symbol, price, metric])
         header = get_header(f'Metric Info {current_time.date()}')
