@@ -83,9 +83,8 @@ class OvernightProcessor(Processor):
         profits = [np.log(values[k + 1] / values[k]) for k in range(len(values) - 1)]
         r = np.average(profits)
         std = np.std(profits)
-        for t in range(1, 11):
-            if (profits[-t] - r) / std < -3:
-                return 0
+        if (profits[-1] - r) / std < -1:
+            return 0
         p = None
         for i in range(len(intraday_lookback)):
             if intraday_lookback.index[i].time() >= MARKET_OPEN:
