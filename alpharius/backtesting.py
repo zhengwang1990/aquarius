@@ -326,7 +326,7 @@ class Backtesting:
             spread_adjust = 1 - BID_ASK_SPREAD if action.type == ActionType.SELL_TO_CLOSE else 1 + BID_ASK_SPREAD
             adjusted_action_price = action.price * spread_adjust
             self._cash += adjusted_action_price * qty
-            profit_pct = (adjusted_action_price - current_position.entry_price) / current_position.entry_price * 100
+            profit_pct = (adjusted_action_price / current_position.entry_price - 1) * 100
             if action.type == ActionType.BUY_TO_CLOSE:
                 profit_pct *= -1
             if profit_pct > 0:

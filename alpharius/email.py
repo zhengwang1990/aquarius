@@ -62,19 +62,6 @@ class Email:
         schedule = nyse.schedule(start_date=today - datetime.timedelta(days=40),
                                  end_date=today)
         market_dates = mcal.date_range(schedule, frequency='1D')
-        orders = self._alpaca.list_orders(status='closed', after=market_dates[-1].strftime('%F'),
-                                          direction='desc')
-        orders_html = ''
-        for order in orders:
-            if order.filled_at is None:
-                continue
-            filled_at_str = pd.to_datetime(order.filled_at).tz_convert(TIME_ZONE).strftime("%H:%M:%S")
-            orders_html += (f'<tr><th scope="row">{order.symbol}</th>'
-                            f'<td>{order.side}</td>'
-                            f'<td>{order.filled_qty}</td>'
-                            f'<td>{order.filled_avg_price}</td>'
-                            f'<td>{filled_at_str}</td>'
-                            '</tr>\n')
         positions_html = ''
         positions = self._alpaca.list_positions()
         for position in positions:
@@ -88,6 +75,44 @@ class Email:
                                f'<td {self._get_color_style(gain)}>{gain * 100:+.2f}%</td>'
                                '</td>\n')
 
+        orders = self._alpaca.list_orders(status='closed', after=market_dates[-2].strftime('%F'),
+                                          direction='desc')
+        current_symbols = set([position.symbol for position in positions])
+        orders_html = ''
+        cut_time = pd.to_datetime(market_dates[-1].strftime('%F')).tz_localize(TIME_ZONE)
+        for order in orders:
+            if order.filled_at is None:
+                continue
+            filled_at = pd.to_datetime(order.filled_at).tz_convert(TIME_ZONE)
+            if filled_at < cut_time:
+                break
+            filled_at_str = filled_at.strftime("%H:%M:%S")
+            order_qty = float(order.filled_qty)
+            order_price = float(order.filled_avg_price)
+            order_gain_col = '<td></td>'
+            if order.symbol in current_symbols:
+                current_symbols.remove(order.symbol)
+            else:
+                for prev_order in orders:
+                    if prev_order.filled_at is None or prev_order.symbol != order.symbol:
+                        continue
+                    prev_filled_at = pd.to_datetime(prev_order.filled_at).tz_convert(TIME_ZONE)
+                    if prev_filled_at < filled_at and prev_order.side != order.side:
+                        cost_price = float(prev_order.filled_avg_price)
+                        order_gain = (order_price / cost_price - 1) * 100
+                        if order.side == 'buy':
+                            order_gain *= -1
+                        order_gain_col = f'<td {self._get_color_style(order_gain)}>{order_gain:+.2f}</td>'
+                        break
+                current_symbols.add(order.symbol)
+            orders_html += (f'<tr><th scope="row">{order.symbol}</th>'
+                            f'<td>{order.side}</td>'
+                            f'<td>{order_qty:.5g}</td>'
+                            f'<td>{order_price:.5g}</td>'
+                            f'<td>{filled_at_str}</td>'
+                            f'{order_gain_col}'
+                            '</tr>\n')
+
         account = self._alpaca.get_account()
         cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         account_equity = float(account.equity) - cash_reserve
@@ -99,8 +124,14 @@ class Email:
         for i in range(len(history.equity)):
             history.equity[i] = (history.equity[i] - cash_reserve
                                  if history.equity[i] > cash_reserve else history.equity[i])
-        historical_value = [equity / history.equity[0] for equity in history.equity]
-        historical_value.append(account_equity / history.equity[0])
+        i = 0
+        equity_denominator = history.equity[i]
+        while equity_denominator == 0:
+            i += 1
+            equity_denominator = history.equity[i]
+        equity_denominator = equity_denominator or 1
+        historical_value = [equity / equity_denominator for equity in history.equity]
+        historical_value.append(account_equity / equity_denominator)
         historical_date = [m.date() for m in market_dates[-history_length:]]
         market_symbols = ['DIA', 'SPY', 'QQQ']
         market_values = {}
