@@ -124,11 +124,11 @@ class Email:
         for i in range(len(history.equity)):
             history.equity[i] = (history.equity[i] - cash_reserve
                                  if history.equity[i] > cash_reserve else history.equity[i])
-        i = 0
-        equity_denominator = history.equity[i]
-        while equity_denominator == 0:
-            i += 1
-            equity_denominator = history.equity[i]
+        equity_denominator = None
+        for equity in history.equity:
+            if equity > 0:
+                equity_denominator = equity
+                break
         equity_denominator = equity_denominator or 1
         historical_value = [equity / equity_denominator for equity in history.equity]
         historical_value.append(account_equity / equity_denominator)

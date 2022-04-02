@@ -170,8 +170,8 @@ class Trading:
         for symbol, t in tasks.items():
             self._intraday_data[symbol] = t.result()
         self._logger.info('Intraday data updated for [%d] symbols. Time elapsed [%.2fs]',
-                     len(tasks),
-                     time.time() - update_start)
+                          len(tasks),
+                          time.time() - update_start)
 
     def _get_position(self, symbol: str) -> Optional[Position]:
         for position in self._positions:
@@ -239,7 +239,7 @@ class Trading:
                      limit_price: Optional[float] = None) -> None:
         order_type = 'market' if limit_price is None else 'limit'
         self._logger.info('Placing order for [%s]: side [%s]; qty [%s]; notional [%s]; type [%s].',
-                     symbol, side, qty, notional, order_type)
+                          symbol, side, qty, notional, order_type)
         try:
             self._alpaca.submit_order(symbol=symbol, qty=qty, side=side,
                                       type=order_type,
