@@ -102,7 +102,7 @@ class Email:
                         order_gain = (order_price / cost_price - 1) * 100
                         if order.side == 'buy':
                             order_gain *= -1
-                        order_gain_col = f'<td {self._get_color_style(order_gain)}>{order_gain:+.2f}</td>'
+                        order_gain_col = f'<td {self._get_color_style(order_gain)}>{order_gain:+.2f}%</td>'
                         break
                 current_symbols.add(order.symbol)
             orders_html += (f'<tr><th scope="row">{order.symbol}</th>'
