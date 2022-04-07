@@ -1,6 +1,5 @@
 from .common import *
 from .exlcusions import EXCLUSIONS
-from alpaca_trade_api.rest import REST, TimeFrame, TimeFrameUnit
 from concurrent import futures
 from tqdm import tqdm
 from typing import Dict, List
@@ -59,13 +58,13 @@ class HistoricalDataLoader:
             self._interval = '1d'
 
     def _init_alpaca(self) -> None:
-        self._alpaca = REST()
+        self._alpaca = tradeapi.REST()
         if self._time_interval == TimeInterval.FIVE_MIN:
-            self._time_frame = TimeFrame(5, TimeFrameUnit.Minute)
+            self._time_frame = tradeapi.TimeFrame(5, tradeapi.TimeFrameUnit.Minute)
         elif self._time_interval == TimeInterval.HOUR:
-            self._time_frame = TimeFrame(1, TimeFrameUnit.Hour)
+            self._time_frame = tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Hour)
         elif self._time_interval == TimeInterval.DAY:
-            self._time_frame = TimeFrame(1, TimeFrameUnit.Day)
+            self._time_frame = tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day)
 
     def load_data_point(self, symbol: str, time_point: DATETIME_TYPE) -> pd.DataFrame:
         return self.load_data_list(symbol, time_point, time_point)

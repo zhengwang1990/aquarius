@@ -14,6 +14,7 @@ Position = collections.namedtuple('Position', ['symbol', 'qty', 'current_price',
                                                'unrealized_plpc'])
 Order = collections.namedtuple('Order', ['id', 'symbol', 'side', 'qty', 'notional',
                                          'filled_qty', 'filled_at', 'filled_avg_price'])
+Bar = collections.namedtuple('Bar', ['t', 'o', 'h', 'l', 'c', 'vw', 'v'])
 History = collections.namedtuple('History', ['equity'])
 PolygonResponse = collections.namedtuple('PolygonResponse', ['status', 'results'])
 
@@ -29,6 +30,7 @@ class FakeAlpaca:
         self.submit_order_call_count = 0
         self.cancel_order_call_count = 0
         self.get_portfolio_history_call_count = 0
+        self.get_bars_call_count = 0
 
     def get_account(self):
         self.get_account_call_count += 1
@@ -66,6 +68,22 @@ class FakeAlpaca:
         self.get_portfolio_history_call_count += 1
         return History([i + 100 for i in range(10)])
 
+    def get_bars(self, symbol, timeframe, start, end, *args, **kwargs):
+        self.get_bars_call_count += 1
+        if timeframe.value == '1Day':
+            results = [Bar(pd.to_datetime(t, unit='s', utc=True), 40, 41, 39, 40.5, 40.123, 10)
+                       for t in range(int(pd.to_datetime('2021-02-17').timestamp()),
+                                      int(pd.to_datetime('2021-03-19').timestamp()),
+                                      86400)]
+        elif timeframe.value == '5Min':
+            results = [Bar(pd.to_datetime(t, unit='s', utc=True), 40, 41, 39, 40.5, 40.123, 10)
+                       for t in range(int(pd.to_datetime('2021-03-17 09:30:00-04:00').timestamp()),
+                                      int(pd.to_datetime('2021-03-17 16:05:00-04:00').timestamp()),
+                                      300)]
+        else:
+            raise ValueError('Time frame must be 5 min or 1 day.')
+        return results
+
 
 class FakePolygon:
 
@@ -74,7 +92,6 @@ class FakePolygon:
 
     def stocks_equities_aggregates(self, ticker, multiplier, timespan, *args, **kwargs):
         self.stocks_equities_aggregates_call_count += 1
-        results = []
         if multiplier == 1 and timespan == 'day':
             results = [{'t': str(t * 1000), 'o': 40, 'h': 41, 'l': 39, 'c': 40.5, 'vw': 40.123, 'v': 10}
                        for t in range(int(pd.to_datetime('2021-02-17').timestamp()),
@@ -85,6 +102,8 @@ class FakePolygon:
                        for t in range(int(pd.to_datetime('2021-03-17 09:30:00-04:00').timestamp()),
                                       int(pd.to_datetime('2021-03-17 16:05:00-04:00').timestamp()),
                                       300)]
+        else:
+            raise ValueError('Time frame must be 5 min or 1 day.')
 
         return PolygonResponse('OK', results)
 
