@@ -265,4 +265,5 @@ class Trading:
         if not orders:
             self._logger.info('All orders are filled')
         else:
-            self._logger.warning('[%d] orders not filled', len(orders))
+            open_symbols = ', '.join([order.symbol for order in orders])
+            self._logger.warning('[%d] orders not filled: %s', len(orders), open_symbols)
