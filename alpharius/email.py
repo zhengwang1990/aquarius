@@ -124,14 +124,17 @@ class Email:
         for i in range(len(history.equity)):
             history.equity[i] = (history.equity[i] - cash_reserve
                                  if history.equity[i] > cash_reserve else history.equity[i])
-        equity_denominator = None
-        for equity in history.equity:
+        equity_denominator = 1
+        historical_start = 0
+        for i, equity in enumerate(history.equity):
             if equity > 0:
                 equity_denominator = equity
+                historical_start = i
                 break
-        equity_denominator = equity_denominator or 1
         historical_value = [equity / equity_denominator for equity in history.equity]
         historical_value.append(account_equity / equity_denominator)
+        for i in range(historical_start):
+            historical_value[i] = None
         historical_date = [m.date() for m in market_dates[-history_length:]]
         market_symbols = ['DIA', 'SPY', 'QQQ']
         market_values = {}
@@ -167,9 +170,12 @@ class Email:
         color_map = {'QQQ': '#78d237', 'SPY': '#FF6358', 'DIA': '#aa46be'}
         pd.plotting.register_matplotlib_converters()
         plt.figure(figsize=(10, 4))
+        portfolio_color = '#28b4c8'
         plt.plot(historical_value, marker='o',
                  label=f'My Portfolio ({(historical_value[-1] - 1) * 100:+.2f}%)',
-                 color='#28b4c8')
+                 color=portfolio_color)
+        if historical_start > 0:
+            plt.plot([1] * (historical_start + 1), '--', marker='o', color=portfolio_color)
         for symbol in market_symbols:
             if symbol not in market_values:
                 continue
