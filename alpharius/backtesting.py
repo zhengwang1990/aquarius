@@ -242,7 +242,7 @@ class Backtesting:
                 if processor.get_trading_frequency() in frequency_to_process:
                     processors.append(processor)
             actions = self._process_data(contexts, processor_stock_universes, processors)
-            current_executed_actions = self._process_actions(current_time.time(), actions)
+            current_executed_actions = self._process_actions(current_time, actions)
             executed_actions.extend(current_executed_actions)
 
             current_interval_start += datetime.timedelta(minutes=5)
@@ -278,7 +278,7 @@ class Backtesting:
         executed_actions = self._process_actions(market_close.time(), actions)
         self._log_day(day, executed_actions)
 
-    def _process_actions(self, current_time: datetime.time, actions: List[Action]) -> List[List[Any]]:
+    def _process_actions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> List[List[Any]]:
         unique_actions = get_unique_actions(actions)
 
         close_actions = [action for action in unique_actions
@@ -304,7 +304,7 @@ class Backtesting:
                 return position
         return None
 
-    def _close_positions(self, current_time: datetime.time, actions: List[Action]) -> List[List[Any]]:
+    def _close_positions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> List[List[Any]]:
         executed_actions = []
         for action in actions:
             assert action.type in [ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]
@@ -333,13 +333,13 @@ class Backtesting:
                 self._num_win += 1
             else:
                 self._num_lose += 1
-            executed_actions.append([symbol, current_position.entry_time, current_time,
+            executed_actions.append([symbol, current_position.entry_time.time(), current_time.time(),
                                      'long' if action.type == ActionType.SELL_TO_CLOSE else 'short',
                                      qty, current_position.entry_price,
                                      action.price, f'{profit_pct:+.2f}%'])
         return executed_actions
 
-    def _open_positions(self, current_time: datetime.time, actions: List[Action]) -> None:
+    def _open_positions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> None:
         tradable_cash = self._cash
         for position in self._positions:
             if position.qty < 0:
