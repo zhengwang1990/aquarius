@@ -1,10 +1,10 @@
 from .common import *
-from .stock_universe import TopVolumeUniverse, IntradayRangeStockUniverse
+from .stock_universe import TopVolumeUniverse
 from typing import List
 import datetime
 import numpy as np
 
-NUM_UNIVERSE_SYMBOLS = 100
+NUM_UNIVERSE_SYMBOLS = 50
 NUM_DIRECTIONAL_SYMBOLS = 5
 ENTRY_TIME = datetime.time(10, 0)
 EXIT_TIME = datetime.time(15, 30)
@@ -37,11 +37,7 @@ class IntradayMomentumProcessor(Processor):
 
     def setup(self, hold_positions: List[Position]) -> None:
         self._positions = {
-            position.symbol: {
-                'side': 'long' if position.qty > 0 else 'short',
-                'entry_time': position.entry_time,
-                'entry_price': position.entry_price,
-            }
+            position.symbol: {'side': 'long' if position.qty > 0 else 'short'}
             for position in hold_positions
         }
 
@@ -52,52 +48,57 @@ class IntradayMomentumProcessor(Processor):
             return self._open_position(context)
 
     def _open_position(self, context: Context):
-        if context.current_time.time() > datetime.time(15, 30) or context.current_time.time() < datetime.time(10, 0):
+        if context.current_time.time() != datetime.time(12, 0):
             return
 
+        interday_closes = context.interday_lookback['Close']
         intraday_closes = context.intraday_lookback['Close']
-        if len(intraday_closes) < 6:
+        if len(interday_closes) < DAYS_IN_A_YEAR:
             return
-        volumes = context.intraday_lookback['Volume']
-
-        # interday_close = context.interday_lookback['Close'][-DAYS_IN_A_MONTH:]
-        # interday_change = [interday_close[i + 1] / interday_close[i] - 1 for i in range(len(interday_close) - 1)]
-        # std = np.std(interday_change)
-        # if abs(context.current_price / intraday_closes[-2] - 1) < 0.5 * std:
-        #     return
-
-        intraday_change_abs = [abs(intraday_closes[i + 1] / intraday_closes[i] - 1)
-                               for i in range(len(intraday_closes) - 1)]
-        if intraday_change_abs[-1] < 3 * np.average(intraday_change_abs[:-1]):
+        market_open = pd.to_datetime(
+            pd.Timestamp.combine(context.current_time.date(), MARKET_OPEN)).tz_localize(TIME_ZONE)
+        open_index = timestamp_to_index(intraday_closes.index, market_open)
+        if open_index is None:
+            return
+        prev_day_close = context.prev_day_close
+        abs_profits = [abs(interday_closes[i] / interday_closes[i - 1] - 1) for i in range(1, len(interday_closes))]
+        daily_volatility = abs(context.current_price / prev_day_close - 1)
+        weekly_volatility = np.average(abs_profits[-DAYS_IN_A_WEEK:])
+        monthly_volatility = np.average(abs_profits[-DAYS_IN_A_MONTH:])
+        yearly_volatility = np.average(abs_profits[-DAYS_IN_A_YEAR:])
+        if weekly_volatility < 1.5 * monthly_volatility:
+            return
+        if daily_volatility > monthly_volatility:
             return
 
-        if volumes[-1] < 2 * np.max(volumes[:-1]):
-            return
+        open_price = intraday_closes[open_index]
+        action = None
+        if context.current_price < open_price < prev_day_close:
+            self._positions[context.symbol] = {'side': 'short'}
+            action = Action(context.symbol, ActionType.SELL_TO_OPEN, 1, context.current_price)
+        elif context.current_price > open_price > prev_day_close:
+            self._positions[context.symbol] = {'side': 'long'}
+            action = Action(context.symbol, ActionType.BUY_TO_OPEN, 1, context.current_price)
 
-        if intraday_closes[-1] > intraday_closes[-2]:
-            self._positions[context.symbol] = {
-                'side': 'long', 'entry_time': context.current_time, 'entry_price': context.current_price}
-            return Action(context.symbol, ActionType.BUY_TO_OPEN, 1, context.current_price)
-        # else:
-        #     self._positions[context.symbol] = {
-        #         'side': 'short', 'entry_time': context.current_time, 'entry_price': context.current_price}
-        #     return Action(context.symbol, ActionType.SELL_TO_OPEN, 1, context.current_price)
+        if action is not None:
+            self._logger.debug('[%s] [%s] Current price %.2f, Open Price %.2f, Prev Close %.2f.'
+                               'Daily volatility %.2f, monthly volatility %.2f, Yearly volatility %.2f',
+                               context.current_time.date(), context.symbol,
+                               context.current_price, open_price, prev_day_close,
+                               daily_volatility, monthly_volatility, yearly_volatility)
+
+        return action
 
     def _close_position(self, context: Context):
-        action = None
+        if context.current_time.time() != datetime.time(16, 0):
+            return
         symbol = context.symbol
         side = self._positions[symbol]['side']
-        entry_price = self._positions[symbol]['entry_price']
-        entry_time = self._positions[symbol]['entry_time']
-        force_close = context.current_time - entry_time >= datetime.timedelta(minutes=30)
         if side == 'long':
-            if force_close or context.current_price > entry_price:
-                action = Action(context.symbol, ActionType.SELL_TO_CLOSE, 1, context.current_price)
+            action = Action(context.symbol, ActionType.SELL_TO_CLOSE, 1, context.current_price)
         else:
-            if force_close or context.current_price < entry_price:
-                action = Action(context.symbol, ActionType.BUY_TO_CLOSE, 1, context.current_price)
-        if action is not None:
-            self._positions.pop(symbol)
+            action = Action(context.symbol, ActionType.BUY_TO_CLOSE, 1, context.current_price)
+        self._positions.pop(symbol)
         return action
 
 
