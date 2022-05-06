@@ -68,9 +68,9 @@ class Email:
             change_today = float(position.change_today)
             gain = float(position.unrealized_plpc)
             positions_html += (f'<tr><th scope="row">{position.symbol}</th>'
-                               f'<td>{position.qty}</td>'
-                               f'<td>{position.avg_entry_price}</td>'
-                               f'<td>{position.current_price}</td>'
+                               f'<td>{float(position.qty):.5g}</td>'
+                               f'<td>{float(position.avg_entry_price):.5g}</td>'
+                               f'<td>{float(position.current_price):.5g}</td>'
                                f'<td {self._get_color_style(change_today)}>{change_today * 100:+.2f}%</td>'
                                f'<td {self._get_color_style(gain)}>{gain * 100:+.2f}%</td>'
                                '</td>\n')
