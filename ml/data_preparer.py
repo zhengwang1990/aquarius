@@ -27,7 +27,7 @@ def _get_row(prefix, d1, d2, data_row):
     return row
 
 
-class Trainer:
+class DataPreparer:
 
     def __init__(self, data_input: str):
         self._data = pd.read_csv(data_input)
@@ -63,13 +63,3 @@ class Trainer:
             intra_data.append(intra_row)
             labels.append(label)
         return [inter_data, intra_data], labels
-
-
-def main():
-    data_input = os.path.join(_ML_ROOT, 'data', 'TQQQ_2020-01-01_2021-01-01.csv')
-    trainer = Trainer(data_input)
-    data = trainer.prepare_data(0, 1)
-
-
-if __name__ == '__main__':
-    main()
