@@ -39,7 +39,7 @@ class DataCollector:
     def __init__(self):
         self._intraday_loader = HistoricalDataLoader(TimeInterval.FIVE_MIN, _DATA_SOURCE)
         self._interday_loader = HistoricalDataLoader(TimeInterval.DAY, _DATA_SOURCE)
-        self._columns = []
+        self._columns = ['date']
         for i in range(1, _TRAINING_DAYS + 1):
             for j in range(1, 4):
                 self._columns.append(f'inter_{i}_{j}')
@@ -96,7 +96,7 @@ class DataCollector:
                 intraday_queue.append(intraday_close[j] / interday_close[i - 1] - 1)
                 if j >= start_index:
                     label = interday_close[i] / intraday_close[j] - 1
-                    row_data = list(interday_queue) + list(intraday_queue)
+                    row_data = [str(current_day.strftime('%F'))] + list(interday_queue) + list(intraday_queue)
                     row_data.append(label)
                     output_data.append(row_data)
         df = pd.DataFrame(output_data, columns=self._columns)
@@ -105,11 +105,11 @@ class DataCollector:
 
 def main():
     collector = DataCollector()
-    symbol = 'QQQ'
+    symbol = 'TQQQ'
     start_date = '2020-01-01'
-    end_date = '2020-02-01'
+    end_date = '2021-01-01'
     output_file = os.path.join(_ML_ROOT, 'data', '_'.join([symbol, start_date, end_date]) + '.csv')
-    collector.write_data('QQQ', start_date, end_date, output_file)
+    collector.write_data(symbol, start_date, end_date, output_file)
 
 
 if __name__ == '__main__':
