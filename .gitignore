@@ -132,6 +132,7 @@ dmypy.json
 cache/
 outputs/
 ml/data/
+ml/models/
 models/
 *.sh
 *.txt
