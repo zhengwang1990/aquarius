@@ -1,5 +1,7 @@
+from sklearn import metrics
 from tensorflow import keras
 from tensorflow.keras import layers
+import tabulate
 import tensorflow as tf
 import os
 
@@ -23,10 +25,12 @@ def make_model():
     return model
 
 
-class ModelTrainer:
+class Model:
 
-    def __init__(self):
+    def __init__(self, long_threshold=0.5, short_threshold=-0.5):
         self._model = None
+        self._long_threshold = long_threshold
+        self._short_threshold = short_threshold
 
     def train(self, data, labels):
         tf.random.set_seed(0)
@@ -39,3 +43,29 @@ class ModelTrainer:
     def save(self, output_file):
         output_path = os.path.join(_ML_ROOT, 'models', output_file)
         self._model.save(output_path)
+
+    def load(self, input_file):
+        input_path = os.path.join(_ML_ROOT, 'models', input_file)
+        self._model = keras.models.load_model(input_path)
+
+    def predict(self, data):
+        results = self._model.predict(data)
+        int_results = []
+        for result in results:
+            if result > self._long_threshold:
+                int_results.append(1)
+            elif result < self._short_threshold:
+                int_results.append(-1)
+            else:
+                int_results.append(0)
+        return int_results
+
+    def evaluate(self, data, labels):
+        int_results = self.predict(data)
+        accuracy = metrics.accuracy_score(labels, int_results)
+        short_precision, _,  long_precision = metrics.precision_score(labels, int_results, average=None)
+        confusion_matrix = metrics.confusion_matrix(labels, int_results)
+        print('Accuracy:', accuracy)
+        print('Long precision:', long_precision)
+        print('Short precision:', short_precision)
+        print(f'Confusion matrix:\n{tabulate.tabulate(confusion_matrix)}')
