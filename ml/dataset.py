@@ -19,7 +19,7 @@ _COLLECT_END = datetime.time(15, 0)
 _TRAINING_DAYS = 240
 
 
-def timestamp_to_index(index: pd.Index, timestamp) -> Optional[int]:
+def _timestamp_to_index(index: pd.Index, timestamp) -> Optional[int]:
     pd_timestamp = pd.to_datetime(timestamp).timestamp()
     left, right = 0, len(index) - 1
     while left <= right:
@@ -34,21 +34,47 @@ def timestamp_to_index(index: pd.Index, timestamp) -> Optional[int]:
     return None
 
 
-class DataCollector:
+def _get_row(prefix, d1, d2, data_row):
+    row = []
+    for f1 in range(1, d1 + 1):
+        pt = []
+        for f2 in range(1, d2 + 1):
+            feature_name = f'{prefix}_{f1}_{f2}'
+            pt.append(data_row[feature_name] * 100)
+        row.append(pt)
+    return row
 
-    def __init__(self):
+
+class Dataset:
+
+    def __init__(self, symbol: str, start_date: str, end_date: str):
         self._intraday_loader = HistoricalDataLoader(TimeInterval.FIVE_MIN, _DATA_SOURCE)
         self._interday_loader = HistoricalDataLoader(TimeInterval.DAY, _DATA_SOURCE)
         self._columns = ['date']
-        for i in range(1, _TRAINING_DAYS + 1):
-            for j in range(1, 4):
+        self._inter_d1, self._inter_d2 = _TRAINING_DAYS, 3
+        self._intra_d1, self._intra_d2 = 67, 2
+        for i in range(1, self._inter_d1 + 1):
+            for j in range(1, self._inter_d2 + 1):
                 self._columns.append(f'inter_{i}_{j}')
-        for i in range(1, 68):
-            for j in range(1, 3):
+        for i in range(1, self._intra_d1 + 1):
+            for j in range(1, self._intra_d2 + 1):
                 self._columns.append(f'intra_{i}_{j}')
         self._columns.append('label')
+        self._data = self._download_data(symbol, start_date, end_date)
+        curr_month = self._data['date'].iloc[0][:7]
+        self._months = [(curr_month, 0)]
+        for i, d in enumerate(self._data['date']):
+            if d[:7] != curr_month:
+                curr_month = d[:7]
+                self._months.append((curr_month, i))
+        self._months.append(('', len(self._data['date'])))
 
-    def write_data(self, symbol: str, start_date: str, end_date: str, output_file: str):
+    def _download_data(self, symbol: str, start_date: str, end_date: str):
+        data_file = f'{symbol}_{start_date}_{end_date}.csv'
+        data_path = os.path.join(_ML_ROOT, 'data', data_file)
+        if os.path.exists(data_path):
+            return pd.read_csv(data_path)
+
         start_date = pd.to_datetime(start_date)
         end_date = pd.to_datetime(end_date)
         history_start = start_date - datetime.timedelta(days=365)
@@ -56,7 +82,7 @@ class DataCollector:
         nyse = mcal.get_calendar('NYSE')
         schedule = nyse.schedule(start_date=start_date, end_date=end_date - datetime.timedelta(days=1))
         market_dates = [pd.to_datetime(d.date()) for d in mcal.date_range(schedule, frequency='1D')]
-        first_day_index = timestamp_to_index(interday_data.index, market_dates[0])
+        first_day_index = _timestamp_to_index(interday_data.index, market_dates[0])
 
         interday_close = interday_data['Close']
         interday_open = interday_data['Open']
@@ -77,7 +103,7 @@ class DataCollector:
             intraday_start = pd.to_datetime(
                 pd.Timestamp.combine(current_day.date(), _COLLECT_START)).tz_localize(_TIME_ZONE)
             intraday_data = self._intraday_loader.load_daily_data(symbol, current_day)
-            start_index = timestamp_to_index(intraday_data.index, intraday_start)
+            start_index = _timestamp_to_index(intraday_data.index, intraday_start)
             if start_index is None:
                 continue
             end_index = start_index + 60
@@ -100,17 +126,38 @@ class DataCollector:
                     row_data.append(label)
                     output_data.append(row_data)
         df = pd.DataFrame(output_data, columns=self._columns)
-        df.to_csv(output_file, index=False)
 
+        df.to_csv(data_path, index=False)
+        return df
 
-def main():
-    collector = DataCollector()
-    symbol = 'TQQQ'
-    start_date = '2020-01-01'
-    end_date = '2021-01-01'
-    output_file = os.path.join(_ML_ROOT, 'data', '_'.join([symbol, start_date, end_date]) + '.csv')
-    collector.write_data(symbol, start_date, end_date, output_file)
+    def get_data(self, start_month_idx: int, end_month_idx: int):
+        start_data_idx = self._months[start_month_idx][1]
+        end_data_idx = self._months[end_month_idx][1]
+        inter_data = []
+        intra_data = []
+        labels = []
+        for i in range(start_data_idx, end_data_idx):
+            data_row = self._data.iloc[i]
+            inter_row = _get_row('inter', self._inter_d1, self._inter_d2, data_row)
+            intra_row = _get_row('intra', self._intra_d1, self._intra_d2, data_row)
+            label = data_row['label']
+            if label > 1E-3:
+                label = 1
+            elif label < -1E-3:
+                label = -1
+            else:
+                label = 0
+            inter_data.append(inter_row)
+            intra_data.append(intra_row)
+            labels.append(label)
+        return [inter_data, intra_data], labels
 
+    def get_train_test(self):
+        for i in range(0, len(self._months) - 13):
+            train_data = self.get_data(i, i + 12)
+            test_data = self.get_data(i + 13, i + 14)
+            yield train_data, test_data
 
-if __name__ == '__main__':
-    main()
+    def get_month_size(self):
+        return len(self._months)
+
