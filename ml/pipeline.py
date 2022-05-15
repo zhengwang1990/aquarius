@@ -25,14 +25,14 @@ class Pipeline:
             else:
                 self._model.train(train_x, train_y)
                 self._model.save(model_name)
-            self._model.evaluate(test_x, test_y, 0.6, -0.6)
+            self._model.print(f'--[{model_name}]' + '-' * 60)
+            self._model.evaluate(test_x, test_y, 0.75, -0.75)
 
 
 def main():
-
     symbol = 'TQQQ'
     start_date = '2020-01-01'
-    end_date = '2021-02-01'
+    end_date = '2022-01-01'
     pipeline = Pipeline(symbol, start_date, end_date)
     pipeline.run()
 

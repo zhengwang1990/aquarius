@@ -145,9 +145,9 @@ class Dataset:
             inter_row = _get_row('inter', self._inter_d1, self._inter_d2, data_row)
             intra_row = _get_row('intra', self._intra_d1, self._intra_d2, data_row)
             label = data_row['label']
-            if label > 1E-2:
+            if label > 5E-3:
                 label = 1
-            elif label < -1E-2:
+            elif label < -5E-3:
                 label = -1
             else:
                 label = 0
@@ -160,7 +160,7 @@ class Dataset:
         for i in range(0, len(self._months) - 13):
             train_data = self.get_data(i, i + 12)
             test_data = self.get_data(i + 12, i + 13)
-            yield Data(name=f'{self._months[i][0]}-{self._months[i + 12][0]}',
+            yield Data(name=self._months[i + 12][0],
                        train_data=train_data, test_data=test_data)
 
     def get_month_size(self):
