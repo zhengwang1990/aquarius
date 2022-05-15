@@ -1,6 +1,7 @@
 from typing import Optional
 import collections
 import datetime
+import numpy as np
 import pandas as pd
 import pandas_market_calendars as mcal
 import os
@@ -17,6 +18,9 @@ _MARKET_START = datetime.time(9, 30)
 _COLLECT_START = datetime.time(10, 0)
 _COLLECT_END = datetime.time(15, 0)
 _TRAINING_DAYS = 240
+
+Data = collections.namedtuple('Dataset', ['name', 'train_data', 'test_data', 'test_data_raw'],
+                              defaults=[None])
 
 
 def _timestamp_to_index(index: pd.Index, timestamp) -> Optional[int]:
@@ -41,8 +45,8 @@ def _get_row(prefix, d1, d2, data_row):
         for f2 in range(1, d2 + 1):
             feature_name = f'{prefix}_{f1}_{f2}'
             pt.append(data_row[feature_name] * 100)
-        row.append(pt)
-    return row
+        row.append(np.array(pt))
+    return np.array(row)
 
 
 class Dataset:
@@ -141,23 +145,23 @@ class Dataset:
             inter_row = _get_row('inter', self._inter_d1, self._inter_d2, data_row)
             intra_row = _get_row('intra', self._intra_d1, self._intra_d2, data_row)
             label = data_row['label']
-            if label > 1E-3:
+            if label > 1E-2:
                 label = 1
-            elif label < -1E-3:
+            elif label < -1E-2:
                 label = -1
             else:
                 label = 0
             inter_data.append(inter_row)
             intra_data.append(intra_row)
             labels.append(label)
-        return [inter_data, intra_data], labels
+        return [np.array(inter_data), np.array(intra_data)], np.array(labels)
 
     def get_train_test(self):
         for i in range(0, len(self._months) - 13):
             train_data = self.get_data(i, i + 12)
-            test_data = self.get_data(i + 13, i + 14)
-            yield train_data, test_data
+            test_data = self.get_data(i + 12, i + 13)
+            yield Data(name=f'{self._months[i][0]}-{self._months[i + 12][0]}',
+                       train_data=train_data, test_data=test_data)
 
     def get_month_size(self):
         return len(self._months)
-

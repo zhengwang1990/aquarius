@@ -153,6 +153,9 @@ class HistoricalDataLoader:
                 return value / reverse_split_factor
             return value
 
+        # It seems that alpaca has the end_time as an inclusive point, so deduct 1s to make it exclusive
+        end_time = end_time - datetime.timedelta(seconds=1)
+
         bars = self._alpaca.get_bars(symbol,
                                      self._time_frame,
                                      start_time.isoformat(),
