@@ -90,18 +90,17 @@ class Dataset:
 
         interday_close = interday_data['Close']
         interday_open = interday_data['Open']
-        interday_queue = collections.deque([0, 0, 0])
-        for i in range(first_day_index - _TRAINING_DAYS + 1, first_day_index):
-            interday_queue.append(interday_close[i - 1] / interday_open[i - 1] - 1)
-            interday_queue.append(interday_close[i - 1] / interday_close[i - 2] - 1)
-            interday_queue.append(interday_open[i - 1] / interday_close[i - 2] - 1)
+        interday_queue = collections.deque([0] * self._inter_d2)
         output_data = []
-        for i in tqdm.tqdm(range(first_day_index, len(interday_data)), ncols=80):
-            for _ in range(3):
-                interday_queue.popleft()
+        for i in tqdm.tqdm(range(first_day_index - _TRAINING_DAYS + 1, len(interday_data)), ncols=80):
             interday_queue.append(interday_close[i - 1] / interday_open[i - 1] - 1)
             interday_queue.append(interday_close[i - 1] / interday_close[i - 2] - 1)
             interday_queue.append(interday_open[i - 1] / interday_close[i - 2] - 1)
+            if i < first_day_index:
+                continue
+
+            for _ in range(self._inter_d2):
+                interday_queue.popleft()
 
             current_day = interday_data.index[i]
             intraday_start = pd.to_datetime(
@@ -118,9 +117,9 @@ class Dataset:
                 continue
 
             intraday_close = intraday_data['Close']
-            intraday_queue = collections.deque([0] * ((end_index - market_start + 1) * 2))
+            intraday_queue = collections.deque([0] * ((end_index - market_start + 1) * self._intra_d2))
             for j in range(market_start, end_index + 1):
-                for _ in range(2):
+                for _ in range(self._intra_d2):
                     intraday_queue.popleft()
                 intraday_queue.append(intraday_close[j] / intraday_close[j - 1] - 1)
                 intraday_queue.append(intraday_close[j] / interday_close[i - 1] - 1)
