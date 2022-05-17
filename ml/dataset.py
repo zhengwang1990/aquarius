@@ -56,7 +56,7 @@ class Dataset:
         self._interday_loader = HistoricalDataLoader(TimeInterval.DAY, _DATA_SOURCE)
         self._columns = ['date']
         self._inter_d1, self._inter_d2 = _TRAINING_DAYS, 3
-        self._intra_d1, self._intra_d2 = 67, 2
+        self._intra_d1, self._intra_d2 = 66, 2
         for i in range(1, self._inter_d1 + 1):
             for j in range(1, self._inter_d2 + 1):
                 self._columns.append(f'inter_{i}_{j}')
@@ -117,11 +117,12 @@ class Dataset:
                 continue
 
             intraday_close = intraday_data['Close']
-            intraday_queue = collections.deque([0] * ((end_index - market_start + 1) * self._intra_d2))
-            for j in range(market_start, end_index + 1):
+            intraday_open = intraday_data['Open']
+            intraday_queue = collections.deque([0] * ((end_index - market_start) * self._intra_d2))
+            for j in range(market_start, end_index):
                 for _ in range(self._intra_d2):
                     intraday_queue.popleft()
-                intraday_queue.append(intraday_close[j] / intraday_close[j - 1] - 1)
+                intraday_queue.append(intraday_close[j] / intraday_open[j] - 1)
                 intraday_queue.append(intraday_close[j] / interday_close[i - 1] - 1)
                 if j >= start_index:
                     label = interday_close[i] / intraday_close[j] - 1
