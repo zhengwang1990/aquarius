@@ -41,6 +41,7 @@ class Trading:
             self._market_open = pd.to_datetime(
                 pd.Timestamp.combine(self._today.date(), MARKET_OPEN)).tz_localize(TIME_ZONE).timestamp()
 
+    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
     def _update_account(self) -> None:
         account = self._alpaca.get_account()
         self._equity = float(account.equity)
