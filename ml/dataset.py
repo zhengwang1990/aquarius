@@ -44,7 +44,7 @@ def _get_row(prefix, d1, d2, data_row):
         pt = []
         for f2 in range(1, d2 + 1):
             feature_name = f'{prefix}_{f1}_{f2}'
-            pt.append(data_row[feature_name] * 100)
+            pt.append(data_row[feature_name])
         row.append(np.array(pt))
     return np.array(row)
 
@@ -56,7 +56,7 @@ class Dataset:
         self._interday_loader = HistoricalDataLoader(TimeInterval.DAY, _DATA_SOURCE)
         self._columns = ['date']
         self._inter_d1, self._inter_d2 = _TRAINING_DAYS, 3
-        self._intra_d1, self._intra_d2 = 66, 2
+        self._intra_d1, self._intra_d2 = 66, 3
         for i in range(1, self._inter_d1 + 1):
             for j in range(1, self._inter_d2 + 1):
                 self._columns.append(f'inter_{i}_{j}')
@@ -93,9 +93,9 @@ class Dataset:
         interday_queue = collections.deque([0] * self._inter_d2)
         output_data = []
         for i in tqdm.tqdm(range(first_day_index - _TRAINING_DAYS + 1, len(interday_data)), ncols=80):
-            interday_queue.append(interday_close[i - 1] / interday_open[i - 1] - 1)
-            interday_queue.append(interday_close[i - 1] / interday_close[i - 2] - 1)
-            interday_queue.append(interday_open[i - 1] / interday_close[i - 2] - 1)
+            interday_queue.append((interday_close[i - 1] / interday_open[i - 1] - 1) * 100)
+            interday_queue.append((interday_close[i - 1] / interday_close[i - 2] - 1) * 100)
+            interday_queue.append((interday_open[i - 1] / interday_close[i - 2] - 1) * 100)
             if i < first_day_index:
                 continue
 
@@ -118,12 +118,14 @@ class Dataset:
 
             intraday_close = intraday_data['Close']
             intraday_open = intraday_data['Open']
+            intraday_volume = intraday_data['Volume']
             intraday_queue = collections.deque([0] * ((end_index - market_start) * self._intra_d2))
             for j in range(market_start, end_index):
                 for _ in range(self._intra_d2):
                     intraday_queue.popleft()
-                intraday_queue.append(intraday_close[j] / intraday_open[j] - 1)
-                intraday_queue.append(intraday_close[j] / interday_close[i - 1] - 1)
+                intraday_queue.append((intraday_close[j] / intraday_open[j] - 1) * 100)
+                intraday_queue.append((intraday_close[j] / interday_close[i - 1] - 1) * 100)
+                intraday_queue.append(intraday_volume[j] / 1E6)
                 if j >= start_index:
                     label = interday_close[i] / intraday_close[j] - 1
                     row_data = [str(current_day.strftime('%F'))] + list(interday_queue) + list(intraday_queue)
@@ -157,10 +159,11 @@ class Dataset:
         return [np.array(inter_data), np.array(intra_data)], np.array(labels)
 
     def get_train_test(self):
-        for i in range(0, len(self._months) - 13):
-            train_data = self.get_data(i, i + 12)
-            test_data = self.get_data(i + 12, i + 13)
-            yield Data(name=self._months[i + 12][0],
+        data_window_month = 12
+        for i in range(0, len(self._months) - data_window_month - 1):
+            train_data = self.get_data(i, i + data_window_month)
+            test_data = self.get_data(i + data_window_month, i + data_window_month + 1)
+            yield Data(name=self._months[i + data_window_month][0],
                        train_data=train_data, test_data=test_data)
 
     def get_month_size(self):

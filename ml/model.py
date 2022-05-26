@@ -13,7 +13,7 @@ _ROOT = os.path.dirname(_ML_ROOT)
 
 def make_model():
     inter_input = layers.Input(shape=(240, 3))
-    intra_input = layers.Input(shape=(66, 2))
+    intra_input = layers.Input(shape=(66, 3))
     inter_lstm = layers.LSTM(25)(inter_input)
     inter_drop = layers.Dropout(0.5)(inter_lstm)
     inter_dense = layers.Dense(15, activation='relu')(inter_drop)
@@ -21,9 +21,10 @@ def make_model():
     intra_drop = layers.Dropout(0.5)(intra_lstm)
     intra_dense = layers.Dense(10, activation='relu')(intra_drop)
     concat = layers.Concatenate(axis=1)([inter_dense, intra_dense])
-    concat_drop = layers.Dropout(0.2)(concat)
+    concat_drop = layers.Dropout(0.5)(concat)
     dense = layers.Dense(5, activation='relu')(concat_drop)
-    output = layers.Dense(1, activation='tanh')(dense)
+    dense_droop = layers.Dropout(0.2)(dense)
+    output = layers.Dense(1, activation='tanh')(dense_droop)
     model = keras.Model(inputs=[inter_input, intra_input], outputs=[output])
     return model
 
@@ -50,7 +51,8 @@ class Model:
         self._model.compile(optimizer='adam', loss='mse')
         early_stopping = keras.callbacks.EarlyStopping(
             monitor='loss', patience=10, restore_best_weights=True)
-        self._model.fit(x=data, y=labels, batch_size=512, epochs=1000, callbacks=[early_stopping])
+        w = np.arange(len(labels)) / len(labels) + 0.5
+        self._model.fit(x=data, y=labels, sample_weight=w, batch_size=512, epochs=1000, callbacks=[early_stopping])
 
     def save(self, output_file):
         output_path = os.path.join(_ML_ROOT, 'models', output_file)
