@@ -30,7 +30,7 @@ class Pipeline:
 
 
 def main():
-    symbol = 'TQQQ'
+    symbol = 'TSLA'
     start_date = '2020-01-01'
     end_date = '2022-01-01'
     pipeline = Pipeline(symbol, start_date, end_date)

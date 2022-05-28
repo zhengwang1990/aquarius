@@ -1,6 +1,7 @@
 from sklearn import metrics
 from tensorflow import keras
 from tensorflow.keras import layers
+from tensorflow.keras import regularizers
 import datetime
 import numpy as np
 import tabulate
@@ -24,7 +25,7 @@ def make_model():
     concat_drop = layers.Dropout(0.5)(concat)
     dense = layers.Dense(5, activation='relu')(concat_drop)
     dense_droop = layers.Dropout(0.2)(dense)
-    output = layers.Dense(1, activation='tanh')(dense_droop)
+    output = layers.Dense(1, use_bias=False, activation='tanh', kernel_regularizer=regularizers.L2(1e-2))(dense_droop)
     model = keras.Model(inputs=[inter_input, intra_input], outputs=[output])
     return model
 
