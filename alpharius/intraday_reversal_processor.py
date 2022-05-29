@@ -1,12 +1,9 @@
 from .common import *
-from .stock_universe import IntradayRangeStockUniverse
+from .stock_universe import TopVolumeUniverse
+from ta import momentum
 from typing import List
 import datetime
 import numpy as np
-
-N_TD = 15
-ENTRY_TIME = datetime.time(10, 0)
-EXIT_TIME = datetime.time(15, 30)
 
 
 class IntradayReversalProcessor(Processor):
@@ -17,83 +14,55 @@ class IntradayReversalProcessor(Processor):
                  data_source: DataSource,
                  output_dir: str) -> None:
         super().__init__()
-        self._interday_positions = []
-        self._intraday_positions = dict()
-        self._stock_universe = IntradayRangeStockUniverse(lookback_start_date,
-                                                          lookback_end_date,
-                                                          data_source,
-                                                          num_stocks=25)
+        self._open_positions = set()
+        self._stock_universe = TopVolumeUniverse(lookback_start_date, lookback_end_date, data_source,
+                                                 num_stocks=300)
         self._output_dir = output_dir
         self._logger = logging_config(os.path.join(self._output_dir, 'intraday_reversal_processor.txt'),
                                       detail=True,
                                       name='intraday_reversal_processor')
-        self._intraday_history = set()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
-        return list(set(self._stock_universe.get_stock_universe(view_time) +
-                        [position.symbol for position in self._interday_positions]))
+        return list(set(self._stock_universe.get_stock_universe(view_time)[200:] +
+                        list(self._open_positions)))
 
     def setup(self, hold_positions: List[Position]) -> None:
-        self._interday_positions = hold_positions
-        self._intraday_history.clear()
+        self._open_positions = set([position.symbol for position in hold_positions])
 
     def process_data(self, context: Context) -> Optional[Action]:
-        if context.symbol in self._intraday_positions:
+        if context.symbol in self._open_positions:
             return self._close_position(context)
-        if context.symbol in self._intraday_history:
-            return
+        return self._open_position(context)
+
+    def _open_position(self, context: Context) -> Optional[Action]:
         current_time = context.current_time.time()
-        if current_time < datetime.time(10, 30) or current_time > datetime.time(15, 0):
-            return
-        vwap = context.vwap
-        if context.current_price >= vwap[-1]:
+        if current_time < datetime.time(11, 10) or current_time > datetime.time(15, 0):
             return
         interday_closes = context.interday_lookback['Close']
-        if context.current_price < interday_closes[-5]:
+        if len(interday_closes) < 200 or context.current_price < np.average(interday_closes[-200:]):
             return
-        p = None
-        for i in range(len(context.intraday_lookback)):
-            if context.intraday_lookback.index[i].time() >= MARKET_OPEN:
-                p = i
-                break
-        if p is None:
+        intraday_closes = context.intraday_lookback['Close']
+        if len(intraday_closes) < 20:
             return
-        closes = context.intraday_lookback['Close'][p:]
-        lows = context.intraday_lookback['Low'][p:]
-        opens = context.intraday_lookback['Open'][p:]
-        volumes = context.intraday_lookback['Volume'][p:]
-        if len(closes) < N_TD + 4:
+        rsi = momentum.rsi(interday_closes[-6:], window=6)
+        if rsi[-1] > 20:
             return
-        for i in range(-N_TD, 0):
-            if closes[i] >= closes[i - 4]:
-                return
-        for i in range(-2, 0):
-            if lows[i] >= np.min(lows[-4:-2]):
-                return
-        if closes[-1] < opens[-1]:
+        mean = np.average(intraday_closes[-20:])
+        std = np.std(intraday_closes[-20:])
+        if context.current_price > mean - 2 * std:
             return
-        if volumes[-1] < volumes[-2]:
-            return
-        take_profit = np.max(closes)
-        stop_loss = np.min(lows[-20:])
-        self._intraday_positions[context.symbol] = {'side': 'long', 'entry_price': context.current_price,
-                                                    'entry_time': current_time, 'take_profit': take_profit,
-                                                    'stop_loss': stop_loss}
-        self._logger.debug('Enter long position of [%s]. Info: %s',
-                           context.symbol, self._intraday_positions[context.symbol])
-        return Action(context.symbol, ActionType.BUY_TO_OPEN, 1, context.current_price)
+        # self._logger.debug('Enter long position of [%s].', context.symbol)
+        self._open_positions.add(context.symbol)
+        return Action(context.symbol, ActionType.BUY_TO_OPEN, 0.2, context.current_price)
 
     def _close_position(self, context: Context) -> Optional[Action]:
-        position = self._intraday_positions[context.symbol]
-        vwap = context.vwap
-        if (context.current_price >= position['take_profit'] or context.current_price <= position['stop_loss']
-                or context.current_time.time() >= datetime.time(15, 30)
-                or context.current_price >= vwap[-1]):
-            self._intraday_positions.pop(context.symbol)
-            self._intraday_history.add(context.symbol)
+        intraday_closes = context.intraday_lookback['Close']
+        mean = np.average(intraday_closes[-20:])
+        if context.current_price > mean or context.current_time.time() == datetime.time(16, 0):
+            self._open_positions.remove(context.symbol)
             return Action(context.symbol, ActionType.SELL_TO_CLOSE, 1, context.current_price)
 
 

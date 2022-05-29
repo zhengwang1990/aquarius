@@ -56,9 +56,6 @@ class Backtesting:
 
         self._details_log = logging_config(os.path.join(self._output_dir, 'details.txt'), detail=False, name='details')
         self._summary_log = logging_config(os.path.join(self._output_dir, 'summary.txt'), detail=False, name='summary')
-        self._profile_log = logging_config(os.path.join(self._output_dir, 'profile.txt'), detail=False, name='profile')
-        self._symbol_stats_log = logging_config(os.path.join(self._output_dir, 'symbol_stats.txt'), detail=False,
-                                                name='symbol_stats')
 
         nyse = mcal.get_calendar('NYSE')
         schedule = nyse.schedule(start_date=self._start_date, end_date=self._end_date - datetime.timedelta(days=1))
@@ -585,6 +582,7 @@ class Backtesting:
     def _print_profile(self):
         if self._run_start_time is None:
             return
+        txt_output = os.path.join(self._output_dir, 'profile.txt')
         total_time = time.time() - self._run_start_time
         outputs = [get_header('Profile')]
         profile = [
@@ -602,17 +600,21 @@ class Backtesting:
              f'{self._data_process_time / total_time * 100:.0f}%'],
         ]
         outputs.append(tabulate.tabulate(profile, tablefmt='grid'))
-        self._profile_log.info('\n'.join(outputs))
+        with open(txt_output, 'w') as f:
+            f.write('\n'.join(outputs))
 
     def _print_symbol_stats(self):
+        txt_output = os.path.join(self._output_dir, 'symbol_stats.txt')
         outputs = [get_header('Symbol Stats')]
         stats = []
         for symbol, stat in self._symbol_stats.items():
             profit = stat['value'] - 1
-            success_rate = stat['n_win'] / (stat['n_win'] + stat['n_loss'])
-            stats.append([symbol, f'{profit * 100 : .2f}%', f'{success_rate * 100 : .2f}%'])
+            n_trades = stat['n_win'] + stat['n_loss']
+            success_rate = stat['n_win'] / n_trades
+            stats.append([symbol, f'{profit * 100 : .2f}%', f'{success_rate * 100 : .2f}%', n_trades])
         stats.sort(key=lambda row: self._symbol_stats[row[0]]['value'], reverse=True)
         outputs.append(tabulate.tabulate(stats,
-                                         headers=['Symbol', 'Profit', 'Success Rate'],
+                                         headers=['Symbol', 'Profit', 'Success Rate', 'Num of Trades'],
                                          tablefmt='grid'))
-        self._symbol_stats_log.info('\n'.join(outputs))
+        with open(txt_output, 'w') as f:
+            f.write('\n'.join(outputs))
