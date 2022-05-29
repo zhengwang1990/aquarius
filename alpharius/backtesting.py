@@ -39,6 +39,7 @@ class Backtesting:
         self._num_win, self._num_lose = 0, 0
         self._cash = 1
         self._interday_data = None
+        self._symbol_stats = dict()
 
         backtesting_output_dir = os.path.join(OUTPUT_ROOT, 'backtesting')
         os.makedirs(backtesting_output_dir, exist_ok=True)
@@ -56,6 +57,8 @@ class Backtesting:
         self._details_log = logging_config(os.path.join(self._output_dir, 'details.txt'), detail=False, name='details')
         self._summary_log = logging_config(os.path.join(self._output_dir, 'summary.txt'), detail=False, name='summary')
         self._profile_log = logging_config(os.path.join(self._output_dir, 'profile.txt'), detail=False, name='profile')
+        self._symbol_stats_log = logging_config(os.path.join(self._output_dir, 'symbol_stats.txt'), detail=False,
+                                                name='symbol_stats')
 
         nyse = mcal.get_calendar('NYSE')
         schedule = nyse.schedule(start_date=self._start_date, end_date=self._end_date - datetime.timedelta(days=1))
@@ -75,9 +78,10 @@ class Backtesting:
         exit(1)
 
     def _close(self):
+        self._print_symbol_stats()
+        self._print_profile()
         self._print_summary()
         self._plot_summary()
-        self._print_profile()
         for processor in self._processors:
             processor.teardown()
 
@@ -326,17 +330,23 @@ class Backtesting:
             spread_adjust = 1 - BID_ASK_SPREAD if action.type == ActionType.SELL_TO_CLOSE else 1 + BID_ASK_SPREAD
             adjusted_action_price = action.price * spread_adjust
             self._cash += adjusted_action_price * qty
-            profit_pct = (adjusted_action_price / current_position.entry_price - 1) * 100
+            profit = adjusted_action_price / current_position.entry_price - 1
             if action.type == ActionType.BUY_TO_CLOSE:
-                profit_pct *= -1
-            if profit_pct > 0:
+                profit *= -1
+            if symbol not in self._symbol_stats:
+                self._symbol_stats[symbol] = {'value': 1, 'n_win': 0, 'n_loss': 0}
+            symbol_stat = self._symbol_stats[symbol]
+            if profit > 0:
                 self._num_win += 1
+                symbol_stat['n_win'] += 1
             else:
                 self._num_lose += 1
+                symbol_stat['n_loss'] += 1
+            symbol_stat['value'] *= 1 + profit
             executed_actions.append([symbol, current_position.entry_time.time(), current_time.time(),
                                      'long' if action.type == ActionType.SELL_TO_CLOSE else 'short',
                                      qty, current_position.entry_price,
-                                     action.price, f'{profit_pct:+.2f}%'])
+                                     action.price, f'{profit * 100:+.2f}%'])
         return executed_actions
 
     def _open_positions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> None:
@@ -448,10 +458,10 @@ class Backtesting:
 
         outputs = [get_header('Summary')]
         n_trades = self._num_win + self._num_lose
-        win_rate = self._num_win / n_trades if n_trades > 0 else 0
+        success_rate = self._num_win / n_trades if n_trades > 0 else 0
         market_dates = self._market_dates[:len(self._daily_equity) - 1]
         summary = [['Time Range', f'{market_dates[0].date()} ~ {market_dates[-1].date()}'],
-                   ['Win Rate', f'{win_rate * 100:.2f}%'],
+                   ['Success Rate', f'{success_rate * 100:.2f}%'],
                    ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)']]
         outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
 
@@ -593,3 +603,16 @@ class Backtesting:
         ]
         outputs.append(tabulate.tabulate(profile, tablefmt='grid'))
         self._profile_log.info('\n'.join(outputs))
+
+    def _print_symbol_stats(self):
+        outputs = [get_header('Symbol Stats')]
+        stats = []
+        for symbol, stat in self._symbol_stats.items():
+            profit = stat['value'] - 1
+            success_rate = stat['n_win'] / (stat['n_win'] + stat['n_loss'])
+            stats.append([symbol, f'{profit * 100 : .2f}%', f'{success_rate * 100 : .2f}%'])
+        stats.sort(key=lambda row: self._symbol_stats[row[0]]['value'], reverse=True)
+        outputs.append(tabulate.tabulate(stats,
+                                         headers=['Symbol', 'Profit', 'Success Rate'],
+                                         tablefmt='grid'))
+        self._symbol_stats_log.info('\n'.join(outputs))
