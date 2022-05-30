@@ -16,6 +16,7 @@ def main():
     args = parser.parse_args()
 
     processor_factories = [
+        #alpharius.MlProcessorFactory(),
         #alpharius.IntradayReversalProcessorFactory(),
         alpharius.OvernightProcessorFactory(),
         #alpharius.IntradayMomentumProcessorFactory(),

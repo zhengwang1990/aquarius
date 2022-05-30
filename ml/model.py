@@ -14,7 +14,7 @@ _ROOT = os.path.dirname(_ML_ROOT)
 
 def make_model():
     inter_input = layers.Input(shape=(240, 3))
-    intra_input = layers.Input(shape=(66, 3))
+    intra_input = layers.Input(shape=(66, 2))
     inter_lstm = layers.LSTM(25)(inter_input)
     inter_drop = layers.Dropout(0.5)(inter_lstm)
     inter_dense = layers.Dense(15, activation='relu')(inter_drop)

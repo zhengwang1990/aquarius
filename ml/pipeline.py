@@ -19,7 +19,7 @@ class Pipeline:
         for ds in data.get_train_test():
             train_x, train_y = ds.train_data
             test_x, test_y = ds.test_data
-            model_name = f'{ds.name}'
+            model_name = f'{ds.name}-{self._symbol}'
             if os.path.exists(os.path.join(_ML_ROOT, 'models', model_name)):
                 self._model.load(model_name)
             else:
@@ -30,9 +30,9 @@ class Pipeline:
 
 
 def main():
-    symbol = 'TSLA'
+    symbol = 'TQQQ'
     start_date = '2020-01-01'
-    end_date = '2022-01-01'
+    end_date = '2022-06-01'
     pipeline = Pipeline(symbol, start_date, end_date)
     pipeline.run()
 
