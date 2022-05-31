@@ -64,13 +64,11 @@ class MlProcessor(Processor):
         intraday_input = []
         intraday_close = context.intraday_lookback['Close']
         intraday_open = context.intraday_lookback['Open']
-        intraday_volume = context.intraday_lookback['Volume']
         end_index = len(context.intraday_lookback)
         for j in range(end_index - 66, end_index):
             if j >= market_start_index:
                 t_feature = np.array([(intraday_close[j] / intraday_open[j] - 1) * 100,
-                                      (intraday_close[j] / interday_close[-1] - 1) * 100,
-                                      intraday_volume[j] / 1E6])
+                                      (intraday_close[j] / interday_close[-1] - 1) * 100])
             else:
                 t_feature = np.array([0, 0, 0])
             intraday_input.append(t_feature)
