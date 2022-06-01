@@ -1,3 +1,4 @@
+from alpharius import processors
 import argparse
 import alpharius
 import datetime
@@ -16,10 +17,10 @@ def main():
     args = parser.parse_args()
 
     processor_factories = [
-        #alpharius.MlProcessorFactory(),
-        #alpharius.IntradayReversalProcessorFactory(),
-        alpharius.OvernightProcessorFactory(),
-        #alpharius.IntradayMomentumProcessorFactory(),
+        #processors.MlProcessorFactory(),
+        #processors.IntradayReversalProcessorFactory(),
+        processors.OvernightProcessorFactory(),
+        #processors.IntradayMomentumProcessorFactory(),
     ]
     today = datetime.datetime.today()
     if args.mode == 'backtest':

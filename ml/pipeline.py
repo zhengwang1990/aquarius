@@ -16,16 +16,19 @@ class Pipeline:
 
     def run(self):
         data = dataset.Dataset(self._symbol, self._start_date, self._end_date)
+        model_dir = os.path.join(_ML_ROOT, 'models', self._symbol)
+        os.makedirs(model_dir, exist_ok=True)
         for ds in data.get_train_test():
             train_x, train_y = ds.train_data
             test_x, test_y = ds.test_data
-            model_name = f'{ds.name}-{self._symbol}'
-            if os.path.exists(os.path.join(_ML_ROOT, 'models', model_name)):
-                self._model.load(model_name)
+            model_name = ds.name
+            model_path = os.path.join(model_dir, model_name)
+            if os.path.exists(model_path):
+                self._model.load(model_path)
             else:
                 self._model.train(train_x, train_y)
-                self._model.save(model_name)
-            self._model.print(f'--[{model_name}]' + '-' * 60)
+                self._model.save(model_path)
+            self._model.print(f'--[{self._symbol} : {model_name}]' + '-' * 60)
             self._model.evaluate(test_x, test_y, 0.75, -0.75)
 
 

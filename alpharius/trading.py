@@ -65,7 +65,7 @@ class Trading:
             self._processors.append(processor)
             self._frequency_to_processor[processor.get_trading_frequency()].append(processor)
         for processor in self._processors:
-            processor.setup(self._positions)
+            processor.setup(self._positions, self._today)
 
     def _init_stock_universe(self) -> None:
         for processor in self._processors:

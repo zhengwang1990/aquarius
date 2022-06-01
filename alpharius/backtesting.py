@@ -192,7 +192,7 @@ class Backtesting:
 
     def _process(self, day: DATETIME_TYPE) -> None:
         for processor in self._processors:
-            processor.setup(self._positions)
+            processor.setup(self._positions, day)
 
         processor_stock_universes, stock_universe = self._load_stock_universe(day)
 
@@ -255,7 +255,7 @@ class Backtesting:
 
     def _process_c2c(self, day: DATETIME_TYPE) -> None:
         for processor in self._processors:
-            processor.setup(self._positions)
+            processor.setup(self._positions, day)
 
         processor_stock_universes, stock_universe = self._load_stock_universe(day)
         market_close = pd.to_datetime(pd.Timestamp.combine(day.date(), MARKET_CLOSE)).tz_localize(TIME_ZONE)

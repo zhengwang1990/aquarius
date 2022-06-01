@@ -1,4 +1,5 @@
 from .fakes import *
+from alpharius import processors
 from parameterized import parameterized
 import alpaca_trade_api as tradeapi
 import alpharius
@@ -86,8 +87,8 @@ class TestTrading(unittest.TestCase):
         self.mock_smtp.assert_called_once()
 
     def test_run_with_processors(self):
-        processor_factories = [alpharius.OvernightProcessorFactory(),
-                               alpharius.IntradayReversalProcessorFactory()]
+        processor_factories = [processors.OvernightProcessorFactory(),
+                               processors.IntradayReversalProcessorFactory()]
         trading = alpharius.Trading(processor_factories=processor_factories)
 
         trading.run()

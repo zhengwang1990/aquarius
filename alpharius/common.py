@@ -206,7 +206,7 @@ class Processor:
                 actions.append(action)
         return actions
 
-    def setup(self, hold_positions: List[Position]) -> None:
+    def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
         return
 
     def teardown(self) -> None:

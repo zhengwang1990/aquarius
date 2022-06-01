@@ -1,5 +1,5 @@
-from .common import *
-from .stock_universe import TopVolumeUniverse
+from alpharius.common import *
+from alpharius.stock_universe import TopVolumeUniverse
 from typing import List
 import numpy as np
 import tabulate
@@ -28,7 +28,7 @@ class OvernightProcessor(Processor):
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.CLOSE_TO_OPEN
 
-    def setup(self, hold_positions: List[Position]) -> None:
+    def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
         self._hold_positions = hold_positions
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:

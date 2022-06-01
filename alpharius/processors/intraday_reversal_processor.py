@@ -1,5 +1,5 @@
-from .common import *
-from .stock_universe import TopVolumeUniverse
+from alpharius.common import *
+from alpharius.stock_universe import TopVolumeUniverse
 from ta import momentum
 from typing import List
 import datetime
@@ -28,7 +28,7 @@ class IntradayReversalProcessor(Processor):
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return ['TSLA', 'NVDA', 'AMAT']
 
-    def setup(self, hold_positions: List[Position]) -> None:
+    def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
         self._open_positions = set([position.symbol for position in hold_positions])
 
     def process_data(self, context: Context) -> Optional[Action]:

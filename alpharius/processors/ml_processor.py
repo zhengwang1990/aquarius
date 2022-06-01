@@ -1,6 +1,6 @@
-from .common import *
+from alpharius.common import *
 from tensorflow import keras
-from typing import List
+from typing import List, Optional
 import datetime
 import numpy as np
 import os
@@ -8,6 +8,7 @@ import os
 _MARKET_START = datetime.time(9, 30)
 _COLLECT_START = datetime.time(10, 0)
 _COLLECT_END = datetime.time(15, 0)
+_STOCK_UNIVERSE = ['TSLA']
 
 
 class MlProcessor(Processor):
@@ -21,21 +22,23 @@ class MlProcessor(Processor):
         self._logger = logging_config(os.path.join(self._output_dir, 'ml_processor.txt'),
                                       detail=True,
                                       name='ml_processor')
+        self._current_month = None
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
-        return ['TSLA']
+        return _STOCK_UNIVERSE
 
-    def setup(self, hold_positions: List[Position]) -> None:
-        model_names = os.listdir(MODEL_ROOT)
-        for name in model_names:
-            if name in self._models:
-                continue
-            model_path = os.path.join(MODEL_ROOT, name)
+    def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
+        current_month = current_time.strftime('%Y-%m')
+        if self._current_month == current_month:
+            return
+        self._current_month = current_month
+        for symbol in _STOCK_UNIVERSE:
+            model_path = os.path.join(MODEL_ROOT, symbol, current_month)
             model = keras.models.load_model(model_path)
-            self._models[name] = model
+            self._models[symbol] = model
 
     def process_data(self, context: Context) -> Optional[Action]:
         if context.current_time.time() < _COLLECT_START:
@@ -46,15 +49,14 @@ class MlProcessor(Processor):
             return self._open_position(context)
 
     def _get_prediction(self, context: Context) -> Optional[float]:
-        model_name = f'{context.current_time.strftime("%Y-%m")}-{context.symbol}'
-        model = self._models[model_name]
+        model = self._models[context.symbol]
         interday_open = context.interday_lookback['Open']
         interday_close = context.interday_lookback['Close']
         interday_input = []
         for i in range(-240, 0):
-            t_feature = np.array([(interday_close[i] / interday_open[i] - 1) * 100,
-                                  (interday_close[i] / interday_close[i - 1] - 1) * 100,
-                                  (interday_open[i] / interday_close[i - 1] - 1) * 100])
+            t_feature = np.asarray([(interday_close[i] / interday_open[i] - 1) * 100,
+                                    (interday_close[i] / interday_close[i - 1] - 1) * 100,
+                                    (interday_open[i] / interday_close[i - 1] - 1) * 100], dtype=np.float32)
             interday_input.append(t_feature)
         intraday_start = pd.to_datetime(
             pd.Timestamp.combine(context.current_time.date(), _MARKET_START)).tz_localize(TIME_ZONE)
@@ -67,13 +69,13 @@ class MlProcessor(Processor):
         end_index = len(context.intraday_lookback)
         for j in range(end_index - 66, end_index):
             if j >= market_start_index:
-                t_feature = np.array([(intraday_close[j] / intraday_open[j] - 1) * 100,
-                                      (intraday_close[j] / interday_close[-1] - 1) * 100])
+                t_feature = np.asarray([(intraday_close[j] / intraday_open[j] - 1) * 100,
+                                        (intraday_close[j] / interday_close[-1] - 1) * 100], dtype=np.float32)
             else:
-                t_feature = np.array([0, 0, 0])
+                t_feature = np.asarray([0, 0], dtype=np.float32)
             intraday_input.append(t_feature)
-        interday_input = np.array(interday_input)
-        intraday_input = np.array(intraday_input)
+        interday_input = np.asarray(interday_input, dtype=np.float32)
+        intraday_input = np.asarray(intraday_input, dtype=np.float32)
         label = model.predict([np.array([interday_input]), np.array([intraday_input])])[0]
         return label
 
@@ -85,7 +87,7 @@ class MlProcessor(Processor):
 
     def _close_position(self, context: Context) -> Optional[Action]:
         label = self._get_prediction(context)
-        if label < 0 or context.current_time.time() == datetime.time(16, 0):
+        if label < 0.5 or context.current_time.time() == datetime.time(16, 0):
             self._open_positions.remove(context.symbol)
             return Action(context.symbol, ActionType.SELL_TO_CLOSE, 1, context.current_price)
 

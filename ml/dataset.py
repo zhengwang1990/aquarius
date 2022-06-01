@@ -75,7 +75,9 @@ class Dataset:
 
     def _download_data(self, symbol: str, start_date: str, end_date: str):
         data_file = f'{symbol}_{start_date}_{end_date}.csv'
-        data_path = os.path.join(_ML_ROOT, 'data', data_file)
+        data_dir = os.path.join(_ML_ROOT, 'data')
+        os.makedirs(data_dir, exist_ok=True)
+        data_path = os.path.join(data_dir, data_file)
         if os.path.exists(data_path):
             return pd.read_csv(data_path)
 

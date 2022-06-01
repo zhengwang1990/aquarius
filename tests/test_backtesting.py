@@ -1,4 +1,5 @@
 from .fakes import *
+from alpharius import processors
 from parameterized import parameterized
 import alpaca_trade_api as tradeapi
 import alpharius
@@ -67,8 +68,8 @@ class TestTrading(unittest.TestCase):
         self.assertGreater(fake_processor.process_data_call_count, 0)
 
     def test_run_with_processors(self):
-        processor_factories = [alpharius.OvernightProcessorFactory(),
-                               alpharius.IntradayReversalProcessorFactory()]
+        processor_factories = [processors.OvernightProcessorFactory(),
+                               processors.IntradayReversalProcessorFactory()]
         backtesting = alpharius.Backtesting(start_date=pd.to_datetime('2021-03-17'),
                                             end_date=pd.to_datetime('2021-03-18'),
                                             processor_factories=processor_factories)

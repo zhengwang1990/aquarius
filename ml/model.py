@@ -55,12 +55,10 @@ class Model:
         w = np.arange(len(labels)) / len(labels) + 0.5
         self._model.fit(x=data, y=labels, sample_weight=w, batch_size=512, epochs=1000, callbacks=[early_stopping])
 
-    def save(self, output_file):
-        output_path = os.path.join(_ML_ROOT, 'models', output_file)
+    def save(self, output_path: str):
         self._model.save(output_path)
 
-    def load(self, input_file):
-        input_path = os.path.join(_ML_ROOT, 'models', input_file)
+    def load(self, input_path: str):
         self._model = keras.models.load_model(input_path)
 
     def predict(self, data, long_threshold, short_threshold):
@@ -82,13 +80,19 @@ class Model:
         int_results = self.predict(data, long_threshold, short_threshold)
         accuracy = metrics.accuracy_score(labels, int_results)
         short_precision, _, long_precision = metrics.precision_score(labels, int_results, average=None)
+        confusion = metrics.confusion_matrix(labels, int_results)
         confusion_matrix = [['', 'y_pred=-1', 'y_pred=0', 'y_pred=1']] + \
                            [[name] + list(row) for name, row in zip(['y_true=-1', 'y_true=0', 'y_true=1'],
-                                                                    metrics.confusion_matrix(labels, int_results))]
+                                                                    confusion)]
         self.print(f'Accuracy: {accuracy : .4f}')
         self.print(f'Long precision: {long_precision : .4f}')
         self.print(f'Short precision: {short_precision : .4f}')
+        self.print(f'Long precision (flat excluded): '
+                   f'{confusion[2][2] / (confusion[0][2] + confusion[2][2]): .4f}')
+        self.print(f'Short precision (flat excluded): '
+                   f'{confusion[0][0] / (confusion[0][0] + confusion[2][0]): .4f}')
         self.print(f'Confusion matrix:\n{tabulate.tabulate(confusion_matrix, tablefmt="grid")}')
+        return confusion
 
     def print(self, output_string):
         output_file = os.path.join(self._output_dir, 'evaluation.txt')

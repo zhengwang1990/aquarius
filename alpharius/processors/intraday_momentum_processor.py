@@ -1,5 +1,5 @@
-from .common import *
-from .stock_universe import TopVolumeUniverse
+from alpharius.common import *
+from alpharius.stock_universe import TopVolumeUniverse
 from typing import List
 import datetime
 import numpy as np
@@ -35,7 +35,7 @@ class IntradayMomentumProcessor(Processor):
         return list(set(self._stock_universe.get_stock_universe(view_time) +
                         list(self._positions.keys())))
 
-    def setup(self, hold_positions: List[Position]) -> None:
+    def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
         self._positions = {
             position.symbol: {'side': 'long' if position.qty > 0 else 'short'}
             for position in hold_positions
