@@ -18,6 +18,7 @@ class Pipeline:
         data = dataset.Dataset(self._symbol, self._start_date, self._end_date)
         model_dir = os.path.join(_ML_ROOT, 'models', self._symbol)
         os.makedirs(model_dir, exist_ok=True)
+        tp, fp = 0, 0
         for ds in data.get_train_test():
             train_x, train_y = ds.train_data
             test_x, test_y = ds.test_data
@@ -29,7 +30,10 @@ class Pipeline:
                 self._model.train(train_x, train_y)
                 self._model.save(model_path)
             self._model.print(f'--[{self._symbol} : {model_name}]' + '-' * 60)
-            self._model.evaluate(test_x, test_y, 0.75, -0.75)
+            confusion_matrix = self._model.evaluate(test_x, test_y, 0.75, -0.75)
+            tp += confusion_matrix[2][2]
+            fp += confusion_matrix[0][2]
+        self._model.print(f'Estimated success rate: {tp / (tp + fp) : .4f} ({tp} / {fp})')
 
 
 def main():
