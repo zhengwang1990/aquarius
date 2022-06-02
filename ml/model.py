@@ -88,9 +88,9 @@ class Model:
         self.print(f'Long precision: {long_precision : .4f}')
         self.print(f'Short precision: {short_precision : .4f}')
         self.print(f'Long precision (flat excluded): '
-                   f'{confusion[2][2] / (confusion[0][2] + confusion[2][2]): .4f}')
+                   f'{confusion[2][2] / (confusion[0][2] + confusion[2][2] + 1E-7): .4f}')
         self.print(f'Short precision (flat excluded): '
-                   f'{confusion[0][0] / (confusion[0][0] + confusion[2][0]): .4f}')
+                   f'{confusion[0][0] / (confusion[0][0] + confusion[2][0] + 1E-7): .4f}')
         self.print(f'Confusion matrix:\n{tabulate.tabulate(confusion_matrix, tablefmt="grid")}')
         return confusion
 

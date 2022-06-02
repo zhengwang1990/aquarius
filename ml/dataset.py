@@ -127,9 +127,8 @@ class Dataset:
                     intraday_queue.popleft()
                 intraday_queue.append((intraday_close[j] / intraday_open[j] - 1) * 100)
                 intraday_queue.append((intraday_close[j] / interday_close[i - 1] - 1) * 100)
-                # intraday_queue.append(intraday_volume[j] / 1E6)
-                if j >= start_index:
-                    label = interday_close[i] / intraday_close[j] - 1
+                if j >= start_index and j + 12 < len(intraday_close):
+                    label = intraday_close[j + 12] / intraday_close[j] - 1
                     row_data = [str(current_day.strftime('%F'))] + list(interday_queue) + list(intraday_queue)
                     row_data.append(label)
                     output_data.append(row_data)

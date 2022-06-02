@@ -30,10 +30,10 @@ class Pipeline:
                 self._model.train(train_x, train_y)
                 self._model.save(model_path)
             self._model.print(f'--[{self._symbol} : {model_name}]' + '-' * 60)
-            confusion_matrix = self._model.evaluate(test_x, test_y, 0.75, -0.75)
+            confusion_matrix = self._model.evaluate(test_x, test_y, 0.5, -0.5)
             tp += confusion_matrix[2][2]
             fp += confusion_matrix[0][2]
-        self._model.print(f'Estimated success rate: {tp / (tp + fp) : .4f} ({tp} / {fp})')
+        self._model.print(f'Estimated success rate: {tp / (tp + fp + 1E-7) : .4f} ({tp} / {tp + fp})')
 
 
 def main():
