@@ -74,13 +74,6 @@ class Dataset:
         self._months.append(('', len(self._data['date'])))
 
     def _download_data(self, symbol: str, start_date: str, end_date: str):
-        data_file = f'{symbol}_{start_date}_{end_date}.csv'
-        data_dir = os.path.join(_ML_ROOT, 'data')
-        os.makedirs(data_dir, exist_ok=True)
-        data_path = os.path.join(data_dir, data_file)
-        if os.path.exists(data_path):
-            return pd.read_csv(data_path)
-
         start_date = pd.to_datetime(start_date)
         end_date = pd.to_datetime(end_date)
         history_start = start_date - datetime.timedelta(days=365)
@@ -133,8 +126,6 @@ class Dataset:
                     row_data.append(label)
                     output_data.append(row_data)
         df = pd.DataFrame(output_data, columns=self._columns)
-
-        df.to_csv(data_path, index=False)
         return df
 
     def get_data(self, start_month_idx: int, end_month_idx: int):
