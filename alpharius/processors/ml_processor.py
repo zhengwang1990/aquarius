@@ -81,13 +81,13 @@ class MlProcessor(Processor):
 
     def _open_position(self, context: Context) -> Optional[Action]:
         label = self._get_prediction(context)
-        if label > 0.75:
+        if label > 0.5:
             self._open_positions.add(context.symbol)
             return Action(context.symbol, ActionType.BUY_TO_OPEN, 1, context.current_price)
 
     def _close_position(self, context: Context) -> Optional[Action]:
         label = self._get_prediction(context)
-        if label < 0.5 or context.current_time.time() == datetime.time(16, 0):
+        if label < 0 or context.current_time.time() == datetime.time(16, 0):
             self._open_positions.remove(context.symbol)
             return Action(context.symbol, ActionType.SELL_TO_CLOSE, 1, context.current_price)
 
