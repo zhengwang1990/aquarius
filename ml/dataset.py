@@ -105,7 +105,7 @@ class Dataset:
             if start_index is None:
                 continue
             end_index = start_index + 60
-            if len(intraday_data) < end_index or intraday_data.index[end_index].time() != _COLLECT_END:
+            if len(intraday_data) <= end_index or intraday_data.index[end_index].time() != _COLLECT_END:
                 continue
             market_start = start_index - 6
             if market_start < 0 or intraday_data.index[market_start].time() != _MARKET_START:
