@@ -74,9 +74,9 @@ class Dataset:
         if current_index + _LABEL_SKIP >= len(intraday_close):
             return None
         profit = intraday_close[current_index + _LABEL_SKIP] / intraday_close[current_index] - 1
-        if profit > 3E-3:
+        if profit > 5E-3:
             return 1
-        elif profit < -3E-3:
+        elif profit < -5E-3:
             return -1
         else:
             return 0
