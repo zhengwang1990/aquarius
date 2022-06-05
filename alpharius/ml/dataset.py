@@ -35,9 +35,9 @@ class Dataset:
         output = []
         for i in range(current_index - INTERDAY_DIM + 1, current_index + 1):
             data_point = [
-                (interday_close[i - 1] / interday_open[i - 1] - 1) * 100,
-                (interday_close[i - 1] / interday_close[i - 2] - 1) * 100,
-                (interday_open[i - 1] / interday_close[i - 2] - 1) * 100,
+                (interday_close[i] / interday_open[i] - 1) * 100,
+                (interday_close[i] / interday_close[i - 1] - 1) * 100,
+                (interday_open[i] / interday_close[i - 1] - 1) * 100,
             ]
             output.append(np.asarray(data_point, dtype=np.float32))
         return np.asarray(output, dtype=np.float32)
@@ -98,7 +98,7 @@ class Dataset:
         labels = []
 
         for i in tqdm.tqdm(range(first_day_index, len(interday_data)), ncols=80):
-            interday_input = self.get_interday_input(interday_data, i)
+            interday_input = self.get_interday_input(interday_data, i - 1)
             current_day = interday_data.index[i]
             intraday_start = pd.to_datetime(
                 pd.Timestamp.combine(current_day.date(), _COLLECT_START)).tz_localize(TIME_ZONE)
@@ -106,12 +106,14 @@ class Dataset:
             start_index = timestamp_to_index(intraday_data.index, intraday_start)
             if start_index is None:
                 continue
+            # Check index dimension match
             market_start = start_index - _COLLECT_SKIP
             if market_start < 0 or intraday_data.index[market_start].time() != _MARKET_START:
                 continue
             end_index = market_start + INTRADAY_DIM
             if len(intraday_data) <= end_index or intraday_data.index[end_index].time() != _COLLECT_END:
                 continue
+            start_index -= 1  # Current time is the close of the previous time index
 
             for j in range(start_index, end_index):
                 intraday_input = self.get_intraday_input(intraday_data, interday_close[i - 1], j)
