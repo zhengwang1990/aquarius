@@ -1,4 +1,5 @@
 from alpharius.common import *
+from alpharius.ml.dataset import Dataset
 from tensorflow import keras
 from typing import List, Optional
 import datetime
@@ -23,6 +24,7 @@ class MlProcessor(Processor):
                                       detail=True,
                                       name='ml_processor')
         self._current_month = None
+        self._dataset = Dataset()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -50,32 +52,8 @@ class MlProcessor(Processor):
 
     def _get_prediction(self, context: Context) -> Optional[float]:
         model = self._models[context.symbol]
-        interday_open = context.interday_lookback['Open']
-        interday_close = context.interday_lookback['Close']
-        interday_input = []
-        for i in range(-240, 0):
-            t_feature = np.asarray([(interday_close[i] / interday_open[i] - 1) * 100,
-                                    (interday_close[i] / interday_close[i - 1] - 1) * 100,
-                                    (interday_open[i] / interday_close[i - 1] - 1) * 100], dtype=np.float32)
-            interday_input.append(t_feature)
-        intraday_start = pd.to_datetime(
-            pd.Timestamp.combine(context.current_time.date(), _MARKET_START)).tz_localize(TIME_ZONE)
-        market_start_index = timestamp_to_index(context.intraday_lookback.index, intraday_start)
-        if market_start_index is None:
-            return 0
-        intraday_input = []
-        intraday_close = context.intraday_lookback['Close']
-        intraday_open = context.intraday_lookback['Open']
-        end_index = len(context.intraday_lookback)
-        for j in range(end_index - 66, end_index):
-            if j >= market_start_index:
-                t_feature = np.asarray([(intraday_close[j] / intraday_open[j] - 1) * 100,
-                                        (intraday_close[j] / interday_close[-1] - 1) * 100], dtype=np.float32)
-            else:
-                t_feature = np.asarray([0, 0], dtype=np.float32)
-            intraday_input.append(t_feature)
-        interday_input = np.asarray(interday_input, dtype=np.float32)
-        intraday_input = np.asarray(intraday_input, dtype=np.float32)
+        interday_input = self._dataset.get_interday_input(context.interday_lookback)
+        intraday_input = self._dataset.get_intraday_input(context.intraday_lookback, context.prev_day_close)
         label = model.predict([np.array([interday_input]), np.array([intraday_input])])[0]
         return label
 
