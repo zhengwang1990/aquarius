@@ -14,7 +14,6 @@ _MARKET_START = datetime.time(9, 30)
 _COLLECT_START = datetime.time(10, 0)
 _COLLECT_END = datetime.time(15, 30)
 _COLLECT_SKIP = (_COLLECT_START.hour * 60 + _COLLECT_START.minute - _MARKET_START.hour * 60 - _MARKET_START.minute) // 5
-_LABEL_SKIP = 6
 _DATA_WINDOW_MONTH = 12
 INTRADAY_DIM = (_COLLECT_END.hour * 60 + _COLLECT_END.minute - _MARKET_START.hour * 60 - _MARKET_START.minute) // 5
 INTERDAY_DIM = 240
@@ -69,11 +68,10 @@ class Dataset:
 
     @staticmethod
     def get_label(intraday_data: pd.DataFrame,
+                  today_close: float,
                   current_index: int) -> Optional[float]:
         intraday_close = intraday_data['Close']
-        if current_index + _LABEL_SKIP >= len(intraday_close):
-            return None
-        profit = intraday_close[current_index + _LABEL_SKIP] / intraday_close[current_index] - 1
+        profit = today_close / intraday_close[current_index] - 1
         if profit > 5E-3:
             return 1
         elif profit < -5E-3:
@@ -117,7 +115,7 @@ class Dataset:
 
             for j in range(start_index, end_index):
                 intraday_input = self.get_intraday_input(intraday_data, interday_close[i - 1], j)
-                label = self.get_label(intraday_data, j)
+                label = self.get_label(intraday_data, interday_close[i], j)
                 if label is None:
                     continue
                 indices.append(interday_close.index[i])
