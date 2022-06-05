@@ -131,9 +131,6 @@ dmypy.json
 .idea/
 cache/
 outputs/
-ml/data/
-ml/models/
-ml/outputs/
 models/
 *.sh
 *.txt

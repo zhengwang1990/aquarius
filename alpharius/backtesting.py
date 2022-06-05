@@ -42,7 +42,6 @@ class Backtesting:
         self._symbol_stats = dict()
 
         backtesting_output_dir = os.path.join(OUTPUT_ROOT, 'backtesting')
-        os.makedirs(backtesting_output_dir, exist_ok=True)
         output_num = 1
         while True:
             output_dir = os.path.join(backtesting_output_dir,
