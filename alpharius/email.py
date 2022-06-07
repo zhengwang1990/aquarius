@@ -11,12 +11,14 @@ import numpy as np
 import os
 import pandas as pd
 import pandas_market_calendars as mcal
+import retrying
 import smtplib
 
 _SMTP_HOST = 'smtp.163.com'
 _SMTP_PORT = 25
 
 
+@retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
 def send_email(data_source: DataSource):
     username = os.environ.get('EMAIL_USERNAME')
     password = os.environ.get('EMAIL_PASSWORD')

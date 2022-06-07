@@ -11,11 +11,11 @@ import tqdm
 
 _DATA_SOURCE = DataSource.ALPACA
 _MARKET_START = datetime.time(9, 30)
-_COLLECT_START = datetime.time(10, 0)
-_COLLECT_END = datetime.time(15, 30)
-_COLLECT_SKIP = (_COLLECT_START.hour * 60 + _COLLECT_START.minute - _MARKET_START.hour * 60 - _MARKET_START.minute) // 5
+COLLECT_START = datetime.time(10, 0)
+COLLECT_END = datetime.time(15, 30)
+_COLLECT_SKIP = (COLLECT_START.hour * 60 + COLLECT_START.minute - _MARKET_START.hour * 60 - _MARKET_START.minute) // 5
 _DATA_WINDOW_MONTH = 12
-INTRADAY_DIM = (_COLLECT_END.hour * 60 + _COLLECT_END.minute - _MARKET_START.hour * 60 - _MARKET_START.minute) // 5
+INTRADAY_DIM = (COLLECT_END.hour * 60 + COLLECT_END.minute - _MARKET_START.hour * 60 - _MARKET_START.minute) // 5
 INTERDAY_DIM = 240
 
 Data = collections.namedtuple('Dataset', ['name', 'train_data', 'test_data'])
@@ -101,7 +101,7 @@ class Dataset:
             interday_input = self.get_interday_input(interday_data, i - 1)
             current_day = interday_data.index[i]
             intraday_start = pd.to_datetime(
-                pd.Timestamp.combine(current_day.date(), _COLLECT_START)).tz_localize(TIME_ZONE)
+                pd.Timestamp.combine(current_day.date(), COLLECT_START)).tz_localize(TIME_ZONE)
             intraday_data = intraday_loader.load_daily_data(symbol, current_day)
             start_index = timestamp_to_index(intraday_data.index, intraday_start)
             if start_index is None:
@@ -111,7 +111,7 @@ class Dataset:
             if market_start < 0 or intraday_data.index[market_start].time() != _MARKET_START:
                 continue
             end_index = market_start + INTRADAY_DIM
-            if len(intraday_data) <= end_index or intraday_data.index[end_index].time() != _COLLECT_END:
+            if len(intraday_data) <= end_index or intraday_data.index[end_index].time() != COLLECT_END:
                 continue
             start_index -= 1  # Current time is the close of the previous time index
 

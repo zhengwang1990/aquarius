@@ -1,14 +1,11 @@
 from alpharius.common import *
-from alpharius.ml.dataset import Dataset
+from alpharius.ml.dataset import Dataset, COLLECT_START, COLLECT_END
 from tensorflow import keras
 from typing import List, Optional
 import datetime
 import numpy as np
 import os
 
-_MARKET_START = datetime.time(9, 30)
-_COLLECT_START = datetime.time(10, 0)
-_COLLECT_END = datetime.time(15, 0)
 _STOCK_UNIVERSE = ['TSLA']
 
 
@@ -43,11 +40,11 @@ class MlProcessor(Processor):
             self._models[symbol] = model
 
     def process_data(self, context: Context) -> Optional[Action]:
-        if context.current_time.time() < _COLLECT_START:
+        if context.current_time.time() < COLLECT_START:
             return
         if context.symbol in self._open_positions:
             return self._close_position(context)
-        if context.current_time.time() < _COLLECT_END:
+        if context.current_time.time() < COLLECT_END:
             return self._open_position(context)
 
     def _get_prediction(self, context: Context) -> Optional[float]:
