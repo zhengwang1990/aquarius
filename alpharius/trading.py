@@ -102,7 +102,7 @@ class Trading:
                 if current_time.second > trigger_seconds and checkpoint_time not in processed:
                     self._process(checkpoint_time)
                     processed.append(checkpoint_time)
-                time.sleep(5)
+            time.sleep(1)
 
         # Send email
         self._logger.info('Sending email')
