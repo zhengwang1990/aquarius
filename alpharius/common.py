@@ -174,7 +174,7 @@ class Context:
         for i in range(len(self.intraday_lookback)):
             total_dolloar += vwaps[i] * volumes[i]
             total_volume += volumes[i]
-            res.append(total_dolloar / total_volume)
+            res.append(total_dolloar / (total_volume + 1E-7))
         return res
 
     @property

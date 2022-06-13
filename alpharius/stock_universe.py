@@ -148,6 +148,10 @@ class IntradayRangeStockUniverse(StockUniverse):
                  num_stocks: int = 100):
         super().__init__(lookback_start_date, lookback_end_date, data_source)
         self._stock_symbols = set(COMPANY_SYMBOLS)
+        self._top_volumes = TopVolumeUniverse(lookback_start_date,
+                                              lookback_end_date,
+                                              data_source,
+                                              1000)
         self._num_stocks = num_stocks
 
     def _get_intraday_range(self, symbol: str, prev_day_ind: int) -> float:
@@ -163,19 +167,16 @@ class IntradayRangeStockUniverse(StockUniverse):
     def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
         prev_day = self.get_prev_day(view_time)
         intraday_ranges = []
+        top_volume_symbols = set(self._top_volumes.get_stock_universe_impl(view_time))
         for symbol, hist in self._historical_data.items():
             if symbol not in self._stock_symbols:
+                continue
+            if symbol not in top_volume_symbols:
                 continue
             if prev_day not in hist.index:
                 continue
             prev_day_ind = timestamp_to_index(hist.index, prev_day)
             if prev_day_ind < DAYS_IN_A_MONTH:
-                continue
-            dollar_volume = self._get_dollar_volume(symbol, prev_day_ind)
-            if dollar_volume < 1E7 or dollar_volume > 1E9:
-                continue
-            closes = hist['Close']
-            if closes[prev_day_ind] < closes[prev_day_ind - 5]:
                 continue
             intraday_range = self._get_intraday_range(symbol, prev_day_ind)
             intraday_ranges.append((symbol, intraday_range))
