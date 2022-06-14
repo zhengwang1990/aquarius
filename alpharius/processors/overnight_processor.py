@@ -79,9 +79,6 @@ class OvernightProcessor(Processor):
         if len(interday_lookback) < DAYS_IN_A_YEAR:
             return 0
         closes = interday_lookback['Close'][-DAYS_IN_A_YEAR:]
-        ma200 = np.average(closes[-200:])
-        if context.current_price < ma200:
-            return 0
         values = np.append(closes, context.current_price)
         profits = [np.log(values[k + 1] / values[k]) for k in range(len(values) - 1)]
         r = np.average(profits)
