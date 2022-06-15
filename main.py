@@ -26,7 +26,7 @@ def main():
         # processors.MlProcessorFactory(),
         processors.OvernightProcessorFactory(),
         # processors.IntradayReversalProcessorFactory(),
-        # processors.IntradayMomentumProcessorFactory(),
+        processors.ZScoreProcessorFactory(),
     ]
     today = datetime.datetime.today()
     if args.mode == 'backtest':

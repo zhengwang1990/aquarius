@@ -139,13 +139,13 @@ class TopVolumeUniverse(StockUniverse):
         return [s[0] for s in dollar_volumes[:self._num_stocks]]
 
 
-class IntradayRangeStockUniverse(StockUniverse):
+class IntradayVolatileStockUniverse(StockUniverse):
 
     def __init__(self,
                  lookback_start_date: DATETIME_TYPE,
                  lookback_end_date: DATETIME_TYPE,
                  data_source: DataSource,
-                 num_stocks: int = 100):
+                 num_stocks: int = 50):
         super().__init__(lookback_start_date, lookback_end_date, data_source)
         self._stock_symbols = set(COMPANY_SYMBOLS)
         self._top_volumes = TopVolumeUniverse(lookback_start_date,

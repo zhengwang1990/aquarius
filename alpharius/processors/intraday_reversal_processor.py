@@ -1,5 +1,5 @@
 from alpharius.common import *
-from alpharius.stock_universe import IntradayRangeStockUniverse
+from alpharius.stock_universe import IntradayVolatileStockUniverse
 from typing import List
 import datetime
 import numpy as np
@@ -19,10 +19,10 @@ class IntradayReversalProcessor(Processor):
         super().__init__()
         self._interday_positions = []
         self._intraday_positions = dict()
-        self._stock_universe = IntradayRangeStockUniverse(lookback_start_date,
-                                                          lookback_end_date,
-                                                          data_source,
-                                                          num_stocks=50)
+        self._stock_universe = IntradayVolatileStockUniverse(lookback_start_date,
+                                                             lookback_end_date,
+                                                             data_source,
+                                                             num_stocks=50)
         self._output_dir = output_dir
         self._logger = logging_config(os.path.join(self._output_dir, 'intraday_reversal_processor.txt'),
                                       detail=True,
