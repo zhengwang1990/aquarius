@@ -574,7 +574,7 @@ class Backtesting:
         if self._run_start_time is None:
             return
         txt_output = os.path.join(self._output_dir, 'profile.txt')
-        total_time = time.time() - self._run_start_time
+        total_time = max(time.time() - self._run_start_time, 1E-7)
         outputs = [get_header('Profile')]
         profile = [
             ['Stage', 'Time Cost (s)', 'Percentage'],

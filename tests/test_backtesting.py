@@ -13,7 +13,7 @@ import unittest
 import unittest.mock as mock
 
 
-class TestTrading(unittest.TestCase):
+class TestBacktesting(unittest.TestCase):
 
     def setUp(self):
         self.patch_open = mock.patch('builtins.open', mock.mock_open())
