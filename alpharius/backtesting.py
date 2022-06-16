@@ -39,7 +39,6 @@ class Backtesting:
         self._num_win, self._num_lose = 0, 0
         self._cash = 1
         self._interday_data = None
-        self._symbol_stats = dict()
 
         backtesting_output_dir = os.path.join(OUTPUT_ROOT, 'backtesting')
         output_num = 1
@@ -74,7 +73,6 @@ class Backtesting:
         exit(1)
 
     def _close(self):
-        self._print_symbol_stats()
         self._print_profile()
         self._print_summary()
         self._plot_summary()
@@ -329,16 +327,10 @@ class Backtesting:
             profit = adjusted_action_price / current_position.entry_price - 1
             if action.type == ActionType.BUY_TO_CLOSE:
                 profit *= -1
-            if symbol not in self._symbol_stats:
-                self._symbol_stats[symbol] = {'value': 1, 'n_win': 0, 'n_loss': 0}
-            symbol_stat = self._symbol_stats[symbol]
             if profit > 0:
                 self._num_win += 1
-                symbol_stat['n_win'] += 1
             else:
                 self._num_lose += 1
-                symbol_stat['n_loss'] += 1
-            symbol_stat['value'] *= 1 + profit
             executed_actions.append([symbol, current_position.entry_time.time(), current_time.time(),
                                      'long' if action.type == ActionType.SELL_TO_CLOSE else 'short',
                                      qty, current_position.entry_price,
@@ -599,21 +591,5 @@ class Backtesting:
              f'{self._data_process_time / total_time * 100:.0f}%'],
         ]
         outputs.append(tabulate.tabulate(profile, tablefmt='grid'))
-        with open(txt_output, 'w') as f:
-            f.write('\n'.join(outputs))
-
-    def _print_symbol_stats(self):
-        txt_output = os.path.join(self._output_dir, 'symbol_stats.txt')
-        outputs = [get_header('Symbol Stats')]
-        stats = []
-        for symbol, stat in self._symbol_stats.items():
-            profit = stat['value'] - 1
-            n_trades = stat['n_win'] + stat['n_loss']
-            success_rate = stat['n_win'] / n_trades
-            stats.append([symbol, f'{profit * 100 : .2f}%', f'{success_rate * 100 : .2f}%', n_trades])
-        stats.sort(key=lambda row: self._symbol_stats[row[0]]['value'], reverse=True)
-        outputs.append(tabulate.tabulate(stats,
-                                         headers=['Symbol', 'Profit', 'Success Rate', 'Num of Trades'],
-                                         tablefmt='grid'))
         with open(txt_output, 'w') as f:
             f.write('\n'.join(outputs))

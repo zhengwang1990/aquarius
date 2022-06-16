@@ -53,7 +53,7 @@ class ZScoreProcessor(Processor):
         z_volume = (intraday_volumes[-1] - np.mean(intraday_volumes)) / (np.std(intraday_volumes) + 1E-7)
         trade = False
         trade = trade or (z_price > 4 and z_volume > 6 and intraday_closes[-1] > intraday_closes[-2])
-        trade = trade or (z_price > 3.5 and intraday_closes[-1] < intraday_closes[-2])
+        trade = trade or (z_price > 3 and intraday_closes[-1] < intraday_closes[-2])
         if not trade:
             return
         header = get_header(f'Z-Scores {context.current_time.date()}')
