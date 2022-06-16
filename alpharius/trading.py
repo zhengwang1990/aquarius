@@ -137,7 +137,8 @@ class Trading:
                                   current_time=checkpoint_time,
                                   current_price=current_price,
                                   interday_lookback=interday_lookback,
-                                  intraday_lookback=intraday_lookback)
+                                  intraday_lookback=intraday_lookback,
+                                  mode=Mode.TRADE)
                 contexts[symbol] = context
         self._logger.info('Contexts prepared for [%s] symbols.', len(contexts))
 

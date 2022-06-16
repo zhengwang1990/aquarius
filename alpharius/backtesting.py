@@ -231,7 +231,8 @@ class Backtesting:
                                   current_time=current_time,
                                   current_price=current_price,
                                   interday_lookback=interday_lookback,
-                                  intraday_lookback=intraday_lookback)
+                                  intraday_lookback=intraday_lookback,
+                                  mode=Mode.BACKTEST)
                 contexts[symbol] = context
             self._context_prep_time += time.time() - prep_context_start
 

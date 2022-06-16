@@ -54,12 +54,12 @@ class ZScoreProcessor(Processor):
         trade = False
         trade = trade or (z_price > 4 and z_volume > 6 and intraday_closes[-1] > intraday_closes[-2])
         trade = trade or (z_price > 3 and intraday_closes[-1] < intraday_closes[-2])
+        if trade or context.mode == Mode.TRADE:
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                               f'Price z-score: {z_price:.1f}. Volume z-score: {z_volume:.1f}. '
+                               f'Current price {context.current_price}.')
         if not trade:
             return
-        header = get_header(f'Z-Scores {context.current_time.date()}')
-        self._logger.debug(
-            header + f'\n[{context.symbol}] Price z-score: {z_price:.1f}. Volume z-score: {z_volume:.1f}. '
-            f'Current price {context.current_price}.')
         self._positions[context.symbol] = {'entry_time': context.current_time}
         return Action(context.symbol, ActionType.BUY_TO_OPEN, 1, context.current_price)
 

@@ -88,7 +88,7 @@ class TestTrading(unittest.TestCase):
 
     def test_run_with_processors(self):
         processor_factories = [processors.OvernightProcessorFactory(),
-                               processors.IntradayReversalProcessorFactory()]
+                               processors.ZScoreProcessorFactory()]
         trading = alpharius.Trading(processor_factories=processor_factories)
 
         trading.run()

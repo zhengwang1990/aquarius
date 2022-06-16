@@ -19,7 +19,6 @@ def main():
 
     processor_factories = [
         processors.OvernightProcessorFactory(),
-        # processors.IntradayReversalProcessorFactory(),
         processors.ZScoreProcessorFactory(),
     ]
     today = datetime.datetime.today()

@@ -69,7 +69,7 @@ class TestBacktesting(unittest.TestCase):
 
     def test_run_with_processors(self):
         processor_factories = [processors.OvernightProcessorFactory(),
-                               processors.IntradayReversalProcessorFactory()]
+                               processors.ZScoreProcessorFactory()]
         backtesting = alpharius.Backtesting(start_date=pd.to_datetime('2021-03-17'),
                                             end_date=pd.to_datetime('2021-03-18'),
                                             processor_factories=processor_factories)

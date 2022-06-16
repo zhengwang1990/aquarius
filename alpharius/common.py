@@ -58,6 +58,14 @@ class ActionType(Enum):
         return self.name
 
 
+class Mode(Enum):
+    BACKTEST = 1
+    TRADE = 2
+
+    def __str__(self):
+        return self.name
+
+
 class TradingFrequency(Enum):
     FIVE_MIN = 1
     CLOSE_TO_CLOSE = 2
@@ -153,12 +161,14 @@ class Context:
                  current_time: DATETIME_TYPE,
                  current_price: float,
                  interday_lookback: pd.DataFrame,
-                 intraday_lookback: Optional[pd.DataFrame]) -> None:
+                 intraday_lookback: Optional[pd.DataFrame],
+                 mode: Optional[Mode] = None) -> None:
         self.symbol = symbol
         self.current_time = current_time
         self.current_price = current_price
         self.interday_lookback = interday_lookback
         self.intraday_lookback = intraday_lookback
+        self.mode = mode
 
     @property
     def prev_day_close(self) -> float:
