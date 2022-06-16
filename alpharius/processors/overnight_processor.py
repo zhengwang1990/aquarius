@@ -1,6 +1,6 @@
 from alpharius.common import *
 from alpharius.stock_universe import TopVolumeUniverse
-from typing import List
+from typing import Dict, List, Tuple
 import numpy as np
 import tabulate
 
@@ -63,7 +63,10 @@ class OvernightProcessor(Processor):
             actions.append(Action(symbol, ActionType.BUY_TO_OPEN, 1, current_prices[symbol]))
         return actions
 
-    def _logging(self, performances, current_prices, current_time):
+    def _logging(self,
+                 performances: List[Tuple[str, float]],
+                 current_prices: Dict[str, float],
+                 current_time: DATETIME_TYPE) -> None:
         performance_info = []
         for symbol, metric in performances[-NUM_DIRECTIONAL_SYMBOLS - 5:]:
             price = current_prices[symbol]

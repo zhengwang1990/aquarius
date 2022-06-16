@@ -13,6 +13,5 @@ retrying
 scikit-learn
 ta
 tabulate
-tensorflow
 tqdm
 yfinance
