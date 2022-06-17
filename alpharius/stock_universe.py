@@ -139,7 +139,7 @@ class TopVolumeUniverse(StockUniverse):
         return [s[0] for s in dollar_volumes[:self._num_stocks]]
 
 
-class IntradayVolatileStockUniverse(StockUniverse):
+class IntradayVolatilityStockUniverse(StockUniverse):
 
     def __init__(self,
                  lookback_start_date: DATETIME_TYPE,
@@ -166,7 +166,7 @@ class IntradayVolatileStockUniverse(StockUniverse):
 
     def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
         prev_day = self.get_prev_day(view_time)
-        intraday_ranges = []
+        intraday_volatilities = []
         top_volume_symbols = set(self._top_volumes.get_stock_universe_impl(view_time))
         for symbol, hist in self._historical_data.items():
             if symbol not in self._stock_symbols:
@@ -178,8 +178,8 @@ class IntradayVolatileStockUniverse(StockUniverse):
             prev_day_ind = timestamp_to_index(hist.index, prev_day)
             if prev_day_ind < DAYS_IN_A_MONTH:
                 continue
-            intraday_range = self._get_intraday_range(symbol, prev_day_ind)
-            intraday_ranges.append((symbol, intraday_range))
+            intraday_volatility = self._get_intraday_range(symbol, prev_day_ind)
+            intraday_volatilities.append((symbol, intraday_volatility))
 
-        intraday_ranges.sort(key=lambda s: s[1], reverse=True)
-        return [s[0] for s in intraday_ranges[:self._num_stocks]]
+        intraday_volatilities.sort(key=lambda s: s[1], reverse=True)
+        return [s[0] for s in intraday_volatilities[:self._num_stocks]]

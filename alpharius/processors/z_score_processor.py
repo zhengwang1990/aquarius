@@ -1,5 +1,5 @@
 from alpharius.common import *
-from alpharius.stock_universe import IntradayVolatileStockUniverse
+from alpharius.stock_universe import IntradayVolatilityStockUniverse
 from typing import List
 import datetime
 import numpy as np
@@ -18,10 +18,10 @@ class ZScoreProcessor(Processor):
                  output_dir: str) -> None:
         super().__init__()
         self._positions = dict()
-        self._stock_universe = IntradayVolatileStockUniverse(lookback_start_date,
-                                                             lookback_end_date,
-                                                             data_source,
-                                                             num_stocks=NUM_UNIVERSE_SYMBOLS)
+        self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
+                                                               lookback_end_date,
+                                                               data_source,
+                                                               num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._output_dir = output_dir
         self._logger = logging_config(os.path.join(self._output_dir, 'z_score_processor.txt'),
                                       detail=True,

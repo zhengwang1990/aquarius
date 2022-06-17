@@ -96,7 +96,7 @@ class Trading:
                     pd.Timestamp.combine(self._today.date(),
                                          datetime.time(int(next_minute.hour),
                                                        int(next_minute.minute)))).tz_localize(TIME_ZONE)
-                trigger_seconds = 45
+                trigger_seconds = 50
                 if checkpoint_time.timestamp() == self._market_close:
                     trigger_seconds -= 10
                 if current_time.second > trigger_seconds and checkpoint_time not in processed:
