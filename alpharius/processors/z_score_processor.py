@@ -4,7 +4,7 @@ from typing import List
 import datetime
 import numpy as np
 
-NUM_UNIVERSE_SYMBOLS = 50
+NUM_UNIVERSE_SYMBOLS = 40
 ENTRY_TIME = datetime.time(10, 0)
 EXIT_TIME = datetime.time(16, 0)
 
