@@ -21,6 +21,10 @@ _DATA_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume', 'VWAP']
 _MAX_WORKERS = 10
 
 
+class DataError(Exception):
+    """Error in data loading."""
+
+
 class HistoricalDataLoader:
 
     def __init__(self, time_interval: TimeInterval, data_source: DataSource, timeout: float = 5) -> None:

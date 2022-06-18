@@ -86,11 +86,15 @@ class Backtesting:
                                        lookback_end_date=self._end_date,
                                        data_source=_DATA_SOURCE,
                                        output_dir=self._output_dir)
-            processor.snapshot(self._output_dir)
             self._processors.append(processor)
+
+    def _take_snapshot(self):
+        for factory in self._processor_factories:
+            factory.snapshot(self._output_dir)
 
     def run(self) -> None:
         self._run_start_time = time.time()
+        self._take_snapshot()
         history_start = self._start_date - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
         self._interday_data = load_tradable_history(history_start, self._end_date, _DATA_SOURCE)
         self._interday_load_time += time.time() - self._run_start_time
