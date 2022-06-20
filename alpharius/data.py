@@ -193,7 +193,7 @@ class HistoricalDataLoader:
 
 
 @functools.lru_cache()
-def _get_tradable_symbols() -> List[str]:
+def get_tradable_symbols() -> List[str]:
     alpaca = tradeapi.REST()
     assets = alpaca.list_assets()
     tradable = [asset.symbol for asset in assets
@@ -202,6 +202,19 @@ def _get_tradable_symbols() -> List[str]:
                 and asset.fractionable]
     tradable = sorted(list(set(tradable).difference(EXCLUSIONS)))
     return tradable
+
+
+@functools.lru_cache()
+def get_shortable_symbols() -> List[str]:
+    alpaca = tradeapi.REST()
+    assets = alpaca.list_assets()
+    shortable = [asset.symbol for asset in assets
+                 if re.match('^[A-Z]*$', asset.symbol)
+                 and asset.tradable and asset.marginable
+                 and asset.shortable
+                 and asset.fractionable]
+    shortable = sorted(list(set(shortable).difference(EXCLUSIONS)))
+    return shortable
 
 
 def _load_cached_history(symbols: List[str],
@@ -244,7 +257,7 @@ def _load_cached_symbol_history(symbol: str,
 def load_tradable_history(start_time: DATETIME_TYPE,
                           end_time: DATETIME_TYPE,
                           data_source: DataSource) -> Dict[str, pd.DataFrame]:
-    tradable = _get_tradable_symbols()
+    tradable = get_tradable_symbols()
     return _load_cached_history(tradable, start_time, end_time, data_source)
 
 
