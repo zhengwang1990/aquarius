@@ -58,6 +58,9 @@
         #table-account {{
           width: 40%;
         }}
+        #table-transactions td:nth-child(8), td:nth-child(9) {{
+          display: none;
+        }}
         @media screen and (max-width: 1200px) {{
           #table-account {{
             width: 55%;
@@ -78,7 +81,14 @@
           #table-account {{
             width: 100%;
           }}
+          #table-transactions td:nth-child(3), td:nth-child(6), td:nth-child(7) {{
+            display: none;
+          }}
+          #table-transactions td:nth-child(8), td:nth-child(9) {{
+            display: block;
+          }}
         }}
+
     </style>
 </head>
 <body>
@@ -86,24 +96,28 @@
 <table class="table table-bordered" id="table-account">
     {account_html}
 </table>
-<h1 class="display">Orders</h1>
-<table class="table table-bordered">
+<h1 class="display">Transactions</h1>
+<table class="table table-bordered" id="table-transactions">
     <thead class="thead-light">
     <tr>
         <th scope="col">Symbol</th>
         <th scope="col">Side</th>
         <th scope="col">Quantity</th>
-        <th scope="col">Price</th>
-        <th scope="col">Filled Time</th>
+        <th scope="col">Entry Price</th>
+        <th scope="col">Exit Price</th>
+        <th scope="col">Entry Time</th>
+        <th scope="col">Exit Time</th>
+        <th scope="col">Entry Time</th>
+        <th scope="col">Exit Time</th>
         <th scope="col">Gain / Loss</th>
     </tr>
     </thead>
     <tbody>
-    {orders_html}
+    {transactions_html}
     </tbody>
 </table>
 <h1 class="display">Positions</h1>
-<table class="table table-bordered">
+<table class="table table-bordered" id="table-positions">
     <thead class="thead-light">
     <tr>
         <th scope="col">Symbol</th>

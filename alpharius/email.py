@@ -57,6 +57,12 @@ class Email:
     def _get_color_style(value: float):
         return 'style="color:{};"'.format('green' if value >= 0 else 'red')
 
+    @staticmethod
+    def _get_simple_time(t: datetime.datetime):
+        if t.second < 30:
+            return t.strftime('%H:%M')
+        return (t + datetime.timedelta(minutes=1)).strftime('%H:%M')
+
     def send_email(self, sender: str, receiver: str):
         message = self._create_message(sender, receiver)
         today = datetime.datetime.today()
@@ -79,41 +85,60 @@ class Email:
 
         orders = self._alpaca.list_orders(status='closed', after=market_dates[-2].strftime('%F'),
                                           direction='desc')
-        current_symbols = set([position.symbol for position in positions])
-        orders_html = ''
+        orders_used = [False] * len(orders)
+        position_symbols = set([position.symbol for position in positions])
+        transactions_html = ''
         cut_time = pd.to_datetime(market_dates[-1].strftime('%F')).tz_localize(TIME_ZONE)
-        for order in orders:
-            if order.filled_at is None:
+        for i in range(len(orders)):
+            order = orders[i]
+            used = orders_used[i]
+            if order.filled_at is None or used:
                 continue
             filled_at = pd.to_datetime(order.filled_at).tz_convert(TIME_ZONE)
             if filled_at < cut_time:
                 break
-            filled_at_str = filled_at.strftime("%H:%M:%S")
+            entry_time = filled_at.strftime('%H:%M:%S')
+            entry_time_simple = self._get_simple_time(filled_at)
             order_qty = float(order.filled_qty)
-            order_price = float(order.filled_avg_price)
-            order_gain_col = '<td></td>'
-            if order.symbol in current_symbols:
-                current_symbols.remove(order.symbol)
+            entry_price = float(order.filled_avg_price)
+            exit_time = ''
+            exit_time_simple = ''
+            exit_price = None
+            order_gain_str = ''
+            order_side = 'long' if order.side == 'buy' else 'short'
+            if order.symbol in position_symbols:
+                position_symbols.remove(order.symbol)
             else:
-                for prev_order in orders:
+                for j, prev_order in orders:
                     if prev_order.filled_at is None or prev_order.symbol != order.symbol:
                         continue
                     prev_filled_at = pd.to_datetime(prev_order.filled_at).tz_convert(TIME_ZONE)
                     if prev_filled_at < filled_at and prev_order.side != order.side:
-                        cost_price = float(prev_order.filled_avg_price)
-                        order_gain = (order_price / cost_price - 1) * 100
-                        if order.side == 'buy':
+                        exit_price = entry_price
+                        entry_price = float(prev_order.filled_avg_price)
+                        order_gain = (exit_price / entry_price - 1) * 100
+                        order_side = 'long' if prev_order.side == 'buy' else 'short'
+                        if order_side == 'short':
                             order_gain *= -1
-                        order_gain_col = f'<td {self._get_color_style(order_gain)}>{order_gain:+.2f}%</td>'
+                        order_gain_str = f'<span {self._get_color_style(order_gain)}>{order_gain:+.2f}%</span>'
+                        exit_time = entry_time
+                        entry_time = prev_filled_at.strftime('%H:%M:%S')
+                        exit_time_simple = entry_time_simple
+                        entry_time_simple = self._get_simple_time(prev_filled_at)
+                        orders_used[j] = True
                         break
-                current_symbols.add(order.symbol)
-            orders_html += (f'<tr><th scope="row">{order.symbol}</th>'
-                            f'<td>{order.side}</td>'
-                            f'<td>{order_qty:.5g}</td>'
-                            f'<td>{order_price:.5g}</td>'
-                            f'<td>{filled_at_str}</td>'
-                            f'{order_gain_col}'
-                            '</tr>\n')
+            exit_price_str = f'{exit_price:.5g}' if exit_price else ''
+            transactions_html += (f'<tr><th scope="row">{order.symbol}</th>'
+                                  f'<td>{order_side}</td>'
+                                  f'<td>{order_qty:.5g}</td>'
+                                  f'<td>{entry_price:.5g}</td>'
+                                  f'<td>{exit_price_str}</td>'
+                                  f'<td>{entry_time}</td>'
+                                  f'<td>{exit_time}</td>'
+                                  f'<td>{entry_time_simple}</td>'
+                                  f'<td>{exit_time_simple}</td>'
+                                  f'<td>{order_gain_str}</td>'
+                                  '</tr>\n')
 
         account = self._alpaca.get_account()
         cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
@@ -204,7 +229,7 @@ class Email:
         plt.savefig(buf, format='png')
         buf.seek(0)
         history_image = image.MIMEImage(buf.read())
-        history_image.add_header('Content-Disposition', "attachment; filename=history.png")
+        history_image.add_header('Content-Disposition', 'attachment; filename=history.png')
         history_image.add_header('Content-ID', '<history>')
 
         html_template_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -212,7 +237,7 @@ class Email:
         with open(html_template_path, 'r') as f:
             html_template = f.read()
         message.attach(text.MIMEText(html_template.format(
-            account_html=account_html, orders_html=orders_html,
+            account_html=account_html, transactions_html=transactions_html,
             positions_html=positions_html), 'html'))
         message.attach(history_image)
         self._client.sendmail(sender, [receiver], message.as_string())
