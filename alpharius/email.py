@@ -6,6 +6,7 @@ import datetime
 import email.mime.image as image
 import email.mime.multipart as multipart
 import email.mime.text as text
+import html
 import io
 import matplotlib.pyplot as plt
 import numpy as np
@@ -256,7 +257,7 @@ class Email:
         error_time = pd.Timestamp(int(time.time()), unit='s', tz=TIME_ZONE).strftime('%F %H:%M')
         with open(log_file, 'r') as f:
             log_content = f.read()
-        error_log = '<br>'.join(log_content.split('\n'))
+        error_log = html.escape(log_content)
         message.attach(text.MIMEText(html_template.format(
             error_time=error_time, error_code=exit_code, error_log=error_log), 'html'))
         self._client.sendmail(self._sender, [self._receiver], message.as_string())
