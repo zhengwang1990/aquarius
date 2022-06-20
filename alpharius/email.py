@@ -257,6 +257,7 @@ class Email:
         with open(log_file, 'r') as f:
             log_content = f.read()
         error_log = '<br>'.join(log_content.split('\n'))
-        html_template.format(error_time=error_time, error_code=exit_code, error_log=error_log)
+        message.attach(text.MIMEText(html_template.format(
+            error_time=error_time, error_code=exit_code, error_log=error_log), 'html'))
         self._client.sendmail(self._sender, [self._receiver], message.as_string())
         self._client.close()
