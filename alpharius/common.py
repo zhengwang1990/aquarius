@@ -6,11 +6,10 @@ import inspect
 import logging
 import os
 import pandas as pd
+import pytz
 import sys
 
-POLYGON_API_KEY_ENV = 'POLYGON_API_KEY'
-CASH_RESERVE_ENV = 'CASH_RESERVE'
-TIME_ZONE = 'America/New_York'
+TIME_ZONE = pytz.timezone('America/New_York')
 CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'cache')
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'outputs')
 DATETIME_TYPE = Union[pd.Timestamp, pd.DatetimeIndex, datetime.datetime]

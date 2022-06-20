@@ -72,9 +72,18 @@ class Trading:
             processor_stock_universe = processor.get_stock_universe(self._today)
             self._processor_stock_universes[processor_name] = processor_stock_universe
             self._stock_universe[processor.get_trading_frequency()].update(processor_stock_universe)
-        self._logger.info('Stock universe of the day: %s', self._stock_universe)
+        self._logger.info('Stock universe of the day:\n%s',
+                          '\n'.join([f'{frequency}\n{universe}'
+                                     for frequency, universe in self._stock_universe.items()]))
 
     def run(self) -> None:
+        # Check if today is a trading day
+        today_str = self._today.strftime('%F')
+        calendar = self._alpaca.get_calendar(start=today_str, end=today_str)
+        if not calendar or calendar[0].date != today_str:
+            self._logger.info('Market does not open on [%s]', today_str)
+            return
+
         # Initialize
         history_start = self._today - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
         self._interday_data = load_tradable_history(history_start, self._today, DEFAULT_DATA_SOURCE)

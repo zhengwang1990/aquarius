@@ -3,10 +3,8 @@ from alpharius import processors
 from parameterized import parameterized
 import alpaca_trade_api as tradeapi
 import alpharius
-import itertools
 import matplotlib.pyplot as plt
 import os
-import pandas_market_calendars as mcal
 import pandas as pd
 import polygon
 import unittest
@@ -31,14 +29,8 @@ class TestBacktesting(unittest.TestCase):
         self.fake_polygon = FakePolygon()
         self.patch_polygon = mock.patch.object(polygon, 'RESTClient', return_value=self.fake_polygon)
         self.patch_polygon.start()
-        self.patch_get_calendar = mock.patch.object(mcal, 'get_calendar', return_value=mock.Mock())
-        self.patch_get_calendar.start()
-        self.patch_date_range = mock.patch.object(
-            mcal, 'date_range',
-            side_effect=itertools.chain(
-                [[pd.to_datetime('2021-03-17')]],
-                itertools.repeat([pd.to_datetime('2021-02-17') + datetime.timedelta(days=i) for i in range(60)])))
-        self.patch_date_range.start()
+        self.patch_to_csv = mock.patch.object(pd.DataFrame, 'to_csv')
+        self.patch_to_csv.start()
         os.environ['POLYGON_API_KEY'] = 'fake_polygon_api_key'
 
     def tearDown(self):
@@ -49,8 +41,7 @@ class TestBacktesting(unittest.TestCase):
         self.patch_tight_layout.stop()
         self.patch_alpaca.stop()
         self.patch_polygon.stop()
-        self.patch_get_calendar.stop()
-        self.patch_date_range.stop()
+        self.patch_to_csv.stop()
 
     @parameterized.expand([(alpharius.TradingFrequency.FIVE_MIN,),
                            (alpharius.TradingFrequency.CLOSE_TO_CLOSE,),

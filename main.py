@@ -3,7 +3,6 @@ from dateutil import relativedelta
 import argparse
 import alpharius
 import datetime
-import pandas_market_calendars as mcal
 
 
 def main():
@@ -31,12 +30,6 @@ def main():
                                             processor_factories=processor_factories)
         backtesting.run()
     else:
-        nyse = mcal.get_calendar('NYSE')
-        schedule = nyse.schedule(start_date=today,
-                                 end_date=today)
-        if len(schedule) == 0:
-            print(f'Market not open on [{today.strftime("%F")}]')
-            return
         trading = alpharius.Trading(processor_factories=processor_factories)
         trading.run()
 

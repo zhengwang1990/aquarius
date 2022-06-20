@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
-import pandas_market_calendars as mcal
 import retrying
 import smtplib
 import time
@@ -72,10 +71,10 @@ class Email:
             self._logger.info('Sending email')
         message = self._create_message('Summary', 'Trade summary of the day')
         today = datetime.datetime.today()
-        nyse = mcal.get_calendar('NYSE')
-        schedule = nyse.schedule(start_date=today - datetime.timedelta(days=40),
-                                 end_date=today)
-        market_dates = mcal.date_range(schedule, frequency='1D')
+        alpaca = tradeapi.REST()
+        calendar = alpaca.get_calendar(start=(today - datetime.timedelta(days=40)).strftime('%F'),
+                                       end=today.strftime('%F'))
+        market_dates = [market_day.date for market_day in calendar]
         positions_html = ''
         positions = self._alpaca.list_positions()
         for position in positions:
@@ -89,12 +88,12 @@ class Email:
                                f'<td {self._get_color_style(gain)}>{gain * 100:+.2f}%</td>'
                                '</td>\n')
 
-        orders = self._alpaca.list_orders(status='closed', after=market_dates[-2].strftime('%F'),
+        orders = self._alpaca.list_orders(status='closed', after=market_dates[-2],
                                           direction='desc')
         orders_used = [False] * len(orders)
         position_symbols = set([position.symbol for position in positions])
         transactions_html = ''
-        cut_time = pd.to_datetime(market_dates[-1].strftime('%F')).tz_localize(TIME_ZONE)
+        cut_time = pd.to_datetime(market_dates[-1]).tz_localize(TIME_ZONE)
         for i in range(len(orders)):
             order = orders[i]
             used = orders_used[i]
@@ -145,8 +144,8 @@ class Email:
         account_equity = float(account.equity) - cash_reserve
         account_cash = float(account.cash) - cash_reserve
         history_length = 10
-        history = self._alpaca.get_portfolio_history(date_start=market_dates[-history_length].strftime('%F'),
-                                                     date_end=market_dates[-2].strftime('%F'),
+        history = self._alpaca.get_portfolio_history(date_start=market_dates[-history_length],
+                                                     date_end=market_dates[-2],
                                                      timeframe='1D')
         for i in range(len(history.equity)):
             history.equity[i] = (history.equity[i] - cash_reserve
@@ -162,13 +161,13 @@ class Email:
         historical_value.append(account_equity / equity_denominator)
         for i in range(historical_start):
             historical_value[i] = None
-        historical_date = [m.date() for m in market_dates[-history_length:]]
+        historical_date = [pd.to_datetime(m) for m in market_dates[-history_length:]]
         market_symbols = ['DIA', 'SPY', 'QQQ']
         market_values = {}
         for symbol in market_symbols:
             symbol_data = self._data_loader.load_data_list(
-                symbol, pd.to_datetime(historical_date[0]),
-                pd.to_datetime(historical_date[-1]) + datetime.timedelta(days=1))
+                symbol, historical_date[0],
+                historical_date[-1] + datetime.timedelta(days=1))
             symbol_close = np.array(symbol_data['Close'])
             market_values[symbol] = symbol_close
 

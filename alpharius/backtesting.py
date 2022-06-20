@@ -1,5 +1,6 @@
 from .common import *
 from .data import load_cached_daily_data, load_tradable_history, get_header
+import alpaca_trade_api as tradeapi
 from concurrent import futures
 from typing import Any, Dict, List, Set, Tuple, Union
 import collections
@@ -11,7 +12,6 @@ import matplotlib.dates as mdates
 import numpy as np
 import os
 import pandas as pd
-import pandas_market_calendars as mcal
 import signal
 import tabulate
 import time
@@ -54,9 +54,10 @@ class Backtesting:
         self._details_log = logging_config(os.path.join(self._output_dir, 'details.txt'), detail=False, name='details')
         self._summary_log = logging_config(os.path.join(self._output_dir, 'summary.txt'), detail=False, name='summary')
 
-        nyse = mcal.get_calendar('NYSE')
-        schedule = nyse.schedule(start_date=self._start_date, end_date=self._end_date - datetime.timedelta(days=1))
-        self._market_dates = [pd.to_datetime(d.date()) for d in mcal.date_range(schedule, frequency='1D')]
+        alpaca = tradeapi.REST()
+        calendar = alpaca.get_calendar(start=self._start_date.strftime('%F'),
+                                       end=(self._end_date - datetime.timedelta(days=1)).strftime('%F'))
+        self._market_dates = [pd.to_datetime(market_day.date) for market_day in calendar]
         signal.signal(signal.SIGINT, self._safe_exit)
 
         self._run_start_time = None
@@ -277,7 +278,7 @@ class Backtesting:
         self._context_prep_time += time.time() - prep_context_start
 
         actions = self._process_data(contexts, processor_stock_universes, self._processors)
-        executed_actions = self._process_actions(market_close.time(), actions)
+        executed_actions = self._process_actions(market_close, actions)
         self._log_day(day, executed_actions)
 
     def _process_actions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> List[List[Any]]:

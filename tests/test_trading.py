@@ -5,10 +5,11 @@ import alpaca_trade_api as tradeapi
 import alpharius
 import email.mime.image as image
 import email.mime.multipart as multipart
+import datetime
 import itertools
 import matplotlib.pyplot as plt
 import os
-import pandas_market_calendars as mcal
+import pandas as pd
 import polygon
 import smtplib
 import time
@@ -34,12 +35,6 @@ class TestTrading(unittest.TestCase):
         self.patch_alpaca.start()
         self.patch_polygon = mock.patch.object(polygon, 'RESTClient', return_value=FakePolygon())
         self.patch_polygon.start()
-        self.patch_get_calendar = mock.patch.object(mcal, 'get_calendar', return_value=mock.Mock())
-        self.patch_get_calendar.start()
-        self.patch_date_range = mock.patch.object(
-            mcal, 'date_range',
-            return_value=[pd.to_datetime('2021-03-08') + datetime.timedelta(days=i) for i in range(10)])
-        self.patch_date_range.start()
         self.patch_smtp = mock.patch.object(smtplib, 'SMTP', autospec=True)
         self.mock_smtp = self.patch_smtp.start()
         self.patch_savefig = mock.patch.object(plt, 'savefig')
@@ -48,6 +43,9 @@ class TestTrading(unittest.TestCase):
         self.patch_image.start()
         self.patch_multipart = mock.patch.object(multipart.MIMEMultipart, 'as_string', return_value='')
         self.patch_multipart.start()
+        self.patch_to_csv = mock.patch.object(pd.DataFrame, 'to_csv')
+        self.patch_to_csv.start()
+
         os.environ['POLYGON_API_KEY'] = 'fake_polygon_api_key'
         os.environ['EMAIL_USERNAME'] = 'fake_user'
         os.environ['EMAIL_PASSWORD'] = 'fake_password'
@@ -62,11 +60,10 @@ class TestTrading(unittest.TestCase):
         self.patch_time.stop()
         self.patch_alpaca.stop()
         self.patch_polygon.stop()
-        self.patch_get_calendar.stop()
-        self.patch_date_range.stop()
         self.patch_smtp.stop()
         self.patch_image.stop()
         self.patch_multipart.stop()
+        self.patch_to_csv.stop()
 
     @parameterized.expand([(alpharius.TradingFrequency.FIVE_MIN,),
                            (alpharius.TradingFrequency.CLOSE_TO_CLOSE,),
@@ -94,6 +91,15 @@ class TestTrading(unittest.TestCase):
         trading.run()
 
         self.mock_smtp.assert_called_once()
+
+    def test_not_run_on_market_close_day(self):
+        trading = alpharius.Trading(processor_factories=[])
+
+        with mock.patch.object(FakeAlpaca, 'get_calendar', return_value=[]):
+            trading.run()
+
+        self.assertGreater(self.fake_alpaca.get_account_call_count, 0)
+        self.assertEqual(self.fake_alpaca.get_bars_call_count, 0)
 
 
 if __name__ == '__main__':

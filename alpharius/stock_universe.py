@@ -2,10 +2,10 @@ from .common import *
 from .constants import COMPANY_SYMBOLS
 from .data import load_tradable_history
 from typing import List, Optional
+import alpaca_trade_api as tradeapi
 import datetime
 import numpy as np
 import json
-import pandas_market_calendars as mcal
 
 _STOCK_UNIVERSE_CACHE_ROOT = os.path.join(CACHE_DIR, 'stock_universe')
 
@@ -18,9 +18,10 @@ class StockUniverse:
                  data_source: DataSource) -> None:
         self._historical_data = load_tradable_history(history_start, end_time, data_source)
 
-        nyse = mcal.get_calendar('NYSE')
-        schedule = nyse.schedule(start_date=history_start, end_date=end_time)
-        self._market_dates = [d.date() for d in mcal.date_range(schedule, frequency='1D')]
+        alpaca = tradeapi.REST()
+        calendar = alpaca.get_calendar(start=history_start.strftime('%F'),
+                                       end=end_time.strftime('%F'))
+        self._market_dates = [pd.to_datetime(market_day.date).date() for market_day in calendar]
 
         self._price_low, self._price_high = None, None
         self._dvolume_low, self._dvolume_high = None, None

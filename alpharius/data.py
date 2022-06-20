@@ -15,10 +15,9 @@ import sys
 import yfinance as yf
 
 _MEMORY_CACHE_SIZE = 5000
-
 _DATA_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume', 'VWAP']
-
 _MAX_WORKERS = 10
+_POLYGON_API_KEY_ENV = 'POLYGON_API_KEY'
 
 
 class DataError(Exception):
@@ -39,7 +38,7 @@ class HistoricalDataLoader:
             self._init_alpaca()
 
     def _init_polygon(self) -> None:
-        polygon_api_key = os.environ.get(POLYGON_API_KEY_ENV)
+        polygon_api_key = os.environ.get(_POLYGON_API_KEY_ENV)
         if not polygon_api_key:
             raise DataError('Polygon API Key not provided')
         self._polygon_client = polygon.RESTClient(auth_key=polygon_api_key, timeout=int(self._timeout))

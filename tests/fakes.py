@@ -16,6 +16,7 @@ Order = collections.namedtuple('Order', ['id', 'symbol', 'side', 'qty', 'notiona
                                          'filled_qty', 'filled_at', 'filled_avg_price'])
 Bar = collections.namedtuple('Bar', ['t', 'o', 'h', 'l', 'c', 'vw', 'v'])
 History = collections.namedtuple('History', ['equity'])
+Calendar = collections.namedtuple('Calendar', ['date', 'open', 'close'])
 PolygonResponse = collections.namedtuple('PolygonResponse', ['status', 'results'])
 
 
@@ -31,6 +32,7 @@ class FakeAlpaca:
         self.cancel_order_call_count = 0
         self.get_portfolio_history_call_count = 0
         self.get_bars_call_count = 0
+        self.get_calendar_call_count = 0
 
     def get_account(self):
         self.get_account_call_count += 1
@@ -83,6 +85,18 @@ class FakeAlpaca:
         else:
             raise ValueError('Time frame must be 5 min or 1 day.')
         return results
+
+    def get_calendar(self, start, end, *args, **kwargs):
+        self.get_calendar_call_count = 0
+        start_date = pd.to_datetime(start)
+        end_date = pd.to_datetime(end)
+        calendar = []
+        date = start_date
+        while date <= end_date:
+            if date.isoweekday() < 6:
+                calendar.append(Calendar(date.strftime('%F'), '09:30', '16:00'))
+            date += datetime.timedelta(days=1)
+        return calendar
 
 
 class FakePolygon:
