@@ -11,9 +11,8 @@ import sys
 POLYGON_API_KEY_ENV = 'POLYGON_API_KEY'
 CASH_RESERVE_ENV = 'CASH_RESERVE'
 TIME_ZONE = 'America/New_York'
-CACHE_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'cache')
-OUTPUT_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'outputs')
-DATA_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data')
+CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'cache')
+OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'outputs')
 DATETIME_TYPE = Union[pd.Timestamp, pd.DatetimeIndex, datetime.datetime]
 DAYS_IN_A_WEEK = 5
 DAYS_IN_A_MONTH = 20
@@ -76,6 +75,7 @@ class TradingFrequency(Enum):
 
 Action = collections.namedtuple('Action', ['symbol', 'type', 'percent', 'price'])
 Position = collections.namedtuple('Position', ['symbol', 'qty', 'entry_price', 'entry_time'])
+DEFAULT_DATA_SOURCE = DataSource.ALPACA
 
 
 def timestamp_to_index(index: pd.Index, timestamp: DATETIME_TYPE) -> Optional[int]:

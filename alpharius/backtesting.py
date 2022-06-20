@@ -16,7 +16,6 @@ import signal
 import tabulate
 import time
 
-_DATA_SOURCE = DataSource.ALPACA
 _MAX_WORKERS = 20
 
 
@@ -40,7 +39,7 @@ class Backtesting:
         self._cash = 1
         self._interday_data = None
 
-        backtesting_output_dir = os.path.join(OUTPUT_ROOT, 'backtesting')
+        backtesting_output_dir = os.path.join(OUTPUT_DIR, 'backtesting')
         output_num = 1
         while True:
             output_dir = os.path.join(backtesting_output_dir,
@@ -84,7 +83,7 @@ class Backtesting:
         for factory in self._processor_factories:
             processor = factory.create(lookback_start_date=history_start,
                                        lookback_end_date=self._end_date,
-                                       data_source=_DATA_SOURCE,
+                                       data_source=DEFAULT_DATA_SOURCE,
                                        output_dir=self._output_dir)
             self._processors.append(processor)
 
@@ -96,7 +95,7 @@ class Backtesting:
         self._run_start_time = time.time()
         self._take_snapshot()
         history_start = self._start_date - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
-        self._interday_data = load_tradable_history(history_start, self._end_date, _DATA_SOURCE)
+        self._interday_data = load_tradable_history(history_start, self._end_date, DEFAULT_DATA_SOURCE)
         self._interday_load_time += time.time() - self._run_start_time
         self._init_processors(history_start)
         all_processor_c2c = np.all([processor.get_trading_frequency() == TradingFrequency.CLOSE_TO_CLOSE
@@ -184,7 +183,7 @@ class Backtesting:
             unique_stock_universe.update(symbols)
         with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
             for symbol in unique_stock_universe:
-                t = pool.submit(load_cached_daily_data, symbol, day, TimeInterval.FIVE_MIN, _DATA_SOURCE)
+                t = pool.submit(load_cached_daily_data, symbol, day, TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
                 tasks[symbol] = t
             for symbol, t in tasks.items():
                 intraday_datas[symbol] = t.result()

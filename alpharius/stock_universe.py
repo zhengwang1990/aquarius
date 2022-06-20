@@ -7,7 +7,7 @@ import numpy as np
 import json
 import pandas_market_calendars as mcal
 
-_STOCK_UNIVERSE_CACHE_ROOT = os.path.join(CACHE_ROOT, 'stock_universe')
+_STOCK_UNIVERSE_CACHE_ROOT = os.path.join(CACHE_DIR, 'stock_universe')
 
 
 class StockUniverse:

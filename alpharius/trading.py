@@ -1,6 +1,6 @@
 from .common import *
 from .data import load_tradable_history, HistoricalDataLoader
-from .email import send_email
+from .email import Email
 from concurrent import futures
 import alpaca_trade_api as tradeapi
 import collections
@@ -10,14 +10,13 @@ import os
 import pandas as pd
 import retrying
 
-_DATA_SOURCE = DataSource.ALPACA
 _MAX_WORKERS = 10
 
 
 class Trading:
 
     def __init__(self, processor_factories: List[ProcessorFactory]) -> None:
-        self._output_dir = os.path.join(OUTPUT_ROOT, 'trading', datetime.datetime.now().strftime('%F'))
+        self._output_dir = os.path.join(OUTPUT_DIR, 'trading', datetime.datetime.now().strftime('%F'))
         os.makedirs(self._output_dir, exist_ok=True)
         self._logger = logging_config(os.path.join(self._output_dir, 'log.txt'), detail=True, name='trading')
         self._equity, self._cash = 0, 0
@@ -60,7 +59,7 @@ class Trading:
         for factory in self._processor_factories:
             processor = factory.create(lookback_start_date=history_start,
                                        lookback_end_date=self._today,
-                                       data_source=_DATA_SOURCE,
+                                       data_source=DEFAULT_DATA_SOURCE,
                                        output_dir=self._output_dir)
             self._processors.append(processor)
             self._frequency_to_processor[processor.get_trading_frequency()].append(processor)
@@ -78,7 +77,7 @@ class Trading:
     def run(self) -> None:
         # Initialize
         history_start = self._today - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
-        self._interday_data = load_tradable_history(history_start, self._today, _DATA_SOURCE)
+        self._interday_data = load_tradable_history(history_start, self._today, DEFAULT_DATA_SOURCE)
         self._init_processors(history_start)
         self._init_stock_universe()
 
@@ -105,8 +104,7 @@ class Trading:
             time.sleep(1)
 
         # Send email
-        self._logger.info('Sending email')
-        send_email(_DATA_SOURCE)
+        Email(self._logger).send_email()
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
         self._logger.info('Process starts for [%s]', checkpoint_time.time())
@@ -161,7 +159,7 @@ class Trading:
     def _update_intraday_data(self, frequency_to_process: List[TradingFrequency]) -> None:
         update_start = time.time()
         tasks = dict()
-        data_loader = HistoricalDataLoader(TimeInterval.FIVE_MIN, _DATA_SOURCE)
+        data_loader = HistoricalDataLoader(TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
         with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
             for frequency, symbols in self._stock_universe.items():
                 if frequency not in frequency_to_process:

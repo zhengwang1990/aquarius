@@ -1,5 +1,6 @@
 from .common import *
 from .data import HistoricalDataLoader
+from typing import Optional, Union
 import alpaca_trade_api as tradeapi
 import datetime
 import email.mime.image as image
@@ -13,44 +14,43 @@ import pandas as pd
 import pandas_market_calendars as mcal
 import retrying
 import smtplib
+import time
 
 _SMTP_HOST = 'smtp.163.com'
 _SMTP_PORT = 25
-
-
-@retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
-def send_email(data_source: DataSource):
-    username = os.environ.get('EMAIL_USERNAME')
-    password = os.environ.get('EMAIL_PASSWORD')
-    receiver = os.environ.get('EMAIL_RECEIVER')
-    if not username or not password or not receiver:
-        return
-    email_client = Email(username, password, data_source)
-    sender = f'Stock Trading System <{username}@163.com>'
-    receiver = receiver
-    email_client.send_email(sender, receiver)
+_HTML_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'html')
 
 
 class Email:
-    def __init__(self, username: str, password: str, data_source: DataSource) -> None:
+    def __init__(self, logger: Optional[logging.Logger]) -> None:
+        username = os.environ.get('EMAIL_USERNAME')
+        password = os.environ.get('EMAIL_PASSWORD')
+        receiver = os.environ.get('EMAIL_RECEIVER')
+        self._logger = logger or logging.getLogger()
+        self._client = None
+        if not username or not password or not receiver:
+            self._logger.warning('Email config not provided')
+            return
+        self._sender = f'Stock Trading System <{username}@163.com>'
+        self._receiver = receiver
         self._alpaca = tradeapi.REST()
-        self._data_loader = HistoricalDataLoader(TimeInterval.DAY, data_source)
-        self._client = self._create_client(username, password)
+        self._data_loader = HistoricalDataLoader(TimeInterval.DAY, DEFAULT_DATA_SOURCE)
+        self._create_client(username, password)
 
-    @staticmethod
-    def _create_client(username: str, password: str) -> smtplib.SMTP:
+    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
+    def _create_client(self, username: str, password: str):
+        self._logger.info('Logging into email server')
         client = smtplib.SMTP(_SMTP_HOST, _SMTP_PORT)
         client.starttls()
         client.ehlo()
         client.login(username, password)
-        return client
+        self._client = client
 
-    @staticmethod
-    def _create_message(sender, receiver):
+    def _create_message(self, category: str, title: str):
         message = multipart.MIMEMultipart('alternative')
-        message['From'] = sender
-        message['To'] = receiver
-        message['Subject'] = f'[Summary] [{datetime.datetime.today().strftime("%F")}] Trade summary of the day'
+        message['From'] = self._sender
+        message['To'] = self._receiver
+        message['Subject'] = f'[{category}] [{datetime.datetime.today().strftime("%F")}] {title}'
         return message
 
     @staticmethod
@@ -63,8 +63,13 @@ class Email:
             return t.strftime('%H:%M')
         return (t + datetime.timedelta(minutes=1)).strftime('%H:%M')
 
-    def send_email(self, sender: str, receiver: str):
-        message = self._create_message(sender, receiver)
+    def send_email(self):
+        if not self._client:
+            self._logger.warning('Email client not created')
+            return
+        else:
+            self._logger.info('Sending email')
+        message = self._create_message('Summary', 'Trade summary of the day')
         today = datetime.datetime.today()
         nyse = mcal.get_calendar('NYSE')
         schedule = nyse.schedule(start_date=today - datetime.timedelta(days=40),
@@ -226,7 +231,7 @@ class Email:
         history_image.add_header('Content-Disposition', 'attachment; filename=history.png')
         history_image.add_header('Content-ID', '<history>')
 
-        html_template_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+        html_template_path = os.path.join(_HTML_DIR,
                                           'email.html')
         with open(html_template_path, 'r') as f:
             html_template = f.read()
@@ -234,5 +239,24 @@ class Email:
             account_html=account_html, transactions_html=transactions_html,
             positions_html=positions_html), 'html'))
         message.attach(history_image)
-        self._client.sendmail(sender, [receiver], message.as_string())
+        self._client.sendmail(self._sender, [self._receiver], message.as_string())
+        self._client.close()
+
+    def send_alert(self, log_file: str, exit_code: Union[int, str]):
+        if not self._client:
+            self._logger.warning('Email client not created')
+            return
+        else:
+            self._logger.info('Sending alert')
+        message = self._create_message('Alert', 'System aborted due to error')
+        html_template_path = os.path.join(_HTML_DIR,
+                                          'alert.html')
+        with open(html_template_path, 'r') as f:
+            html_template = f.read()
+        error_time = pd.Timestamp(int(time.time()), unit='s', tz=TIME_ZONE).strftime('%F %H:%M')
+        with open(log_file, 'r') as f:
+            log_content = f.read()
+        error_log = '<br>'.join(log_content.split('\n'))
+        html_template.format(error_time=error_time, error_code=exit_code, error_log=error_log)
+        self._client.sendmail(self._sender, [self._receiver], message.as_string())
         self._client.close()

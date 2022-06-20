@@ -221,7 +221,7 @@ def _load_cached_history(symbols: List[str],
                          start_time: DATETIME_TYPE,
                          end_time: DATETIME_TYPE,
                          data_source: DataSource) -> Dict[str, pd.DataFrame]:
-    cache_dir = os.path.join(CACHE_ROOT, str(TimeInterval.DAY),
+    cache_dir = os.path.join(CACHE_DIR, str(TimeInterval.DAY),
                              start_time.strftime('%F'), end_time.strftime('%F'))
     if symbols:
         os.makedirs(cache_dir, exist_ok=True)
@@ -242,7 +242,7 @@ def _load_cached_symbol_history(symbol: str,
                                 start_time: DATETIME_TYPE,
                                 end_time: DATETIME_TYPE,
                                 data_loader: HistoricalDataLoader) -> pd.DataFrame:
-    cache_file = os.path.join(CACHE_ROOT, str(TimeInterval.DAY),
+    cache_file = os.path.join(CACHE_DIR, str(TimeInterval.DAY),
                               start_time.strftime('%F'), end_time.strftime('%F'),
                               f'history_{symbol}.csv')
     if os.path.isfile(cache_file):
@@ -266,7 +266,7 @@ def load_cached_daily_data(symbol: str,
                            time_interval: TimeInterval,
                            data_source: DataSource) -> pd.DataFrame:
     assert time_interval in [TimeInterval.FIVE_MIN, TimeInterval.HOUR]
-    cache_dir = os.path.join(CACHE_ROOT, str(time_interval), day.strftime('%F'))
+    cache_dir = os.path.join(CACHE_DIR, str(time_interval), day.strftime('%F'))
     if not os.path.isdir(cache_dir):
         os.makedirs(cache_dir, exist_ok=True)
     cache_file = os.path.join(cache_dir, f'history_{symbol}.csv')
