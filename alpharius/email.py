@@ -58,7 +58,7 @@ class Email:
         return 'style="color:{};"'.format('green' if value >= 0 else 'red')
 
     @staticmethod
-    def _get_simple_time(t: datetime.datetime):
+    def _round_time(t: datetime.datetime):
         if t.second < 30:
             return t.strftime('%H:%M')
         return (t + datetime.timedelta(minutes=1)).strftime('%H:%M')
@@ -97,19 +97,17 @@ class Email:
             filled_at = pd.to_datetime(order.filled_at).tz_convert(TIME_ZONE)
             if filled_at < cut_time:
                 break
-            entry_time = filled_at.strftime('%H:%M:%S')
-            entry_time_simple = self._get_simple_time(filled_at)
+            entry_time = self._round_time(filled_at)
             order_qty = float(order.filled_qty)
             entry_price = float(order.filled_avg_price)
             exit_time = ''
-            exit_time_simple = ''
             exit_price = None
             order_gain_str = ''
             order_side = 'long' if order.side == 'buy' else 'short'
             if order.symbol in position_symbols:
                 position_symbols.remove(order.symbol)
             else:
-                for j, prev_order in orders:
+                for j, prev_order in enumerate(orders):
                     if prev_order.filled_at is None or prev_order.symbol != order.symbol:
                         continue
                     prev_filled_at = pd.to_datetime(prev_order.filled_at).tz_convert(TIME_ZONE)
@@ -122,9 +120,7 @@ class Email:
                             order_gain *= -1
                         order_gain_str = f'<span {self._get_color_style(order_gain)}>{order_gain:+.2f}%</span>'
                         exit_time = entry_time
-                        entry_time = prev_filled_at.strftime('%H:%M:%S')
-                        exit_time_simple = entry_time_simple
-                        entry_time_simple = self._get_simple_time(prev_filled_at)
+                        entry_time = self._round_time(prev_filled_at)
                         orders_used[j] = True
                         break
             exit_price_str = f'{exit_price:.5g}' if exit_price else ''
@@ -135,8 +131,6 @@ class Email:
                                   f'<td>{exit_price_str}</td>'
                                   f'<td>{entry_time}</td>'
                                   f'<td>{exit_time}</td>'
-                                  f'<td>{entry_time_simple}</td>'
-                                  f'<td>{exit_time_simple}</td>'
                                   f'<td>{order_gain_str}</td>'
                                   '</tr>\n')
 
