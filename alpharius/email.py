@@ -18,7 +18,7 @@ import time
 
 _SMTP_HOST = 'smtp.163.com'
 _SMTP_PORT = 25
-_HTML_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'html')
+_HTML_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'html')
 
 
 class Email:
