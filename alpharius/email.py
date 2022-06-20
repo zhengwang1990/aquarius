@@ -22,7 +22,7 @@ _HTML_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file
 
 
 class Email:
-    def __init__(self, logger: Optional[logging.Logger]) -> None:
+    def __init__(self, logger: Optional[logging.Logger] = None) -> None:
         username = os.environ.get('EMAIL_USERNAME')
         password = os.environ.get('EMAIL_PASSWORD')
         receiver = os.environ.get('EMAIL_RECEIVER')
