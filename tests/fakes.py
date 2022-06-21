@@ -57,8 +57,8 @@ class FakeAlpaca:
 
     def list_orders(self, *args, **kwargs):
         self.list_orders_call_count += 1
-        return [Order('ORDER123', 'DIA', 'short', '14', None, '0', '2021-03-17T10:15:00.0Z', '12'),
-                Order('ORDER123', 'SPY', 'long', '12', None, '1', '2021-03-17T10:20:00.0Z', '13')]
+        return [Order('ORDER123', 'DIA', 'short', '14', None, '0', pd.to_datetime('2021-03-17T10:15:00.0Z'), '12'),
+                Order('ORDER123', 'SPY', 'long', '12', None, '1', pd.to_datetime('2021-03-17T10:20:00.0Z'), '13')]
 
     def submit_order(self, *args, **kwargs):
         self.submit_order_call_count += 1
@@ -88,13 +88,13 @@ class FakeAlpaca:
 
     def get_calendar(self, start, end, *args, **kwargs):
         self.get_calendar_call_count = 0
-        start_date = pd.to_datetime(start)
-        end_date = pd.to_datetime(end)
+        start_date = pd.Timestamp(start)
+        end_date = pd.Timestamp(end)
         calendar = []
         date = start_date
         while date <= end_date:
             if date.isoweekday() < 6:
-                calendar.append(Calendar(date.strftime('%F'), '09:30', '16:00'))
+                calendar.append(Calendar(date, datetime.time(9, 30), datetime.time(16, 0)))
             date += datetime.timedelta(days=1)
         return calendar
 

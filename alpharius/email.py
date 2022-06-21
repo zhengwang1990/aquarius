@@ -58,7 +58,7 @@ class Email:
         return 'style="color:{};"'.format('green' if value >= 0 else 'red')
 
     @staticmethod
-    def _round_time(t: datetime.datetime):
+    def _round_time(t: pd.Timestamp):
         if t.second < 30:
             return t.strftime('%H:%M')
         return (t + datetime.timedelta(minutes=1)).strftime('%H:%M')
@@ -88,18 +88,18 @@ class Email:
                                f'<td {self._get_color_style(gain)}>{gain * 100:+.2f}%</td>'
                                '</td>\n')
 
-        orders = self._alpaca.list_orders(status='closed', after=market_dates[-2],
+        orders = self._alpaca.list_orders(status='closed', after=market_dates[-2].strftime('%F'),
                                           direction='desc')
         orders_used = [False] * len(orders)
         position_symbols = set([position.symbol for position in positions])
         transactions_html = ''
-        cut_time = pd.to_datetime(market_dates[-1]).tz_localize(TIME_ZONE)
+        cut_time = market_dates[-1].tz_localize(TIME_ZONE)
         for i in range(len(orders)):
             order = orders[i]
             used = orders_used[i]
             if order.filled_at is None or used:
                 continue
-            filled_at = pd.to_datetime(order.filled_at).tz_convert(TIME_ZONE)
+            filled_at = order.filled_at.tz_convert(TIME_ZONE)
             if filled_at < cut_time:
                 break
             entry_time = self._round_time(filled_at)
@@ -115,7 +115,7 @@ class Email:
                 for j, prev_order in enumerate(orders):
                     if prev_order.filled_at is None or prev_order.symbol != order.symbol:
                         continue
-                    prev_filled_at = pd.to_datetime(prev_order.filled_at).tz_convert(TIME_ZONE)
+                    prev_filled_at = prev_order.filled_at.tz_convert(TIME_ZONE)
                     if prev_filled_at < filled_at and prev_order.side != order.side:
                         exit_price = entry_price
                         entry_price = float(prev_order.filled_avg_price)
@@ -144,8 +144,8 @@ class Email:
         account_equity = float(account.equity) - cash_reserve
         account_cash = float(account.cash) - cash_reserve
         history_length = 10
-        history = self._alpaca.get_portfolio_history(date_start=market_dates[-history_length],
-                                                     date_end=market_dates[-2],
+        history = self._alpaca.get_portfolio_history(date_start=market_dates[-history_length].strftime('%F'),
+                                                     date_end=market_dates[-2].strftime('%F'),
                                                      timeframe='1D')
         for i in range(len(history.equity)):
             history.equity[i] = (history.equity[i] - cash_reserve
@@ -161,7 +161,7 @@ class Email:
         historical_value.append(account_equity / equity_denominator)
         for i in range(historical_start):
             historical_value[i] = None
-        historical_date = [pd.to_datetime(m) for m in market_dates[-history_length:]]
+        historical_date = [market_day for market_day in market_dates[-history_length:]]
         market_symbols = ['DIA', 'SPY', 'QQQ']
         market_values = {}
         for symbol in market_symbols:

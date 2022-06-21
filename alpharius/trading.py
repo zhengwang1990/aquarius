@@ -80,7 +80,7 @@ class Trading:
         # Check if today is a trading day
         today_str = self._today.strftime('%F')
         calendar = self._alpaca.get_calendar(start=today_str, end=today_str)
-        if not calendar or calendar[0].date != today_str:
+        if not calendar or calendar[0].date.strftime('%F') != today_str:
             self._logger.info('Market does not open on [%s]', today_str)
             return
 
