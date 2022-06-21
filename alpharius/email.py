@@ -3,6 +3,7 @@ from .data import HistoricalDataLoader
 from typing import Optional, Union
 import alpaca_trade_api as tradeapi
 import datetime
+import functools
 import email.mime.image as image
 import email.mime.multipart as multipart
 import email.mime.text as text
@@ -34,7 +35,8 @@ class Email:
         self._sender = f'Stock Trading System <{username}@163.com>'
         self._receiver = receiver
         self._alpaca = tradeapi.REST()
-        self._data_loader = HistoricalDataLoader(TimeInterval.DAY, DEFAULT_DATA_SOURCE)
+        self._interday_data_loader = HistoricalDataLoader(TimeInterval.DAY, DEFAULT_DATA_SOURCE)
+        self._intraday_data_loader = HistoricalDataLoader(TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
         self._create_client(username, password)
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
@@ -62,6 +64,17 @@ class Email:
         if t.second < 30:
             return t.strftime('%H:%M')
         return (t + datetime.timedelta(minutes=1)).strftime('%H:%M')
+
+    @functools.lru_cache()
+    def _load_daily_data(self, symbol: str, day: DATETIME_TYPE) -> pd.DataFrame:
+        return self._intraday_data_loader.load_daily_data(symbol, day)
+
+    def _get_historical_price(self, symbol: str, t: pd.Timestamp) -> Optional[float]:
+        intraday_data = self._load_daily_data(symbol, t)
+        round_t_str = t.strftime('%F ') + self._round_time(t) + ':00'
+        round_t = pd.to_datetime(round_t_str).tz_localize(TIME_ZONE)
+        ind = timestamp_to_index(intraday_data.index, round_t)
+        return intraday_data['Close'][ind]
 
     def send_email(self):
         if not self._client:
@@ -103,11 +116,11 @@ class Email:
             if filled_at < cut_time:
                 break
             entry_time = self._round_time(filled_at)
-            order_qty = float(order.filled_qty)
             entry_price = float(order.filled_avg_price)
             exit_time = ''
             exit_price = None
             order_gain_str = ''
+            slippage_cost = ''
             order_side = 'long' if order.side == 'buy' else 'short'
             if order.symbol in position_symbols:
                 position_symbols.remove(order.symbol)
@@ -126,17 +139,25 @@ class Email:
                         order_gain_str = f'<span {self._get_color_style(order_gain)}>{order_gain:+.2f}%</span>'
                         exit_time = entry_time
                         entry_time = self._round_time(prev_filled_at)
+                        theory_entry_price = self._get_historical_price(order.symbol, prev_filled_at)
+                        theory_exit_price = self._get_historical_price(order.symbol, filled_at)
+                        if theory_entry_price and theory_exit_price:
+                            theory_gain = (theory_exit_price / theory_entry_price - 1) * 100
+                            if order_side == 'short':
+                                theory_gain *= -1
+                            diff_gain = order_gain - theory_gain
+                            slippage_cost = f'<span {self._get_color_style(diff_gain)}>{diff_gain:+.2f}%</span>'
                         orders_used[j] = True
                         break
             exit_price_str = f'{exit_price:.5g}' if exit_price else ''
             transactions_html += (f'<tr><th scope="row">{order.symbol}</th>'
                                   f'<td>{order_side}</td>'
-                                  f'<td>{order_qty:.5g}</td>'
                                   f'<td>{entry_price:.5g}</td>'
                                   f'<td>{exit_price_str}</td>'
                                   f'<td>{entry_time}</td>'
                                   f'<td>{exit_time}</td>'
                                   f'<td>{order_gain_str}</td>'
+                                  f'<td>{slippage_cost}</td>'
                                   '</tr>\n')
 
         account = self._alpaca.get_account()
@@ -165,7 +186,7 @@ class Email:
         market_symbols = ['DIA', 'SPY', 'QQQ']
         market_values = {}
         for symbol in market_symbols:
-            symbol_data = self._data_loader.load_data_list(
+            symbol_data = self._interday_data_loader.load_data_list(
                 symbol, historical_date[0],
                 historical_date[-1] + datetime.timedelta(days=1))
             symbol_close = np.array(symbol_data['Close'])
