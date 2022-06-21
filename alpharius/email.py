@@ -72,9 +72,10 @@ class Email:
     def _get_historical_price(self, symbol: str, t: pd.Timestamp) -> Optional[float]:
         intraday_data = self._load_daily_data(symbol, t)
         round_t_str = t.strftime('%F ') + self._round_time(t) + ':00'
-        round_t = pd.to_datetime(round_t_str).tz_localize(TIME_ZONE)
+        round_t = pd.to_datetime(round_t_str).tz_localize(TIME_ZONE) - datetime.timedelta(minutes=5)
         ind = timestamp_to_index(intraday_data.index, round_t)
-        return intraday_data['Close'][ind]
+        if ind is not None:
+            return intraday_data['Close'][ind]
 
     def send_email(self):
         if not self._client:
@@ -159,7 +160,6 @@ class Email:
                                   f'<td>{order_gain_str}</td>'
                                   f'<td>{slippage_cost}</td>'
                                   '</tr>\n')
-
         account = self._alpaca.get_account()
         cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         account_equity = float(account.equity) - cash_reserve
