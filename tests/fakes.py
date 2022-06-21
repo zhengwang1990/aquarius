@@ -1,6 +1,7 @@
 import alpharius
 import collections
 import datetime
+import itertools
 import pandas as pd
 import unittest.mock as mock
 
@@ -33,6 +34,7 @@ class FakeAlpaca:
         self.get_portfolio_history_call_count = 0
         self.get_bars_call_count = 0
         self.get_calendar_call_count = 0
+        self._value_cycle = itertools.cycle([40, 41, 43, 42, 41.5, 50])
 
     def get_account(self):
         self.get_account_call_count += 1
@@ -73,14 +75,18 @@ class FakeAlpaca:
     def get_bars(self, symbol, timeframe, start, end, *args, **kwargs):
         self.get_bars_call_count += 1
         if timeframe.value == '1Day':
-            results = [Bar(pd.to_datetime(t, unit='s', utc=True), 40, 41, 39, 40.5, 40.123, 10)
-                       for t in range(int(pd.to_datetime('2021-02-17').timestamp()),
-                                      int(pd.to_datetime('2021-03-19').timestamp()),
-                                      86400)]
+            results = [Bar(pd.to_datetime(t, unit='s', utc=True),
+                           40, 41, 39, next(self._value_cycle), 40.123, 10)
+                       for t in range(int(pd.to_datetime(start).timestamp()),
+                                      int(pd.to_datetime(end).timestamp() + 86400),
+                                      86400)
+                       if pd.to_datetime(t, unit='s').isoweekday() < 6]
         elif timeframe.value == '5Min':
-            results = [Bar(pd.to_datetime(t, unit='s', utc=True), 40, 41, 39, 40.5, 40.123, 10)
-                       for t in range(int(pd.to_datetime('2021-03-17 09:30:00-04:00').timestamp()),
-                                      int(pd.to_datetime('2021-03-17 16:05:00-04:00').timestamp()),
+            day_str = pd.to_datetime(start).strftime('%F')
+            results = [Bar(pd.to_datetime(t, unit='s', utc=True),
+                           40, 41, 39, next(self._value_cycle), 40.123, 10)
+                       for t in range(int(pd.to_datetime(f'{day_str} 09:30:00-04:00').timestamp()),
+                                      int(pd.to_datetime(f'{day_str} 16:05:00-04:00').timestamp()),
                                       300)]
         else:
             raise ValueError('Time frame must be 5 min or 1 day.')
@@ -103,19 +109,23 @@ class FakePolygon:
 
     def __init__(self):
         self.stocks_equities_aggregates_call_count = 0
+        self._value_cycle = itertools.cycle([40, 41, 43, 42, 41.5, 50])
 
-    def stocks_equities_aggregates(self, ticker, multiplier, timespan, *args, **kwargs):
+    def stocks_equities_aggregates(self, ticker, multiplier, timespan, from_, to, *args, **kwargs):
         self.stocks_equities_aggregates_call_count += 1
         if multiplier == 1 and timespan == 'day':
-            results = [{'t': str(t * 1000), 'o': 40, 'h': 41, 'l': 39, 'c': 40.5, 'vw': 40.123, 'v': 10}
-                       for t in range(int(pd.to_datetime('2021-02-17').timestamp()),
-                                      int(pd.to_datetime('2021-03-19').timestamp()),
-                                      86400)]
+            start = pd.to_datetime(from_, unit='ms', utc=True)
+            end = pd.to_datetime(to, unit='ms', utc=True)
+            results = [{'t': str(t * 1000), 'o': 40, 'h': 41, 'l': 39,
+                        'c': next(self._value_cycle), 'vw': 40.123, 'v': 10}
+                       for t in range(int(pd.to_datetime(start.date()).timestamp()),
+                                      int(pd.to_datetime(end.date()).timestamp() + 86400),
+                                      86400)
+                       if pd.to_datetime(t, unit='s').isoweekday() < 6]
         elif multiplier == 5 and timespan == 'minute':
-            results = [{'t': str(t * 1000), 'o': 40, 'h': 41, 'l': 39, 'c': 40.5, 'vw': 40.123, 'v': 10}
-                       for t in range(int(pd.to_datetime('2021-03-17 09:30:00-04:00').timestamp()),
-                                      int(pd.to_datetime('2021-03-17 16:05:00-04:00').timestamp()),
-                                      300)]
+            results = [{'t': str(t * 1000), 'o': 40, 'h': 41, 'l': 39,
+                        'c': next(self._value_cycle), 'vw': 40.123, 'v': 10}
+                       for t in range(from_ // 1000, to // 1000 + 300, 300)]
         else:
             raise ValueError('Time frame must be 5 min or 1 day.')
 

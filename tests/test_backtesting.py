@@ -50,7 +50,7 @@ class TestBacktesting(unittest.TestCase):
         fake_processor_factory = FakeProcessorFactory(trading_frequency)
         fake_processor = fake_processor_factory.processor
         backtesting = alpharius.Backtesting(start_date=pd.to_datetime('2021-03-17'),
-                                            end_date=pd.to_datetime('2021-03-18'),
+                                            end_date=pd.to_datetime('2021-03-24'),
                                             processor_factories=[fake_processor_factory])
 
         backtesting.run()
