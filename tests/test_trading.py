@@ -5,7 +5,6 @@ import alpaca_trade_api as tradeapi
 import alpharius
 import email.mime.image as image
 import email.mime.multipart as multipart
-import datetime
 import itertools
 import matplotlib.pyplot as plt
 import os
