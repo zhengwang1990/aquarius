@@ -5,7 +5,7 @@ from typing import List
 import datetime
 import numpy as np
 
-NUM_UNIVERSE_SYMBOLS = 40
+NUM_UNIVERSE_SYMBOLS = 20
 ENTRY_TIME = datetime.time(10, 0)
 EXIT_TIME = datetime.time(16, 0)
 
@@ -53,31 +53,25 @@ class ZScoreProcessor(Processor):
                          for i in range(1, len(intraday_closes))]
         z_price = (price_changes[-1] - np.mean(price_changes)) / (np.std(price_changes) + 1E-7)
         z_volume = (intraday_volumes[-1] - np.mean(intraday_volumes)) / (np.std(intraday_volumes) + 1E-7)
-        is_long = False
-        is_short = False
-        is_long = is_long or (z_price > 4 and z_volume > 6 and intraday_closes[-1] > intraday_closes[-2])
-        is_long = is_long or (z_price > 3 and intraday_closes[-1] < intraday_closes[-2])
-        is_short = is_short or (z_price > 3 and z_volume < 0 and intraday_closes[-1] > intraday_closes[-2])
-        is_short = is_short and (context.symbol in self._shortable_symbols)
-        is_trade = is_long or is_short
+        is_trade = False
+        is_trade = is_trade or (z_price > 4 and z_volume > 6 and intraday_closes[-1] > intraday_closes[-2])
+        is_trade = is_trade or (z_price > 3 and intraday_closes[-1] < intraday_closes[-2])
+        is_trade = is_trade and (context.current_price / context.prev_day_close < 2)
         if is_trade or context.mode == Mode.TRADE:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Price z-score: {z_price:.1f}. Volume z-score: {z_volume:.1f}. '
                                f'Current price {context.current_price}.')
         if not is_trade:
             return
-        self._positions[context.symbol] = {'entry_time': context.current_time,
-                                           'side': 'long' if is_long else 'short'}
-        action_type = ActionType.BUY_TO_OPEN if is_long else ActionType.SELL_TO_OPEN
-        return Action(context.symbol, action_type, 1, context.current_price)
+        self._positions[context.symbol] = {'entry_time': context.current_time}
+        return Action(context.symbol, ActionType.BUY_TO_OPEN, 1, context.current_price)
 
     def _close_position(self, context: Context) -> Optional[Action]:
         position = self._positions[context.symbol]
         if context.current_time < position['entry_time'] + datetime.timedelta(minutes=5):
             return
-        action_type = ActionType.SELL_TO_CLOSE if position['side'] == 'long' else ActionType.BUY_TO_CLOSE
         self._positions.pop(context.symbol)
-        return Action(context.symbol, action_type, 1, context.current_price)
+        return Action(context.symbol, ActionType.SELL_TO_CLOSE, 1, context.current_price)
 
 
 class ZScoreProcessorFactory(ProcessorFactory):

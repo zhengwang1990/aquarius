@@ -152,7 +152,7 @@ class IntradayVolatilityStockUniverse(StockUniverse):
         self._top_volumes = TopVolumeUniverse(lookback_start_date,
                                               lookback_end_date,
                                               data_source,
-                                              1000)
+                                              500)
         self._num_stocks = num_stocks
 
     def _get_intraday_range(self, symbol: str, prev_day_ind: int) -> float:
