@@ -45,8 +45,11 @@ class ZScoreProcessor(Processor):
     def _open_position(self, context: Context) -> Optional[Action]:
         if context.current_time.time() <= ENTRY_TIME or context.current_time.time() >= EXIT_TIME:
             return
-        intraday_closes = context.intraday_lookback['Close']
-        intraday_volumes = context.intraday_lookback['Volume']
+        market_open_ind = 0
+        while context.intraday_lookback.index[market_open_ind].time() < datetime.time(9, 30):
+            market_open_ind += 1
+        intraday_closes = context.intraday_lookback['Close'][market_open_ind:]
+        intraday_volumes = context.intraday_lookback['Volume'][market_open_ind:]
         if len(intraday_closes) < 6:
             return
         price_changes = [abs(intraday_closes[i] - intraday_closes[i - 1])
