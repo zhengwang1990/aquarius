@@ -57,8 +57,8 @@ class ZScoreProcessor(Processor):
         z_price = (price_changes[-1] - np.mean(price_changes)) / (np.std(price_changes) + 1E-7)
         z_volume = (intraday_volumes[-1] - np.mean(intraday_volumes)) / (np.std(intraday_volumes) + 1E-7)
         is_trade = False
-        is_trade = is_trade or (z_price > 4 and z_volume > 6 and intraday_closes[-1] > intraday_closes[-2])
-        is_trade = is_trade or (z_price > 3 and intraday_closes[-1] < intraday_closes[-2])
+        is_trade = is_trade or (z_price > 3 and z_volume > 6 and intraday_closes[-1] > intraday_closes[-2])
+        is_trade = is_trade or (z_price > 3.5 and intraday_closes[-1] < intraday_closes[-2])
         is_trade = is_trade and (context.current_price / context.prev_day_close < 2)
         if is_trade or context.mode == Mode.TRADE:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
