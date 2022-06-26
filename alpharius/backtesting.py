@@ -453,6 +453,8 @@ class Backtesting:
         n_trades = self._num_win + self._num_lose
         success_rate = self._num_win / n_trades if n_trades > 0 else 0
         market_dates = self._market_dates[:len(self._daily_equity) - 1]
+        if not market_dates:
+            return
         summary = [['Time Range', f'{market_dates[0].date()} ~ {market_dates[-1].date()}'],
                    ['Success Rate', f'{success_rate * 100:.2f}%'],
                    ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)']]

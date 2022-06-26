@@ -99,7 +99,7 @@ class OvernightProcessor(Processor):
         for close_price, open_price in zip(closes, opens):
             overnight_returns.append(np.log(open_price / close_price))
         overnight_returns.sort()
-        performance = float(np.sum(overnight_returns[DAYS_IN_A_MONTH:-DAYS_IN_A_MONTH]))
+        performance = float(np.sum(overnight_returns[30:-30]))
         return performance
 
 

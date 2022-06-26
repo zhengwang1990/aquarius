@@ -43,7 +43,8 @@ class ZScoreProcessor(Processor):
             return self._open_position(context)
 
     def _open_position(self, context: Context) -> Optional[Action]:
-        if context.current_time.time() <= ENTRY_TIME or context.current_time.time() >= EXIT_TIME:
+        t = context.current_time.time()
+        if t <= ENTRY_TIME or t >= EXIT_TIME:
             return
         market_open_ind = 0
         while context.intraday_lookback.index[market_open_ind].time() < datetime.time(9, 30):
@@ -58,7 +59,8 @@ class ZScoreProcessor(Processor):
         z_volume = (intraday_volumes[-1] - np.mean(intraday_volumes)) / (np.std(intraday_volumes) + 1E-7)
         is_trade = False
         is_trade = is_trade or (z_price > 3 and z_volume > 6 and intraday_closes[-1] > intraday_closes[-2])
-        is_trade = is_trade or (z_price > 3.5 and intraday_closes[-1] < intraday_closes[-2])
+        threshold = 2.5 if t < datetime.time(11, 0) else 3.5
+        is_trade = is_trade or (z_price > threshold and intraday_closes[-1] < intraday_closes[-2])
         is_trade = is_trade and (context.current_price / context.prev_day_close < 2)
         if is_trade or context.mode == Mode.TRADE:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
