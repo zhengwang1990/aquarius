@@ -146,13 +146,14 @@ class IntradayVolatilityStockUniverse(StockUniverse):
                  lookback_start_date: DATETIME_TYPE,
                  lookback_end_date: DATETIME_TYPE,
                  data_source: DataSource,
-                 num_stocks: int = 50):
+                 num_stocks: int = 50,
+                 num_top_volume: int = 500):
         super().__init__(lookback_start_date, lookback_end_date, data_source)
         self._stock_symbols = set(COMPANY_SYMBOLS)
         self._top_volumes = TopVolumeUniverse(lookback_start_date,
                                               lookback_end_date,
                                               data_source,
-                                              500)
+                                              num_top_volume)
         self._num_stocks = num_stocks
 
     def _get_intraday_range(self, symbol: str, prev_day_ind: int) -> float:
@@ -184,3 +185,49 @@ class IntradayVolatilityStockUniverse(StockUniverse):
 
         intraday_volatilities.sort(key=lambda s: s[1], reverse=True)
         return [s[0] for s in intraday_volatilities[:self._num_stocks]]
+
+
+class TopIntradayReturnStockUniverse(StockUniverse):
+
+    def __init__(self,
+                 lookback_start_date: DATETIME_TYPE,
+                 lookback_end_date: DATETIME_TYPE,
+                 data_source: DataSource,
+                 num_stocks: int = 50,
+                 num_top_volume: int = 500):
+        super().__init__(lookback_start_date, lookback_end_date, data_source)
+        self._stock_symbols = set(COMPANY_SYMBOLS)
+        self._top_volumes = TopVolumeUniverse(lookback_start_date,
+                                              lookback_end_date,
+                                              data_source,
+                                              num_top_volume)
+        self._num_stocks = num_stocks
+
+    def _get_intraday_return(self, symbol: str, prev_day_ind: int) -> float:
+        hist = self._historical_data[symbol]
+        res = []
+        for i in range(max(prev_day_ind - DAYS_IN_A_MONTH + 1, 1), prev_day_ind + 1):
+            c = hist['Close'][i]
+            o = hist['Open'][i]
+            res.append(c - o)
+        return np.average(res) if res else 0
+
+    def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
+        prev_day = self.get_prev_day(view_time)
+        intraday_returns = []
+        top_volume_symbols = set(self._top_volumes.get_stock_universe_impl(view_time))
+        for symbol, hist in self._historical_data.items():
+            if symbol not in self._stock_symbols:
+                continue
+            if symbol not in top_volume_symbols:
+                continue
+            if prev_day not in hist.index:
+                continue
+            prev_day_ind = timestamp_to_index(hist.index, prev_day)
+            if prev_day_ind < DAYS_IN_A_MONTH:
+                continue
+            intraday_return = self._get_intraday_return(symbol, prev_day_ind)
+            intraday_returns.append((symbol, intraday_return))
+
+        intraday_returns.sort(key=lambda s: s[1], reverse=True)
+        return [s[0] for s in intraday_returns[:self._num_stocks]]
