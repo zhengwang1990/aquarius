@@ -1,11 +1,11 @@
 from alpharius.common import *
 from alpharius.data import get_shortable_symbols
-from alpharius.stock_universe import TopIntradayReturnStockUniverse
+from alpharius.stock_universe import IntradayGainStockUniverse
 from typing import List
 import datetime
 import numpy as np
 
-NUM_UNIVERSE_SYMBOLS = 20
+NUM_UNIVERSE_SYMBOLS = 15
 ENTRY_TIME = datetime.time(10, 0)
 EXIT_TIME = datetime.time(13, 0)
 
@@ -20,10 +20,10 @@ class O2lProcessor(Processor):
                  output_dir: str) -> None:
         super().__init__()
         self._positions = dict()
-        self._stock_universe = TopIntradayReturnStockUniverse(lookback_start_date,
-                                                              lookback_end_date,
-                                                              data_source,
-                                                              num_stocks=NUM_UNIVERSE_SYMBOLS)
+        self._stock_universe = IntradayGainStockUniverse(lookback_start_date,
+                                                         lookback_end_date,
+                                                         data_source,
+                                                         num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._output_dir = output_dir
         self._logger = logging_config(os.path.join(self._output_dir, 'o2l_processor.txt'),
                                       detail=True,

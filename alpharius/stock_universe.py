@@ -187,7 +187,7 @@ class IntradayVolatilityStockUniverse(StockUniverse):
         return [s[0] for s in intraday_volatilities[:self._num_stocks]]
 
 
-class TopIntradayReturnStockUniverse(StockUniverse):
+class IntradayGainStockUniverse(StockUniverse):
 
     def __init__(self,
                  lookback_start_date: DATETIME_TYPE,
