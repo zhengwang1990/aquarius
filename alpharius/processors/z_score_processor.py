@@ -1,5 +1,4 @@
 from alpharius.common import *
-from alpharius.data import get_shortable_symbols
 from alpharius.stock_universe import IntradayVolatilityStockUniverse
 from typing import List
 import datetime
@@ -27,7 +26,6 @@ class ZScoreProcessor(Processor):
         self._logger = logging_config(os.path.join(self._output_dir, 'z_score_processor.txt'),
                                       detail=True,
                                       name='z_score_processor')
-        self._shortable_symbols = set(get_shortable_symbols())
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN

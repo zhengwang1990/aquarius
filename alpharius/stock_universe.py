@@ -187,7 +187,7 @@ class IntradayVolatilityStockUniverse(StockUniverse):
         return [s[0] for s in intraday_volatilities[:self._num_stocks]]
 
 
-class IntradayGainStockUniverse(StockUniverse):
+class MonthlyGainStockUniverse(StockUniverse):
 
     def __init__(self,
                  lookback_start_date: DATETIME_TYPE,
@@ -203,14 +203,14 @@ class IntradayGainStockUniverse(StockUniverse):
                                               num_top_volume)
         self._num_stocks = num_stocks
 
-    def _get_intraday_return(self, symbol: str, prev_day_ind: int) -> float:
+    def _get_monthly_gain(self, symbol: str, prev_day_ind: int) -> float:
         hist = self._historical_data[symbol]
         res = []
         for i in range(max(prev_day_ind - DAYS_IN_A_MONTH + 1, 1), prev_day_ind + 1):
-            c = hist['Close'][i]
-            o = hist['Open'][i]
-            res.append(c - o)
-        return np.average(res) if res else 0
+            curr_close = hist['Close'][i]
+            prev_close = hist['Close'][i - 1]
+            res.append(curr_close / prev_close - 1)
+        return np.average(sorted(res)[5:-5]) if res else 0
 
     def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
         prev_day = self.get_prev_day(view_time)
@@ -226,7 +226,7 @@ class IntradayGainStockUniverse(StockUniverse):
             prev_day_ind = timestamp_to_index(hist.index, prev_day)
             if prev_day_ind < DAYS_IN_A_MONTH:
                 continue
-            intraday_return = self._get_intraday_return(symbol, prev_day_ind)
+            intraday_return = self._get_monthly_gain(symbol, prev_day_ind)
             intraday_returns.append((symbol, intraday_return))
 
         intraday_returns.sort(key=lambda s: s[1], reverse=True)
