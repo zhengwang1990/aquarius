@@ -1,5 +1,4 @@
 from alpharius.common import *
-from alpharius.data import get_shortable_symbols
 from alpharius.stock_universe import MonthlyGainStockUniverse
 from typing import List
 import datetime
@@ -27,7 +26,6 @@ class O2lProcessor(Processor):
         self._logger = logging_config(os.path.join(self._output_dir, 'o2l_processor.txt'),
                                       detail=True,
                                       name='o2l_processor')
-        self._shortable_symbols = set(get_shortable_symbols())
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -37,7 +35,7 @@ class O2lProcessor(Processor):
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
-                        list(self._positions.keys())) & self._shortable_symbols)
+                        list(self._positions.keys())))
 
     def process_data(self, context: Context) -> Optional[Action]:
         if context.symbol in self._positions:
