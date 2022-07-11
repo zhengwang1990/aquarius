@@ -6,7 +6,6 @@ import datetime
 import numpy as np
 
 NUM_UNIVERSE_SYMBOLS = 15
-ENTRY_TIME = datetime.time(10, 0)
 EXIT_TIME = datetime.time(13, 0)
 
 
@@ -38,7 +37,7 @@ class O2lProcessor(Processor):
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
-                        list(self._positions.keys())))
+                        list(self._positions.keys())) & self._shortable_symbols)
 
     def process_data(self, context: Context) -> Optional[Action]:
         if context.symbol in self._positions:
@@ -48,7 +47,7 @@ class O2lProcessor(Processor):
 
     def _open_position(self, context: Context) -> Optional[Action]:
         t = context.current_time.time()
-        if t <= ENTRY_TIME or t >= EXIT_TIME:
+        if t >= EXIT_TIME:
             return
         interday_opens = context.interday_lookback['Open'][-DAYS_IN_A_MONTH:]
         interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
