@@ -125,7 +125,7 @@ def logging_config(logging_file=None, detail=True, name=None) -> logging.Logger:
     logger.propagate = False
     if detail:
         formatter = logging.Formatter(
-            '[%(levelname)s] [%(asctime)s] [%(filename)s:%(lineno)d]\n%(message)s')
+            '[%(levelname)s] [%(asctime)s] [%(filename)s:%(lineno)d] %(message)s')
     else:
         formatter = logging.Formatter('%(message)s')
     stream_handler = logging.StreamHandler()

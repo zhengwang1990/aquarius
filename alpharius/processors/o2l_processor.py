@@ -74,7 +74,7 @@ class O2lProcessor(Processor):
             return
         if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=15) or
                 context.current_time.time() >= EXIT_TIME):
-            self._positions['status'] = 'inactive'
+            position['status'] = 'inactive'
             return Action(context.symbol, ActionType.SELL_TO_CLOSE, 1, context.current_price)
 
 

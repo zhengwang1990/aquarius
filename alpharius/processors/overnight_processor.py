@@ -72,7 +72,7 @@ class OvernightProcessor(Processor):
             price = current_prices[symbol]
             performance_info.append([symbol, price, metric])
         header = get_header(f'Metric Info {current_time.date()}')
-        self._logger.debug(header + '\n' + tabulate.tabulate(
+        self._logger.debug('\n' + header + '\n' + tabulate.tabulate(
             performance_info, headers=['Symbol', 'Price', 'Performance'], tablefmt='grid'))
 
     @staticmethod
