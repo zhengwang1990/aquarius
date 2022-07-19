@@ -60,7 +60,7 @@ class ZScoreProcessor(Processor):
         threshold = 2.5 if t < datetime.time(11, 0) else 3.5
         is_trade = is_trade or (z_price > threshold and intraday_closes[-1] < intraday_closes[-2])
         is_trade = is_trade and (context.current_price / context.prev_day_close < 2)
-        if is_trade or context.mode == Mode.TRADE:
+        if is_trade or (context.mode == Mode.TRADE and z_price > 1):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Price z-score: {z_price:.1f}. Volume z-score: {z_volume:.1f}. '
                                f'Current price {context.current_price}.')
