@@ -186,6 +186,10 @@ class Trading:
             self._intraday_data[symbol] = t.result()
         latest_trades = data_loader.get_last_trades(all_symbols)
         for symbol, price in latest_trades.items():
+            old_value = self._intraday_data[symbol]['Close'][-1]
+            if abs(price / old_value - 1) > 0.01:
+                self._logger.info('[%s] Current price is updated from [%.5g] to [%.5g]',
+                                  symbol, old_value, price)
             self._intraday_data[symbol]['Close'][-1] = price
         self._logger.info('Intraday data updated for [%d] symbols. Time elapsed [%.2fs]',
                           len(tasks),
@@ -198,6 +202,9 @@ class Trading:
         return None
 
     def _trade(self, actions: List[Action]) -> None:
+        if not actions:
+            return
+
         unique_actions = get_unique_actions(actions)
 
         close_actions = [action for action in unique_actions
