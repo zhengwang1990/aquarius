@@ -1,5 +1,5 @@
 from .common import *
-from .data import HistoricalDataLoader
+from .data import DataLoader
 from typing import Optional, Union
 import alpaca_trade_api as tradeapi
 import datetime
@@ -35,8 +35,8 @@ class Email:
         self._sender = f'Stock Trading System <{username}@163.com>'
         self._receiver = receiver
         self._alpaca = tradeapi.REST()
-        self._interday_data_loader = HistoricalDataLoader(TimeInterval.DAY, DEFAULT_DATA_SOURCE)
-        self._intraday_data_loader = HistoricalDataLoader(TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
+        self._interday_data_loader = DataLoader(TimeInterval.DAY, DEFAULT_DATA_SOURCE)
+        self._intraday_data_loader = DataLoader(TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
         self._create_client(username, password)
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)

@@ -214,7 +214,7 @@ class MonthlyGainStockUniverse(StockUniverse):
 
     def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
         prev_day = self.get_prev_day(view_time)
-        intraday_returns = []
+        monthly_returns = []
         top_volume_symbols = set(self._top_volumes.get_stock_universe_impl(view_time))
         for symbol, hist in self._historical_data.items():
             if symbol not in self._stock_symbols:
@@ -226,8 +226,8 @@ class MonthlyGainStockUniverse(StockUniverse):
             prev_day_ind = timestamp_to_index(hist.index, prev_day)
             if prev_day_ind < DAYS_IN_A_MONTH:
                 continue
-            intraday_return = self._get_monthly_gain(symbol, prev_day_ind)
-            intraday_returns.append((symbol, intraday_return))
+            monthly_return = self._get_monthly_gain(symbol, prev_day_ind)
+            monthly_returns.append((symbol, monthly_return))
 
-        intraday_returns.sort(key=lambda s: s[1], reverse=True)
-        return [s[0] for s in intraday_returns[:self._num_stocks]]
+        monthly_returns.sort(key=lambda s: s[1], reverse=True)
+        return [s[0] for s in monthly_returns[:self._num_stocks]]

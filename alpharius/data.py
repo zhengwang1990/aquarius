@@ -24,7 +24,7 @@ class DataError(Exception):
     """Error in data loading."""
 
 
-class HistoricalDataLoader:
+class DataLoader:
 
     def __init__(self, time_interval: TimeInterval, data_source: DataSource, timeout: float = 5) -> None:
         self._time_interval = time_interval
@@ -190,6 +190,15 @@ class HistoricalDataLoader:
         df = pd.DataFrame(data, index=index, columns=_DATA_COLUMNS)
         return df
 
+    def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
+        if self._data_source == DataSource.ALPACA:
+            return self._alpaca_get_last_trades(symbols)
+        raise DataError(f'{self._data_source} is not supported')
+
+    def _alpaca_get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
+        trades = self._alpaca.get_latest_trades(symbols)
+        return {symbol: trade.p for symbol, trade in trades.items()}
+
 
 @functools.lru_cache()
 def get_tradable_symbols() -> List[str]:
@@ -224,7 +233,7 @@ def _load_cached_history(symbols: List[str],
                              start_time.strftime('%F'), end_time.strftime('%F'))
     if symbols:
         os.makedirs(cache_dir, exist_ok=True)
-    data_loader = HistoricalDataLoader(TimeInterval.DAY, data_source)
+    data_loader = DataLoader(TimeInterval.DAY, data_source)
     res = {}
     tasks = {}
     with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
@@ -240,7 +249,7 @@ def _load_cached_history(symbols: List[str],
 def _load_cached_symbol_history(symbol: str,
                                 start_time: DATETIME_TYPE,
                                 end_time: DATETIME_TYPE,
-                                data_loader: HistoricalDataLoader) -> pd.DataFrame:
+                                data_loader: DataLoader) -> pd.DataFrame:
     cache_file = os.path.join(CACHE_DIR, str(TimeInterval.DAY),
                               start_time.strftime('%F'), end_time.strftime('%F'),
                               f'history_{symbol}.csv')
@@ -272,7 +281,7 @@ def load_cached_daily_data(symbol: str,
     if os.path.isfile(cache_file):
         hist = pd.read_csv(cache_file, index_col=0, parse_dates=True)
     else:
-        data_loader = HistoricalDataLoader(time_interval, data_source)
+        data_loader = DataLoader(time_interval, data_source)
         hist = data_loader.load_daily_data(symbol, day)
         hist.to_csv(cache_file)
     return hist

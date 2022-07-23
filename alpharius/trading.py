@@ -1,5 +1,5 @@
 from .common import *
-from .data import load_tradable_history, HistoricalDataLoader
+from .data import load_tradable_history, DataLoader
 from .email import Email
 from concurrent import futures
 import alpaca_trade_api as tradeapi
@@ -33,6 +33,7 @@ class Trading:
         self._stock_universe = collections.defaultdict(set)
         self._interday_data = dict()
         self._intraday_data = dict()
+        self._latest_trades = dict()
         clock = self._alpaca.get_clock()
         self._market_open = clock.next_open.timestamp()
         self._market_close = clock.next_close.timestamp()
@@ -136,8 +137,10 @@ class Trading:
                 intraday_lookback = self._intraday_data[symbol]
                 interday_lookback = self._interday_data.get(symbol)
                 if interday_lookback is None:
+                    self._logger.warning('[%s] interday data not available', symbol)
                     continue
                 if not len(intraday_lookback):
+                    self._logger.warning('[%s] intraday data not available', symbol)
                     continue
                 current_price = intraday_lookback['Close'][-1]
                 context = Context(symbol=symbol,
@@ -168,16 +171,22 @@ class Trading:
     def _update_intraday_data(self, frequency_to_process: List[TradingFrequency]) -> None:
         update_start = time.time()
         tasks = dict()
-        data_loader = HistoricalDataLoader(TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
+        data_loader = DataLoader(TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
+        all_symbols = set()
+        for frequency, symbols in self._stock_universe.items():
+            if frequency not in frequency_to_process:
+                continue
+            all_symbols.update(symbols)
+        all_symbols = list(all_symbols)
         with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
-            for frequency, symbols in self._stock_universe.items():
-                if frequency not in frequency_to_process:
-                    continue
-                for symbol in symbols:
-                    t = pool.submit(data_loader.load_daily_data, symbol, self._today)
-                    tasks[symbol] = t
+            for symbol in all_symbols:
+                t = pool.submit(data_loader.load_daily_data, symbol, self._today)
+                tasks[symbol] = t
         for symbol, t in tasks.items():
             self._intraday_data[symbol] = t.result()
+        latest_trades = data_loader.get_last_trades(all_symbols)
+        for symbol, price in latest_trades.items():
+            self._intraday_data[symbol]['Close'][-1] = price
         self._logger.info('Intraday data updated for [%d] symbols. Time elapsed [%.2fs]',
                           len(tasks),
                           time.time() - update_start)

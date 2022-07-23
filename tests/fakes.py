@@ -18,6 +18,7 @@ Order = collections.namedtuple('Order', ['id', 'symbol', 'side', 'qty', 'notiona
 Bar = collections.namedtuple('Bar', ['t', 'o', 'h', 'l', 'c', 'vw', 'v'])
 History = collections.namedtuple('History', ['equity'])
 Calendar = collections.namedtuple('Calendar', ['date', 'open', 'close'])
+Trade = collections.namedtuple('Trade', ['p'])
 PolygonResponse = collections.namedtuple('PolygonResponse', ['status', 'results'])
 
 
@@ -34,6 +35,7 @@ class FakeAlpaca:
         self.get_portfolio_history_call_count = 0
         self.get_bars_call_count = 0
         self.get_calendar_call_count = 0
+        self.get_latest_trades_call_count = 0
         self._value_cycle = itertools.cycle([40, 41, 43, 42, 41.5, 50])
 
     def get_account(self):
@@ -93,7 +95,7 @@ class FakeAlpaca:
         return results
 
     def get_calendar(self, start, end, *args, **kwargs):
-        self.get_calendar_call_count = 0
+        self.get_calendar_call_count += 1
         start_date = pd.Timestamp(start)
         end_date = pd.Timestamp(end)
         calendar = []
@@ -103,6 +105,10 @@ class FakeAlpaca:
                 calendar.append(Calendar(date, datetime.time(9, 30), datetime.time(16, 0)))
             date += datetime.timedelta(days=1)
         return calendar
+
+    def get_latest_trades(self, symbols, *args, **kwargs):
+        self.get_latest_trades_call_count += 1
+        return {symbol: Trade(123) for symbol in symbols}
 
 
 class FakePolygon:

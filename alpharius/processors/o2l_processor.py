@@ -31,7 +31,10 @@ class O2lProcessor(Processor):
         return TradingFrequency.FIVE_MIN
 
     def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
-        self._positions = dict()
+        to_remove = [symbol for symbol, position in self._positions.items()
+                     if position['status'] != 'active']
+        for symbol in to_remove:
+            self._positions.pop(symbol)
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
