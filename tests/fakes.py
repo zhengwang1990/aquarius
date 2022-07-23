@@ -19,7 +19,8 @@ Bar = collections.namedtuple('Bar', ['t', 'o', 'h', 'l', 'c', 'vw', 'v'])
 History = collections.namedtuple('History', ['equity'])
 Calendar = collections.namedtuple('Calendar', ['date', 'open', 'close'])
 Trade = collections.namedtuple('Trade', ['p'])
-PolygonResponse = collections.namedtuple('PolygonResponse', ['status', 'results'])
+Agg = collections.namedtuple('Agg', ['timestamp', 'open', 'high', 'low', 'close', 'vwap', 'volume'])
+LastTrade = collections.namedtuple('LastTrade', ['price'])
 
 
 class FakeAlpaca:
@@ -114,28 +115,31 @@ class FakeAlpaca:
 class FakePolygon:
 
     def __init__(self):
-        self.stocks_equities_aggregates_call_count = 0
+        self.get_aggs_call_count = 0
+        self.get_last_trade_call_count = 0
         self._value_cycle = itertools.cycle([40, 41, 43, 42, 41.5, 50])
 
-    def stocks_equities_aggregates(self, ticker, multiplier, timespan, from_, to, *args, **kwargs):
-        self.stocks_equities_aggregates_call_count += 1
+    def get_aggs(self, ticker, multiplier, timespan, from_, to, *args, **kwargs):
+        self.get_aggs_call_count += 1
         if multiplier == 1 and timespan == 'day':
             start = pd.to_datetime(from_, unit='ms', utc=True)
             end = pd.to_datetime(to, unit='ms', utc=True)
-            results = [{'t': str(t * 1000), 'o': 40, 'h': 41, 'l': 39,
-                        'c': next(self._value_cycle), 'vw': 40.123, 'v': 10}
+            results = [Agg(t * 1000, 40, 41, 39, next(self._value_cycle), 40.123, 10)
                        for t in range(int(pd.to_datetime(start.date()).timestamp()),
                                       int(pd.to_datetime(end.date()).timestamp() + 86400),
                                       86400)
                        if pd.to_datetime(t, unit='s').isoweekday() < 6]
         elif multiplier == 5 and timespan == 'minute':
-            results = [{'t': str(t * 1000), 'o': 40, 'h': 41, 'l': 39,
-                        'c': next(self._value_cycle), 'vw': 40.123, 'v': 10}
+            results = [Agg(t * 1000, 40, 41, 39, next(self._value_cycle), 40.123, 10)
                        for t in range(from_ // 1000, to // 1000 + 300, 300)]
         else:
             raise ValueError('Time frame must be 5 min or 1 day.')
 
-        return PolygonResponse('OK', results)
+        return results
+
+    def get_last_trade(self, symbol, *args, **kwargs):
+        self.get_last_trade_call_count += 1
+        return LastTrade(123)
 
 
 class FakeProcessor(alpharius.Processor):

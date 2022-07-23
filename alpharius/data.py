@@ -41,7 +41,7 @@ class DataLoader:
         polygon_api_key = os.environ.get(_POLYGON_API_KEY_ENV)
         if not polygon_api_key:
             raise DataError('Polygon API Key not provided')
-        self._polygon_client = polygon.RESTClient(auth_key=polygon_api_key, timeout=int(self._timeout))
+        self._polygon_client = polygon.RESTClient()
         if self._time_interval == TimeInterval.FIVE_MIN:
             self._multiplier = 5
             self._timespan = 'minute'
@@ -107,22 +107,18 @@ class DataLoader:
                                 end_time: DATETIME_TYPE) -> pd.DataFrame:
         from_ = int(start_time.timestamp() * 1000)
         to = int(end_time.timestamp() * 1000)
-        response = self._polygon_client.stocks_equities_aggregates(
+        aggs = self._polygon_client.get_aggs(
             symbol, self._multiplier, self._timespan, from_=from_, to=to, limit=50000)
-        if response.status != 'OK':
-            raise DataError(f'Polygon response status {response.status}')
-        if not hasattr(response, 'results'):
-            return pd.DataFrame([], columns=['Open', 'High', 'Low', 'Close', 'Volume'])
         if self._time_interval == TimeInterval.DAY:
             index = pd.DatetimeIndex(
-                [pd.to_datetime(pd.to_datetime(int(res['t']), unit='ms', utc=True).tz_convert(TIME_ZONE).date())
-                 for res in response.results])
+                [pd.to_datetime(pd.to_datetime(agg.timestamp), unit='ms', utc=True).tz_convert(TIME_ZONE).date()
+                 for agg in aggs])
         else:
             index = pd.DatetimeIndex(
-                [pd.to_datetime(int(res['t']), unit='ms', utc=True).tz_convert(TIME_ZONE)
-                 for res in response.results])
-        df = pd.DataFrame([[res['o'], res['h'], res['l'], res['c'], res['v'],
-                            res['vw'] if 'vw' in res else res['c']] for res in response.results],
+                [pd.to_datetime(agg.timestamp, unit='ms', utc=True).tz_convert(TIME_ZONE)
+                 for agg in aggs])
+        df = pd.DataFrame([[agg.open, agg.high, agg.low, agg.close, agg.volume,
+                            agg.vwap] for agg in aggs],
                           index=index,
                           columns=_DATA_COLUMNS)
         return df
@@ -190,14 +186,25 @@ class DataLoader:
         df = pd.DataFrame(data, index=index, columns=_DATA_COLUMNS)
         return df
 
+    @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
     def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
         if self._data_source == DataSource.ALPACA:
             return self._alpaca_get_last_trades(symbols)
+        if self._data_source == DataSource.POLYGON:
+            return self._polygon_get_last_trades(symbols)
         raise DataError(f'{self._data_source} is not supported')
 
     def _alpaca_get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
         trades = self._alpaca.get_latest_trades(symbols)
         return {symbol: trade.p for symbol, trade in trades.items()}
+
+    def _polygon_get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
+        trades = dict()
+        for symbol in symbols:
+            trade = self._polygon_client.get_last_trade(symbol)
+            trades[symbol] = trade.price
+        return trades
+
 
 
 @functools.lru_cache()

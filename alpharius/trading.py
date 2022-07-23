@@ -186,11 +186,15 @@ class Trading:
             self._intraday_data[symbol] = t.result()
         latest_trades = data_loader.get_last_trades(all_symbols)
         for symbol, price in latest_trades.items():
-            old_value = self._intraday_data[symbol]['Close'][-1]
+            intraday_lookback = self._intraday_data[symbol]
+            if len(intraday_lookback) == 0:
+                self._logger.warning('[%s] intraday data not available', symbol)
+                continue
+            old_value = intraday_lookback['Close'][-1]
             if abs(price / old_value - 1) > 0.01:
                 self._logger.info('[%s] Current price is updated from [%.5g] to [%.5g]',
                                   symbol, old_value, price)
-            self._intraday_data[symbol]['Close'][-1] = price
+            intraday_lookback['Close'][-1] = price
         self._logger.info('Intraday data updated for [%d] symbols. Time elapsed [%.2fs]',
                           len(tasks),
                           time.time() - update_start)
