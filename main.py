@@ -20,6 +20,7 @@ def main():
         processors.OvernightProcessorFactory(),
         processors.ZScoreProcessorFactory(),
         processors.O2lProcessorFactory(),
+        processors.O2hProcessorFactory(),
     ]
     today = datetime.datetime.today()
     if args.mode == 'backtest':
