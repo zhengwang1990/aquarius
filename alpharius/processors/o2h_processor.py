@@ -78,7 +78,7 @@ class O2hProcessor(Processor):
         position = self._positions[context.symbol]
         if position['status'] != 'active':
             return
-        if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=15) or
+        if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
                 context.current_time.time() >= EXIT_TIME):
             position['status'] = 'inactive'
             return Action(context.symbol, ActionType.BUY_TO_CLOSE, 1, context.current_price)
