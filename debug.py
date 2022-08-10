@@ -1,9 +1,9 @@
+from alpharius import *
 import argparse
 import datetime
 import os
 import mplfinance as fplt
 import pandas as pd
-from alpharius import *
 
 CACHE_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'cache')
 
