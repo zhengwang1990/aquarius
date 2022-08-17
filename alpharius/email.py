@@ -260,8 +260,7 @@ class Email:
             account_html=account_html, transactions_html=transactions_html,
             positions_html=positions_html), 'html'))
         message.attach(history_image)
-        self._client.sendmail(self._sender, [self._receiver], message.as_string())
-        self._client.close()
+        self._send_mail(message)
 
     def send_alert(self, log_file: str, exit_code: Union[int, str]):
         if not self._client:
@@ -269,7 +268,7 @@ class Email:
             return
         else:
             self._logger.info('Sending alert')
-        message = self._create_message('Alert', 'System aborted due to error')
+        message = self._create_message('Alert', 'System encountered an unexpected error')
         html_template_path = os.path.join(_HTML_DIR,
                                           'alert.html')
         with open(html_template_path, 'r') as f:
@@ -280,5 +279,9 @@ class Email:
         error_log = html.escape(log_content)
         message.attach(text.MIMEText(html_template.format(
             error_time=error_time, error_code=exit_code, error_log=error_log), 'html'))
+        self._send_mail(message)
+
+    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
+    def _send_mail(self, message):
         self._client.sendmail(self._sender, [self._receiver], message.as_string())
         self._client.close()
