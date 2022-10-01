@@ -10,7 +10,7 @@ class TestConstants(unittest.TestCase):
         self.assertIn('AAPL', nasdaq100_symbols)
 
     def test_get_sp500(self):
-        sp500_symbols = trade.get_sp500(pd.to_datetime('2015-01-01'))
+        sp500_symbols = trade.get_sp500(pd.to_datetime('1999-01-01'))
         self.assertIn('AAPL', sp500_symbols)
 
 
