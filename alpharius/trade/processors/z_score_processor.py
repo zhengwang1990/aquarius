@@ -1,5 +1,5 @@
-from alpharius.common import *
-from alpharius.stock_universe import IntradayVolatilityStockUniverse
+from ..common import *
+from ..stock_universe import IntradayVolatilityStockUniverse
 from typing import List
 import datetime
 import numpy as np

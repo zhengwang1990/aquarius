@@ -1,5 +1,5 @@
-from alpharius.common import *
-from alpharius.stock_universe import TopVolumeUniverse
+from ..common import *
+from ..stock_universe import TopVolumeUniverse
 from typing import Dict, List, Tuple
 import numpy as np
 import tabulate

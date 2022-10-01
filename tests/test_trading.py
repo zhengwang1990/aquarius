@@ -1,8 +1,8 @@
 from .fakes import *
-from alpharius import processors
+from alpharius.trade import processors
 from parameterized import parameterized
 import alpaca_trade_api as tradeapi
-import alpharius
+import alpharius.trade as trade
 import email.mime.image as image
 import email.mime.multipart as multipart
 import itertools
@@ -64,13 +64,13 @@ class TestTrading(unittest.TestCase):
         self.patch_multipart.stop()
         self.patch_to_csv.stop()
 
-    @parameterized.expand([(alpharius.TradingFrequency.FIVE_MIN,),
-                           (alpharius.TradingFrequency.CLOSE_TO_CLOSE,),
-                           (alpharius.TradingFrequency.CLOSE_TO_OPEN,)])
+    @parameterized.expand([(trade.TradingFrequency.FIVE_MIN,),
+                           (trade.TradingFrequency.CLOSE_TO_CLOSE,),
+                           (trade.TradingFrequency.CLOSE_TO_OPEN,)])
     def test_run_success(self, trading_frequency):
         fake_processor_factory = FakeProcessorFactory(trading_frequency)
         fake_processor = fake_processor_factory.processor
-        trading = alpharius.Trading(processor_factories=[fake_processor_factory])
+        trading = trade.Trading(processor_factories=[fake_processor_factory])
 
         trading.run()
 
@@ -87,14 +87,14 @@ class TestTrading(unittest.TestCase):
                                processors.ZScoreProcessorFactory(),
                                processors.O2lProcessorFactory(),
                                processors.O2hProcessorFactory()]
-        trading = alpharius.Trading(processor_factories=processor_factories)
+        trading = trade.Trading(processor_factories=processor_factories)
 
         trading.run()
 
         self.mock_smtp.assert_called_once()
 
     def test_not_run_on_market_close_day(self):
-        trading = alpharius.Trading(processor_factories=[])
+        trading = trade.Trading(processor_factories=[])
 
         with mock.patch.object(FakeAlpaca, 'get_calendar', return_value=[]):
             trading.run()

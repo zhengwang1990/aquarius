@@ -1,7 +1,7 @@
-from alpharius import processors
+from trade import processors
 from dateutil import relativedelta
 import argparse
-import alpharius
+import trade
 import datetime
 
 
@@ -28,11 +28,11 @@ def main():
         default_end_date = (today + datetime.timedelta(days=1)).strftime('%F')
         start_date = args.start_date or default_start_date
         end_date = args.end_date or default_end_date
-        backtesting = alpharius.Backtesting(start_date=start_date, end_date=end_date,
-                                            processor_factories=processor_factories)
+        backtesting = trade.Backtesting(start_date=start_date, end_date=end_date,
+                                        processor_factories=processor_factories)
         backtesting.run()
     else:
-        trading = alpharius.Trading(processor_factories=processor_factories)
+        trading = trade.Trading(processor_factories=processor_factories)
         trading.run()
 
 

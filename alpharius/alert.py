@@ -1,4 +1,4 @@
-from alpharius import Email
+from trade import Email
 import argparse
 
 

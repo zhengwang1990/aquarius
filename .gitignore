@@ -132,5 +132,6 @@ dmypy.json
 cache/
 outputs/
 models/
+bin/envs.sh
 *.sh
 *.txt

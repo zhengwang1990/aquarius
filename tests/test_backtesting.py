@@ -1,8 +1,8 @@
 from .fakes import *
-from alpharius import processors
+from alpharius.trade import processors
 from parameterized import parameterized
 import alpaca_trade_api as tradeapi
-import alpharius
+import alpharius.trade as trade
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
@@ -43,15 +43,15 @@ class TestBacktesting(unittest.TestCase):
         self.patch_polygon.stop()
         self.patch_to_csv.stop()
 
-    @parameterized.expand([(alpharius.TradingFrequency.FIVE_MIN,),
-                           (alpharius.TradingFrequency.CLOSE_TO_CLOSE,),
-                           (alpharius.TradingFrequency.CLOSE_TO_OPEN,)])
+    @parameterized.expand([(trade.TradingFrequency.FIVE_MIN,),
+                           (trade.TradingFrequency.CLOSE_TO_CLOSE,),
+                           (trade.TradingFrequency.CLOSE_TO_OPEN,)])
     def test_run_success(self, trading_frequency):
         fake_processor_factory = FakeProcessorFactory(trading_frequency)
         fake_processor = fake_processor_factory.processor
-        backtesting = alpharius.Backtesting(start_date=pd.to_datetime('2021-03-17'),
-                                            end_date=pd.to_datetime('2021-03-24'),
-                                            processor_factories=[fake_processor_factory])
+        backtesting = trade.Backtesting(start_date=pd.to_datetime('2021-03-17'),
+                                        end_date=pd.to_datetime('2021-03-24'),
+                                        processor_factories=[fake_processor_factory])
 
         backtesting.run()
 
@@ -63,9 +63,9 @@ class TestBacktesting(unittest.TestCase):
                                processors.ZScoreProcessorFactory(),
                                processors.O2lProcessorFactory(),
                                processors.O2hProcessorFactory()]
-        backtesting = alpharius.Backtesting(start_date=pd.to_datetime('2021-03-17'),
-                                            end_date=pd.to_datetime('2021-03-18'),
-                                            processor_factories=processor_factories)
+        backtesting = trade.Backtesting(start_date=pd.to_datetime('2021-03-17'),
+                                        end_date=pd.to_datetime('2021-03-18'),
+                                        processor_factories=processor_factories)
 
         backtesting.run()
 

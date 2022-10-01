@@ -1,4 +1,4 @@
-import alpharius
+import alpharius.trade as trade
 import collections
 import datetime
 import itertools
@@ -142,7 +142,7 @@ class FakePolygon:
         return LastTrade(123)
 
 
-class FakeProcessor(alpharius.Processor):
+class FakeProcessor(trade.Processor):
     def __init__(self, trading_frequency):
         super().__init__()
         self.get_stock_universe_call_count = 0
@@ -159,24 +159,24 @@ class FakeProcessor(alpharius.Processor):
     def process_data(self, context):
         self.process_data_call_count += 1
         if context.current_time.time() == datetime.time(10, 0) and context.symbol == 'QQQ':
-            return alpharius.Action('QQQ', alpharius.ActionType.BUY_TO_OPEN, 1, 51)
+            return trade.Action('QQQ', trade.ActionType.BUY_TO_OPEN, 1, 51)
         if context.current_time.time() == datetime.time(10, 0) and context.symbol == 'DIA':
-            return alpharius.Action('DIA', alpharius.ActionType.BUY_TO_OPEN, 1, 51)
+            return trade.Action('DIA', trade.ActionType.BUY_TO_OPEN, 1, 51)
         if context.current_time.time() == datetime.time(11, 30) and context.symbol == 'QQQ':
-            return alpharius.Action('QQQ', alpharius.ActionType.SELL_TO_CLOSE, 1, 52)
+            return trade.Action('QQQ', trade.ActionType.SELL_TO_CLOSE, 1, 52)
         if context.current_time.time() == datetime.time(12, 0) and context.symbol == 'DIA':
-            return alpharius.Action('DIA', alpharius.ActionType.SELL_TO_CLOSE, 1, 52)
+            return trade.Action('DIA', trade.ActionType.SELL_TO_CLOSE, 1, 52)
         if context.current_time.time() == datetime.time(13, 0) and context.symbol == 'DIA':
-            return alpharius.Action('DIA', alpharius.ActionType.SELL_TO_OPEN, 1, 52)
+            return trade.Action('DIA', trade.ActionType.SELL_TO_OPEN, 1, 52)
         if context.current_time.time() == datetime.time(13, 10) and context.symbol == 'DIA':
-            return alpharius.Action('DIA', alpharius.ActionType.BUY_TO_CLOSE, 1, 50)
+            return trade.Action('DIA', trade.ActionType.BUY_TO_CLOSE, 1, 50)
         if context.current_time.time() == datetime.time(15, 0) and context.symbol == 'SPY':
-            return alpharius.Action('SPY', alpharius.ActionType.BUY_TO_OPEN, 1, 50)
+            return trade.Action('SPY', trade.ActionType.BUY_TO_OPEN, 1, 50)
 
 
-class FakeProcessorFactory(alpharius.ProcessorFactory):
+class FakeProcessorFactory(trade.ProcessorFactory):
 
-    def __init__(self, trading_frequency: alpharius.TradingFrequency):
+    def __init__(self, trading_frequency: trade.TradingFrequency):
         super().__init__()
         self.create_call_count = 0
         self.processor = FakeProcessor(trading_frequency)

@@ -1,11 +1,11 @@
-from alpharius import *
+from trade import *
 import argparse
 import datetime
 import os
 import mplfinance as fplt
 import pandas as pd
 
-CACHE_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'cache')
+CACHE_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), '../cache')
 
 
 def vwap(df):
