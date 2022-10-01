@@ -10,8 +10,9 @@ import pytz
 import sys
 
 TIME_ZONE = pytz.timezone('America/New_York')
-CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'cache')
-OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'outputs')
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+CACHE_DIR = os.path.join(BASE_DIR, 'cache')
+OUTPUT_DIR = os.path.join(BASE_DIR, 'outputs')
 DATETIME_TYPE = Union[pd.Timestamp, pd.DatetimeIndex, datetime.datetime]
 DAYS_IN_A_WEEK = 5
 DAYS_IN_A_MONTH = 20

@@ -457,7 +457,8 @@ class Backtesting:
             return
         summary = [['Time Range', f'{market_dates[0].date()} ~ {market_dates[-1].date()}'],
                    ['Success Rate', f'{success_rate * 100:.2f}%'],
-                   ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)']]
+                   ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)'],
+                   ['Output Dir', os.path.relpath(self._output_dir, BASE_DIR)]]
         outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
 
         print_symbols = ['QQQ', 'SPY', 'TQQQ']
