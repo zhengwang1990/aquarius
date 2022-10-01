@@ -1,6 +1,6 @@
 # Alpharius
 
-[![Build Status](https://app.travis-ci.com/zhengwang1990/alpharius.svg?branch=main)](https://app.travis-ci.com/zhengwang1990/alpharius)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/zhengwang1990/alpharius/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/zhengwang1990/alpharius/tree/main)
 [![codecov](https://codecov.io/gh/zhengwang1990/alpharius/branch/main/graph/badge.svg?token=R8RUFJJ1CV)](https://codecov.io/gh/zhengwang1990/alpharius)
 
 ## Install
