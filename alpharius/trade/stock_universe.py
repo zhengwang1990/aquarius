@@ -1,7 +1,7 @@
 from .common import *
 from .constants import COMPANY_SYMBOLS
 from .data import load_tradable_history
-from typing import List, Optional
+from typing import List
 import alpaca_trade_api as tradeapi
 import datetime
 import numpy as np
@@ -22,39 +22,7 @@ class StockUniverse:
         calendar = alpaca.get_calendar(start=history_start.strftime('%F'),
                                        end=end_time.strftime('%F'))
         self._market_dates = [pd.to_datetime(market_day.date).date() for market_day in calendar]
-
-        self._price_low, self._price_high = None, None
-        self._dvolume_low, self._dvolume_high = None, None
-        self._atrp_low, self._atrp_high = None, None
         self._cache_dir = None
-
-    def set_price_filer(self, low: Optional[float] = None, high: Optional[float] = None) -> None:
-        self._price_low = low
-        self._price_high = high
-
-    def set_dollar_volume_filter(self, low: Optional[float] = None, high: Optional[float] = None) -> None:
-        self._dvolume_low = low
-        self._dvolume_high = high
-
-    def set_average_true_range_percent_filter(self, low: Optional[float] = None, high: Optional[float] = None) -> None:
-        self._atrp_low = low
-        self._atrp_high = high
-
-    def _get_dollar_volume(self, symbol: str, prev_day_ind: int) -> float:
-        hist = self._historical_data[symbol]
-        pv = [hist['VWAP'][i] * hist['Volume'][i]
-              for i in range(max(prev_day_ind - DAYS_IN_A_MONTH + 1, 0), prev_day_ind + 1)]
-        return np.average(pv) if pv else 0
-
-    def _get_average_true_range_percent(self, symbol: str, prev_day_ind: int) -> float:
-        hist = self._historical_data[symbol]
-        atrp = []
-        for i in range(max(prev_day_ind - DAYS_IN_A_MONTH + 1, 1), prev_day_ind + 1):
-            h = hist['High'][i]
-            l = hist['Low'][i]
-            c = hist['Close'][i - 1]
-            atrp.append(max(h - l, h - c, c - l) / c)
-        return np.average(atrp) if atrp else 0
 
     def get_prev_day(self, view_time: DATETIME_TYPE):
         prev_day = view_time.date() - datetime.timedelta(days=1)
@@ -83,31 +51,7 @@ class StockUniverse:
         return stock_universe
 
     def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
-        res = []
-        prev_day = self.get_prev_day(view_time)
-        for symbol, hist in self._historical_data.items():
-            if prev_day not in hist.index:
-                continue
-            prev_day_ind = timestamp_to_index(hist.index, prev_day)
-            prev_close = hist['Close'][prev_day_ind]
-            if self._price_low is not None and prev_close < self._price_low:
-                continue
-            if self._price_high is not None and prev_close > self._price_high:
-                continue
-            if self._dvolume_low is not None or self._dvolume_high is not None:
-                dvolume = self._get_dollar_volume(symbol, prev_day_ind)
-                if self._dvolume_low is not None and dvolume < self._dvolume_low:
-                    continue
-                if self._dvolume_high is not None and dvolume > self._dvolume_high:
-                    continue
-            if self._atrp_low is not None or self._atrp_high is not None:
-                atrp = self._get_average_true_range_percent(symbol, prev_day_ind)
-                if self._atrp_low is not None and atrp < self._atrp_low:
-                    continue
-                if self._atrp_high is not None and atrp > self._atrp_high:
-                    continue
-            res.append(symbol)
-        return res
+        raise NotImplementedError('Calling parent interface')
 
 
 class TopVolumeUniverse(StockUniverse):
@@ -120,6 +64,12 @@ class TopVolumeUniverse(StockUniverse):
         super().__init__(lookback_start_date, lookback_end_date, data_source)
         self._stock_symbols = set(COMPANY_SYMBOLS)
         self._num_stocks = num_stocks
+
+    def _get_dollar_volume(self, symbol: str, prev_day_ind: int) -> float:
+        hist = self._historical_data[symbol]
+        pv = [hist['VWAP'][i] * hist['Volume'][i]
+              for i in range(max(prev_day_ind - DAYS_IN_A_MONTH + 1, 0), prev_day_ind + 1)]
+        return np.average(pv) if pv else 0
 
     def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
         prev_day = self.get_prev_day(view_time)
