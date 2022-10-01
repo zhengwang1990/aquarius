@@ -53,8 +53,8 @@ class OvernightProcessor(Processor):
         performances = []
         for context in contexts_selected:
             performances.append((context.symbol, self._get_performance(context)))
-        performances.sort(key=lambda s: s[1])
-        long_symbols = [s[0] for s in performances[-NUM_DIRECTIONAL_SYMBOLS:] if s[1] > 0]
+        performances.sort(key=lambda s: s[1], reverse=True)
+        long_symbols = [s[0] for s in performances[:NUM_DIRECTIONAL_SYMBOLS] if s[1] > 0]
 
         self._logging(performances, current_prices, current_time)
 
@@ -68,7 +68,7 @@ class OvernightProcessor(Processor):
                  current_prices: Dict[str, float],
                  current_time: DATETIME_TYPE) -> None:
         performance_info = []
-        for symbol, metric in performances[-NUM_DIRECTIONAL_SYMBOLS - 5:]:
+        for symbol, metric in performances[:NUM_DIRECTIONAL_SYMBOLS + 15]:
             price = current_prices[symbol]
             performance_info.append([symbol, price, metric])
         header = get_header(f'Metric Info {current_time.date()}')
