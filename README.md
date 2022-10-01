@@ -6,7 +6,7 @@
 ## Install
 
 ```shell
-$ make all
+$ make
 ```
 
 ## Run
