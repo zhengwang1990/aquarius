@@ -1,6 +1,6 @@
 # Alpharius
 
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/zhengwang1990/alpharius/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/zhengwang1990/alpharius/tree/main)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/zhengwang1990/alpharius/tree/main.svg?style=shield&circle-token=bb63b49e6c12272a8f1b40d42a97f76f1d652e86)](https://dl.circleci.com/status-badge/redirect/gh/zhengwang1990/alpharius/tree/main)
 [![codecov](https://codecov.io/gh/zhengwang1990/alpharius/branch/main/graph/badge.svg?token=R8RUFJJ1CV)](https://codecov.io/gh/zhengwang1990/alpharius)
 
 ## Install
