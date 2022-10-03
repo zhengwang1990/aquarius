@@ -46,7 +46,7 @@ class FakeAlpaca:
     def list_assets(self):
         self.list_assets_call_count += 1
         return [Asset(symbol, True, True, True, True, True)
-                for symbol in ['QQQ', 'SPY', 'DIA', 'TQQQ']]
+                for symbol in ['QQQ', 'SPY', 'DIA', 'TQQQ', 'GOOG', 'AAPL', 'MSFT']]
 
     def list_positions(self):
         self.list_positions_call_count += 1
