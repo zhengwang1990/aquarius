@@ -86,7 +86,8 @@ class TestTrading(unittest.TestCase):
         processor_factories = [processors.OvernightProcessorFactory(),
                                processors.ZScoreProcessorFactory(),
                                processors.O2lProcessorFactory(),
-                               processors.O2hProcessorFactory()]
+                               processors.O2hProcessorFactory(),
+                               processors.TqqqProcessorFactory()]
         trading = trade.Trading(processor_factories=processor_factories)
 
         trading.run()

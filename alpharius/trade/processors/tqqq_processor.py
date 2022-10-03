@@ -41,8 +41,8 @@ class TqqqProcessor(Processor):
         intraday_closes = context.intraday_lookback['Close'][market_open_ind:]
         if len(intraday_closes) < N + 1:
             return
-        interday_closes = context.interday_lookback['Close'][-DAYS_IN_A_MONTH:]
-        if len(interday_closes) < DAYS_IN_A_MONTH:
+        interday_closes = context.interday_lookback['Close'][-DAYS_IN_A_MONTH * 2:]
+        if len(interday_closes) < DAYS_IN_A_MONTH * 2:
             return
         if context.current_price > np.max(interday_closes) * 0.7:
             return
@@ -54,6 +54,9 @@ class TqqqProcessor(Processor):
                 down += 1
             if intraday_high[i] > intraday_high[i - 1]:
                 up += 1
+        if up >= N // 2 or down >= N // 2:
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] '
+                               f'Up count [{up} / {N}]. Down count [{down} / {N}].')
         if down == N:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'side': 'short'}
