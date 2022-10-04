@@ -50,21 +50,26 @@ class O2lProcessor(Processor):
         t = context.current_time.time()
         if t >= EXIT_TIME:
             return
+        market_open_ind = 0
+        while context.intraday_lookback.index[market_open_ind].time() < datetime.time(9, 30):
+            market_open_ind += 1
+        market_open_price = context.intraday_lookback['Open'][market_open_ind]
+        intraday_closes = context.intraday_lookback['Close'][market_open_ind:]
+        if intraday_closes[-1] > np.min(intraday_closes):
+            return
         interday_opens = context.interday_lookback['Open'][-DAYS_IN_A_MONTH:]
         interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
         o2l_losses = [l / o - 1 for o, l in zip(interday_opens, interday_lows)]
         o2l_avg = np.average(o2l_losses)
         o2l_std = np.std(o2l_losses)
-        market_open_ind = 0
-        while context.intraday_lookback.index[market_open_ind].time() < datetime.time(9, 30):
-            market_open_ind += 1
-        market_open_price = context.intraday_lookback['Open'][market_open_ind]
         curent_loss = context.current_price / market_open_price - 1
-        threshold = o2l_avg - 4 * o2l_std
-        is_trade = curent_loss < threshold
+        up_threshold = o2l_avg - 4 * o2l_std
+        low_threshold = o2l_avg - 6 * o2l_std
+        is_trade = low_threshold < curent_loss < up_threshold
         if is_trade or (context.mode == Mode.TRADE and curent_loss < o2l_avg):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                               f'Current loss: {curent_loss * 100:.2f}%. Threshold: {threshold * 100:.2f}%. '
+                               f'Current loss: {curent_loss * 100:.2f}%. '
+                               f'Threshold: {low_threshold * 100:.2f}% ~ {up_threshold * 100:.2f}%. '
                                f'Current price {context.current_price}.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
