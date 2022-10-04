@@ -8,7 +8,8 @@ EXIT_TIME = datetime.time(14, 0)
 N = {'TQQQ': 8, 'UCO': 9, 'FAS': 8}
 
 
-class BearEtfProcessor(Processor):
+class BearMomentumProcessor(Processor):
+    """Momentum strategy that works in a bear market."""
 
     def __init__(self,
                  output_dir: str) -> None:
@@ -77,12 +78,12 @@ class BearEtfProcessor(Processor):
         return action
 
 
-class BearEtfProcessorFactory(ProcessorFactory):
+class BearMomentumProcessorFactory(ProcessorFactory):
 
     def __init__(self):
         super().__init__()
 
     def create(self,
                output_dir: str,
-               *args, **kwargs) -> BearEtfProcessor:
-        return BearEtfProcessor(output_dir)
+               *args, **kwargs) -> BearMomentumProcessor:
+        return BearMomentumProcessor(output_dir)
