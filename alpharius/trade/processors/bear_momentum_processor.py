@@ -5,7 +5,7 @@ import numpy as np
 
 ENTRY_TIME = datetime.time(10, 0)
 EXIT_TIME = datetime.time(14, 0)
-N = {'TQQQ': 8, 'UCO': 9, 'FAS': 8}
+N = {'TQQQ': 8, 'UCO': 9, 'FAS': 9}
 
 
 class BearMomentumProcessor(Processor):
