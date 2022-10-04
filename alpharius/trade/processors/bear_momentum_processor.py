@@ -59,11 +59,11 @@ class BearMomentumProcessor(Processor):
         if up >= n - 2 or down >= n - 2:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Up count [{up} / {n}]. Down count [{down} / {n}].')
-        if down == n:
+        if down == n and context.current_price < context.prev_day_close:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'side': 'short'}
             return Action(context.symbol, ActionType.SELL_TO_OPEN, 1, context.current_price)
-        if up == n:
+        if up == n and context.current_price > context.prev_day_close:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'side': 'long'}
             return Action(context.symbol, ActionType.BUY_TO_OPEN, 1, context.current_price)
