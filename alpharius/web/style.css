@@ -10,6 +10,7 @@
 :root{
     /* ===== Colors ===== */
     --primary-color: #0E4BF1;
+	  --primary-bg-color: #335D9F;
     --panel-color: #fff;
     --text-color: #000;
     --black-light-color: #707070;
@@ -58,9 +59,19 @@ nav{
 nav.close{
     width: 73px;
 }
-nav .logo-name{
+nav .logo{
     display: flex;
     align-items: center;
+		border-bottom: 1px solid #e9edf4;
+		border-right: 1px solid #e9edf4;
+		left: 0;
+		right: 0;
+		top: 0;
+		position: fixed;
+		z-index: 99;
+		height: 75px;
+    padding: 15px 13px;
+		width: 250px;
 }
 nav .logo-image{
     display: flex;
@@ -73,19 +84,19 @@ nav .logo-image img{
     border-radius: 50%;
 }
 
-nav .logo-name .logo_name{
+nav .logo .logo-text{
     font-size: 22px;
     font-weight: 600;
     color: var(--text-color);
-    margin-left: 14px;
+    margin-left: 30px;
     transition: var(--tran-05);
 }
-nav.close .logo_name{
+nav.close .logo-text{
     opacity: 0;
     pointer-events: none;
 }
 nav .menu-items{
-    margin-top: 40px;
+    margin-top: 75px;
     height: calc(100% - 90px);
     display: flex;
     flex-direction: column;
@@ -111,20 +122,25 @@ nav .menu-items{
     background-color: var(--primary-color);
 }
 .menu-items li a i{
-    font-size: 24px;
+    font-size: 22px;
     min-width: 45px;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--black-light-color);
+		color: var(--black-light-color);
 }
 .menu-items li a .link-name{
     font-size: 16px;
     font-weight: 400;
-    color: var(--black-light-color);    
     transition: var(--tran-05);
+		color: var(--black-light-color);
 }
+.menu-items li a .active {
+    color: var(--primary-bg-color);
+}
+
+
 nav.close li a .link-name{
     opacity: 0;
     pointer-events: none;
@@ -159,44 +175,17 @@ nav.close ~ .dashboard{
     background-color: var(--panel-color);
     transition: var(--tran-05);
     z-index: 10;
+		border-bottom: 1px solid #e9edf4;
+		height: 75px;
 }
 nav.close ~ .dashboard .top{
     left: 73px;
     width: calc(100% - 73px);
 }
 .dashboard .top .sidebar-toggle{
-    font-size: 26px;
-    color: var(--text-color);
+    font-size: 25px;
+    color: var(--primary-bg-color);
     cursor: pointer;
-}
-.dashboard .top .search-box{
-    position: relative;
-    height: 45px;
-    max-width: 600px;
-    width: 100%;
-    margin: 0 30px;
-}
-.top .search-box input{
-    position: absolute;
-    border: 1px solid var(--border-color);
-    background-color: var(--panel-color);
-    padding: 0 25px 0 50px;
-    border-radius: 5px;
-    height: 100%;
-    width: 100%;
-    color: var(--text-color);
-    font-size: 15px;
-    font-weight: 400;
-    outline: none;
-}
-.top .search-box i{
-    position: absolute;
-    left: 15px;
-    font-size: 22px;
-    z-index: 10;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--black-light-color);
 }
 .dashboard .dash-content{
     padding-top: 50px;
@@ -291,11 +280,11 @@ nav.close ~ .dashboard .top{
     nav.close{
         width: 250px;
     }
-    nav .logo_name{
+    nav .logo-text{
         opacity: 0;
         pointer-events: none;
     }
-    nav.close .logo_name{
+    nav.close .logo-text{
         opacity: 1;
         pointer-events: auto;
     }
@@ -346,11 +335,11 @@ nav.close ~ .dashboard .top{
     nav.close{
         width: 73px;
     }
-    nav .logo_name{
+    nav .logo-text{
         opacity: 0;
         pointer-events: none;
     }
-    nav.close .logo_name{
+    nav.close .logo-text{
         opacity: 0;
         pointer-events: none;
     }
