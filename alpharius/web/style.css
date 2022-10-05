@@ -10,7 +10,7 @@
 :root{
     /* ===== Colors ===== */
     --primary-color: #0E4BF1;
-	  --primary-bg-color: #335D9F;
+	--primary-bg-color: #335D9F;
     --panel-color: #fff;
     --text-color: #000;
     --black-light-color: #707070;
@@ -62,16 +62,16 @@ nav.close{
 nav .logo{
     display: flex;
     align-items: center;
-		border-bottom: 1px solid #e9edf4;
-		border-right: 1px solid #e9edf4;
-		left: 0;
-		right: 0;
-		top: 0;
-		position: fixed;
-		z-index: 99;
-		height: 75px;
+    border-bottom: 1px solid #e9edf4;
+    border-right: 1px solid #e9edf4;
+    left: 0;
+    right: 0;
+    top: 0;
+    position: fixed;
+    z-index: 99;
+    height: 75px;
     padding: 15px 13px;
-		width: 250px;
+	width: 250px;
 }
 nav .logo-image{
     display: flex;
@@ -88,7 +88,7 @@ nav .logo .logo-text{
     font-size: 22px;
     font-weight: 600;
     color: var(--text-color);
-    margin-left: 30px;
+    margin-left: 20px;
     transition: var(--tran-05);
 }
 nav.close .logo-text{
@@ -112,10 +112,13 @@ nav .menu-items{
     text-decoration: none;
     position: relative;
 }
+.menu-items ul {
+    padding-left: 0;
+}
 .nav-links li a:hover:before{
     content: "";
     position: absolute;
-    left: -7px;
+    left: -3px;
     height: 5px;
     width: 5px;
     border-radius: 50%;
@@ -128,13 +131,13 @@ nav .menu-items{
     display: flex;
     align-items: center;
     justify-content: center;
-		color: var(--black-light-color);
+    color: var(--black-light-color);
 }
 .menu-items li a .link-name{
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 400;
     transition: var(--tran-05);
-		color: var(--black-light-color);
+    color: var(--black-light-color);
 }
 .menu-items li a .active {
     color: var(--primary-bg-color);
@@ -175,8 +178,8 @@ nav.close ~ .dashboard{
     background-color: var(--panel-color);
     transition: var(--tran-05);
     z-index: 10;
-		border-bottom: 1px solid #e9edf4;
-		height: 75px;
+	border-bottom: 1px solid #e9edf4;
+	height: 75px;
 }
 nav.close ~ .dashboard .top{
     left: 73px;
@@ -188,7 +191,7 @@ nav.close ~ .dashboard .top{
     cursor: pointer;
 }
 .dashboard .dash-content{
-    padding-top: 50px;
+    padding-top: 75px;
 }
 .dash-content .title{
     display: flex;
@@ -218,7 +221,7 @@ nav.close ~ .dashboard .top{
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-		margin: 30px 0 30px 0;
+	margin: 30px 0 30px 0;
 }
 .dash-content .boxes .box{
     display: flex;
@@ -229,7 +232,7 @@ nav.close ~ .dashboard .top{
     padding: 15px 20px;
     background-color: #fff;
     transition: var(--tran-05);
-		box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
 }
 .boxes .box i{
     font-size: 35px;
@@ -367,4 +370,54 @@ nav.close ~ .dashboard .top{
         left: 0;
         width: 100%;
     }
+}
+.dash-content .card .card-header {
+    background-color: #fff;
+}
+
+.dash-content .row {
+    margin: 15px 0 15px 0;
+    display: flex;
+    margin-left: -0.75em;
+    margin-right: -0.75em;
+}
+
+.card .card-header .card-title {
+    font-size: 16px;
+    font-weight: 400;
+}
+
+
+
+.dash-content .card .my-btn-outline-primary {
+    --bs-btn-color: var(--primary-bg-color);
+    --bs-btn-border-color: var(--primary-bg-color);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--primary-bg-color);
+    --bs-btn-hover-border-color: var(--primary-bg-color);
+    --bs-btn-focus-shadow-rgb: 13,110,253;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--primary-bg-color);
+    --bs-btn-active-border-color: var(--primary-bg-color);
+    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --bs-btn-disabled-color: #0d6efd;
+    --bs-btn-disabled-bg: transparent;
+    --bs-btn-disabled-border-color: var(--primary-bg-color);
+    --bs-gradient: none;
+}
+
+.dash-content .card .btn {
+    font-size: 13px;
+    margin-left: 15px;
+    width: 70px;
+}
+
+#button-row {
+    margin-right: 15px;
+    float: right;
+}
+#button-row .button-col {
+    padding: 0px;
+    margin-top: 3px;
+    margin-bottom: 3px;
 }
