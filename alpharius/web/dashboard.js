@@ -1,10 +1,23 @@
 var active_graph="portforlio-1d";
 document.getElementById("btn-radio-1d").addEventListener("click", () => {
     change_graph(active_graph, "portforlio-1d");
-})
+});
 document.getElementById("btn-radio-10d").addEventListener("click", () => {
     change_graph(active_graph, "portforlio-10d");
-})
+});
+document.getElementById("btn-radio-1m").addEventListener("click", () => {
+    change_graph(active_graph, "portforlio-1m");
+});
+document.getElementById("btn-radio-6m").addEventListener("click", () => {
+    change_graph(active_graph, "portforlio-6m");
+});
+document.getElementById("btn-radio-1y").addEventListener("click", () => {
+    change_graph(active_graph, "portforlio-1y");
+});
+document.getElementById("btn-radio-5y").addEventListener("click", () => {
+    change_graph(active_graph, "portforlio-5y");
+});
+
 
 function change_graph(old_graph, new_graph) {
     if (old_graph === new_graph) {
@@ -47,11 +60,62 @@ const data_10d = {
             data: [0, 10, 5, 2, 20, 30, 45, 15, 10, 5, 2, 20],
         },
     ]
-    };
+};
+
+const data_1m = {
+    labels: ["10-01", "10-02", "10-04", "10-05", "10-09", "10-11", "10-12", "10-13", "10-14", "10-15", "10-17", "10-18"],
+    datasets: [
+        {
+            label: "value",
+            backgroundColor: "green",
+            borderColor: "green",
+            radius: 4,
+            data: [7, 10,0, 10, 5, 2, 20, 30, 45, 15, 10, 5, 2, 20],
+        },
+    ]
+};
+
+const data_6m = {
+    labels: ["01-01", "01-25", "02-11", "03-05", "04-09", "05-11", "06-12", "07-13", "08-12", "09-15", "09-17", "09-18", "10-11", "10-12", "10-13", "10-14", "10-15", "10-17", "10-18"],
+    datasets: [
+        {
+            label: "value",
+            backgroundColor: "green",
+            borderColor: "green",
+            radius: 1,
+            data: [7, 10,0, 32, 5, 2, 20, 30, 45, 15, 10, 5, 2, 20, 7, 10,0, 10, 5, 2, 20, 30, 45, 15, 10, 5, 2, 20],
+        },
+    ]
+};
+
+const data_1y = {
+    labels: ["2022-01-01", "", "", "2022-02-02", "", "", "2022-03-04", "", "", "2022-04-01", "", "", "2022-05-01", "", "", "2022-06-01", "", "", "2022-10-01"],
+    datasets: [
+        {
+            label: "value",
+            backgroundColor: "green",
+            borderColor: "green",
+            radius: 1,
+            data: [7, 10,0, 32, 5, 2, 20, 30, 45, 15, 10, 5, 2, 15, 7, 23,0, 10, 5, 2, 1, 32, 44, 1, 10, 5, 24, 11],
+        },
+    ]
+};
+
+const data_5y = {
+    labels: ["01-01", "01-25", "02-11", "03-05", "04-09", "05-11", "06-12", "07-13", "08-12", "09-15", "09-17", "09-18", "10-11", "10-12", "10-13", "10-14", "10-15", "10-17", "10-18"],
+    datasets: [
+        {
+            label: "value",
+            backgroundColor: "red",
+            borderColor: "red",
+            radius: 1,
+            data: [7, 10,0, 32, 5, 2, 20, 30, 45, 15, 10, 5, 2, 20, 7, 10,0, 10, 5, 2, 20, 30, 45, 15, 10, 5, 2, 20],
+        },
+    ]
+};
 
 const config_fine = {
     type: "line",
-    data: data_1d,
     options: {
         interaction: {
             intersect: false,
@@ -64,9 +128,9 @@ const config_fine = {
         },
         scales: {
             x: {
-            grid: {
-                display: false,
-            }
+                grid: {
+                    display: false,
+                }
             }
         }
     }
@@ -74,7 +138,6 @@ const config_fine = {
 
 const config_coarse = {
     type: "line",
-    data: data_10d,
     options: {
         maintainAspectRatio: false,
         interaction: {
@@ -88,12 +151,26 @@ const config_coarse = {
     }
 };
 
-new Chart(
-    document.getElementById("portforlio-1d"),
-    config_fine
-);
+const config_1d = {data: data_1d};
+Object.assign(config_1d, config_fine);
+new Chart(document.getElementById("portforlio-1d"), config_1d);
 
-new Chart(
-    document.getElementById("portforlio-10d"),
-    config_coarse
-);
+const config_10d = {data: data_10d};
+Object.assign(config_10d, config_coarse);
+new Chart(document.getElementById("portforlio-10d"), config_10d);
+
+const config_1m = {data: data_1m};
+Object.assign(config_1m, config_coarse);
+new Chart(document.getElementById("portforlio-1m"), config_1m);
+
+const config_6m = {data: data_6m};
+Object.assign(config_6m, config_fine);
+new Chart(document.getElementById("portforlio-6m"), config_6m);
+
+const config_1y = {data: data_1y};
+Object.assign(config_1y, config_fine);
+new Chart(document.getElementById("portforlio-1y"), config_1y);
+
+const config_5y = {data: data_5y};
+Object.assign(config_5y, config_fine);
+new Chart(document.getElementById("portforlio-5y"), config_5y);
