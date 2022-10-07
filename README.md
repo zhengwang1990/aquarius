@@ -9,7 +9,7 @@
 $ make
 ```
 
-## Run
+## Trade
 
 ### Run tests
 ```shell
@@ -21,7 +21,7 @@ $ python -m unittest discover
 $ python alpharius/trade.py --mode backtest --start_date 2017-01-01 --end_date 2022-06-01
 ```
 
-## Run realtime trading
+### Run realtime trading
 ```shell
 $ python alpharius/trade.py --mode trade
 ```
