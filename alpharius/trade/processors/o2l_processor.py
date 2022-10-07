@@ -1,8 +1,12 @@
-from ..common import *
-from ..stock_universe import MonthlyGainStockUniverse
-from typing import List
 import datetime
+import os
+from typing import List, Optional
+
 import numpy as np
+from ..common import (
+    Action, ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
+    Position, Mode, DAYS_IN_A_MONTH, DATETIME_TYPE, logging_config)
+from ..stock_universe import MonthlyGainStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 15
 EXIT_TIME = datetime.time(13, 0)

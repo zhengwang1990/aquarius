@@ -16,7 +16,7 @@ jobs:
           command: pip install codecov
       - run:
           name: Run tests
-          command: coverage run -m unittest discover
+          command: coverage run -m pytest
       - run:
           name: Generate coverage report
           command: codecov

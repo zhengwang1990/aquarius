@@ -6,6 +6,8 @@ numpy
 pandas
 polygon-api-client
 parameterized
+pytest
+pytest-mock
 python-dateutil
 pytz
 requests

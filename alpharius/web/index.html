@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<!--=== Coding by CodingLab | www.codinglabweb.com === -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="common.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.0/css/line.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css"
+          integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <title>Alpharius</title>
+</head>
+<body>
+<nav>
+    <div class="logo">
+        <div class="logo-image">
+            <img src="images/logo.png" alt="">
+        </div>
+
+        <span class="logo-text">Alpharius</span>
+    </div>
+
+    <div class="menu-items">
+        <ul class="nav-links">
+            <li><a href="#">
+                <i class="uil uil-estate active"></i>
+                <span class="link-name active">Dahsboard</span>
+            </a></li>
+            <li><a href="#">
+                <i class="uil uil-transaction"></i>
+                <span class="link-name">Transactions</span>
+            </a></li>
+            <li><a href="#">
+                <i class="uil uil-chart"></i>
+                <span class="link-name">Analytics</span>
+            </a></li>
+            <li><a href="#">
+                <i class="uil uil-file-alt"></i>
+                <span class="link-name">Logs</span>
+            </a></li>
+        </ul>
+    </div>
+</nav>
+
+<section class="dashboard">
+    <div class="top">
+        <i class="uil uil-bars sidebar-toggle"></i>
+    </div>
+
+    <div class="dash-content">
+
+        <div class="row"> 
+            <div class="col-lg-12 col-md-12 col-sm-12 col-xl-12"> 
+                <div class="row"> 
+                    <div class="col-lg-6 col-md-6 col-sm-6 col-xl-3 col-6">
+                        <div class="card overflow-hidden">
+                            <div class="card-body">
+                                <div class="d-flex"> 
+                                    <div class="mt-2"> 
+                                        <h6 class="">QQQ</h6> 
+                                        <h2 class="mb-0">327</h2> 
+                                    </div> 
+                                </div> 
+                                <span class="text-muted footnote"><span style="color:red;"><i class="uil uil-arrow-down"></i> -1.23%</span> Today</span> 
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 col-md-6 col-sm-6 col-xl-3 col-6">
+                        <div class="card overflow-hidden">
+                            <div class="card-body">
+                                <div class="d-flex"> 
+                                    <div class="mt-2"> 
+                                        <h6 class="">SPY</h6> 
+                                        <h2 class="mb-0">123</h2> 
+                                    </div> 
+                                </div> 
+                                <span class="text-muted footnote"><span style="color:green;"><i class="uil uil-arrow-up"></i> +0.51%</span> Today</span> 
+                            </div>
+                        </div>
+                    </div> 
+                    <div class="col-lg-6 col-md-6 col-sm-6 col-xl-3 col-6">
+                        <div class="card overflow-hidden">
+                            <div class="card-body">
+                                <div class="d-flex"> 
+                                    <div class="mt-2"> 
+                                        <h6 class="">DIA</h6> 
+                                        <h2 class="mb-0">122</h2> 
+                                    </div> 
+                                </div> 
+                                <span class="text-muted footnote"><span style="color:green;"><i class="uil uil-arrow-up"></i> +0.2%</span> Today</span> 
+                            </div>
+                        </div>
+                    </div> 
+                    <div class="col-lg-6 col-md-6 col-sm-6 col-xl-3 col-6">
+                        <div class="card overflow-hidden">
+                            <div class="card-body">
+                                <div class="d-flex"> 
+                                    <div class="mt-2"> 
+                                        <h6 class="">TQQQ</h6> 
+                                        <h2 class="mb-0">23</h2> 
+                                    </div> 
+                                </div> 
+                                <span class="text-muted footnote"><span style="color:red;"><i class="uil uil-arrow-down"></i> -3.23%</span> Today</span> 
+                            </div>
+                        </div>
+                    </div> 
+                </div>
+            </div>
+        </div>
+        <div class="row"> 
+            <div class="col-lg-12 col-md-12 col-sm-12 col-xl-12">                             
+                <div class="card">
+                    <div class="card-header"><span class="card-title">Portfolio Value</span></div>
+                    <div id="portforlio-info"> 
+                        <span id="current-equity" class="mb-0 number-font">4,321</span> 
+                        <span id="currnet-change" class="number-font" style="color:green;">+50.25 (+1.2%) </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="button-row">
+                            <div class="col-sm-12 col-md-6 col-lg-6 col-xl-6 button-col">
+                                <input type="radio" class="btn-check" name="btnradio" id="btn-radio-1d"
+                                        autocomplete="off"
+                                        checked>
+                                <label class="btn my-btn-outline-primary" for="btn-radio-1d">1 D</label>
+
+                                <input type="radio" class="btn-check" name="btnradio" id="btn-radio-10d"
+                                        autocomplete="off">
+                                <label class="btn my-btn-outline-primary" for="btn-radio-10d">10 D</label>
+
+                                <input type="radio" class="btn-check" name="btnradio" id="btn-radio-1m"
+                                        autocomplete="off">
+                                <label class="btn my-btn-outline-primary" for="btn-radio-1m">1 M</label>
+                            </div>
+                            <div class="col-sm-12 col-md-6 col-lg-6 col-xl-6 button-col">
+                                <input type="radio" class="btn-check" name="btnradio" id="btn-radio-6m"
+                                        autocomplete="off">
+                                <label class="btn my-btn-outline-primary" for="btn-radio-6m">6 M</label>
+
+                                <input type="radio" class="btn-check" name="btnradio" id="btn-radio-1y"
+                                        autocomplete="off">
+                                <label class="btn my-btn-outline-primary" for="btn-radio-1y">1 Y</label>
+
+                                <input type="radio" class="btn-check" name="btnradio" id="btn-radio-5y"
+                                        autocomplete="off">
+                                <label class="btn my-btn-outline-primary" for="btn-radio-5y">5 Y</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="chart-container">
+                        <canvas id="portforlio-1d"></canvas>
+                        <canvas id="portforlio-10d" style="display:none;"></canvas>
+                        <canvas id="portforlio-1m" style="display:none;"></canvas>
+                        <canvas id="portforlio-6m" style="display:none;"></canvas>
+                        <canvas id="portforlio-1y" style="display:none;"></canvas>
+                        <canvas id="portforlio-5y" style="display:none;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row"> 
+            <div class="col-lg-12 col-md-12 col-sm-12 col-xl-6">                             
+                <div class="card">
+                    <div class="card-header"><span class="card-title">Recent Orders</span></div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                              <tr>
+                                <th scope="col">SYMBOL</th>
+                                <th scope="col">SIDE</th>
+                                <th scope="col">QTY</th>
+                                <th scope="col">PRICE</th>
+                                <th scope="col">TIME</th>
+                                <th scope="col" class="xs-hidden">GAIN/LOSS</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td>OXY</td><td><span class="badge-shape badge-oragne">sell</span></td><td>12.3</td><td>232</td><td>09:20</td><td class="xs-hidden"></td>
+                              </tr>
+                              <tr>
+                                <td>APA</td><td><span class="badge-shape badge-blue">buy</span></td><td>12.3</td><td>232</td><td>09:20</td><td class="xs-hidden"></td>
+                              </tr>
+                              <tr>
+                                <td>TSLA</td><td><span class="badge-shape badge-oragne">sell</span></td><td>12.3</td><td>232</td><td>09:20</td><td class="xs-hidden"></td>
+                              </tr>
+                              <tr>
+                                <td>TQQQ</td><td><span class="badge-shape badge-blue">buy</span></td><td>12.3</td><td>232</td><td>09:20</td><td class="xs-hidden"></td>
+                              </tr>
+                              <tr>
+                                <td>MSFT</td><td><span class="badge-shape badge-oragne">sell</span></td><td>12.3</td><td>232</td><td>09:20</td><td class="xs-hidden"><span class="number-font" style="color:green;">+1.2% </span></td>
+                              </tr>
+                              <tr>
+                                <td>GOOG</td><td><span class="badge-shape badge-blue">buy</span></td><td>12.3</td><td>232</td><td>09:20</td><td class="xs-hidden"><span class="number-font" style="color:green;">+1.2% </span></td>
+                              </tr>
+                              <tr>
+                                <td>TQQQ</td><td><span class="badge-shape badge-oragne">sell</span></td><td>12.3</td><td>232</td><td>09:20</td><td class="xs-hidden"></td>
+                              </tr>
+                              <tr>
+                                <td>USMV</td><td><span class="badge-shape badge-blue">buy</span></td><td>12.3</td><td>232</td><td>09:20</td><td class="xs-hidden"></td>
+                              </tr>
+                              <tr>
+                                <td>FSA</td><td><span class="badge-shape badge-blue">buy</span></td><td>12.3</td><td>232</td><td>09:20</td><td class="xs-hidden"><span class="number-font" style="color:red;">-1.2% </span></td>
+                              </tr>
+                              <tr>
+                                <td>AMC</td><td><span class="badge-shape badge-blue">buy</span></td><td>12.3</td><td>232</td><td>09:20</td><td class="xs-hidden"><span class="number-font" style="color:green;">+1.2% </span></td>
+                              </tr>
+                            </tbody>
+                          </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-12 col-md-12 col-sm-12 col-xl-6">                             
+                <div class="card" id="position-card">
+                    <div class="card-header"><span class="card-title">Current Positions</span></div>
+                    <div class="card-body">
+                        <table class="table table-borderless">
+                            <thead>
+                              <tr>
+                                <th scope="col">SYMBOL</th>
+                                <th scope="col">QTY</th>
+                                <th scope="col">ENTRY PRICE</th>
+                                <th scope="col">CURRENT PRICE</th>
+                                <th scope="col" class="xs-hidden">GAIN/LOSS</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                                <td>OXY</td><td>12.3</td><td>232</td><td>235</td><td class="xs-hidden"><span class="number-font" style="color:red;">-1.2% </span></td>
+                            </tbody>
+                          </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script src="common.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

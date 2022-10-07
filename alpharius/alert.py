@@ -1,5 +1,6 @@
-from trade import Email
 import argparse
+
+from trade import Email
 
 
 def main():

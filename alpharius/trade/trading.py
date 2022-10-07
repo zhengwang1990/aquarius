@@ -1,14 +1,20 @@
-from .common import *
-from .data import load_tradable_history, DataLoader
-from .email import Email
-from concurrent import futures
-import alpaca_trade_api as tradeapi
 import collections
 import datetime
 import time
 import os
+from concurrent import futures
+from typing import List, Optional
+
+import alpaca_trade_api as tradeapi
 import pandas as pd
 import retrying
+from .common import (
+    Action, ActionType, ProcessorFactory, TradingFrequency, Context, Mode,
+    TimeInterval, Position, MARKET_OPEN, DATETIME_TYPE, DEFAULT_DATA_SOURCE,
+    INTERDAY_LOOKBACK_LOAD, TIME_ZONE, OUTPUT_DIR, SHORT_RESERVE_RATIO,
+    logging_config, get_unique_actions)
+from .data import load_tradable_history, DataLoader
+from .email import Email
 
 _MAX_WORKERS = 10
 
@@ -253,7 +259,7 @@ class Trading:
             assert action.type in [ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]
             symbol = action.symbol
             cash_to_trade = min(tradable_cash / len(actions), tradable_cash * action.percent)
-            if cash_to_trade < (self._equity - self._cash_reserve) * 0.01:
+            if cash_to_trade < tradable_cash * 0.01:
                 self._logger.info('Not enough cash to open [%s]. Skipping open.', symbol)
                 continue
             side = 'buy' if action.type == ActionType.BUY_TO_OPEN else 'sell'

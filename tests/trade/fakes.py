@@ -1,11 +1,12 @@
-import alpharius.trade as trade
 import collections
 import datetime
 import itertools
+
 import pandas as pd
-import unittest.mock as mock
+from alpharius import trade
 
 Clock = collections.namedtuple('Clock', ['next_open', 'next_close'])
+ClockTimestamp = collections.namedtuple('ClockTimestamp', ['timestamp'])
 Asset = collections.namedtuple('Asset', ['symbol', 'tradable', 'marginable',
                                          'shortable', 'easy_to_borrow', 'fractionable'])
 Account = collections.namedtuple('Account', ['equity', 'cash'])
@@ -19,7 +20,8 @@ Bar = collections.namedtuple('Bar', ['t', 'o', 'h', 'l', 'c', 'vw', 'v'])
 History = collections.namedtuple('History', ['equity'])
 Calendar = collections.namedtuple('Calendar', ['date', 'open', 'close'])
 Trade = collections.namedtuple('Trade', ['p'])
-Agg = collections.namedtuple('Agg', ['timestamp', 'open', 'high', 'low', 'close', 'vwap', 'volume'])
+Agg = collections.namedtuple(
+    'Agg', ['timestamp', 'open', 'high', 'low', 'close', 'vwap', 'volume'])
 LastTrade = collections.namedtuple('LastTrade', ['price'])
 
 
@@ -54,14 +56,14 @@ class FakeAlpaca:
 
     def get_clock(self):
         self.get_clock_call_count += 1
-        next_open = mock.Mock()
-        next_open.timestamp.return_value = 1615987800
-        next_close = mock.Mock()
-        next_close.timestamp.return_value = 1616007600
+        next_open = ClockTimestamp(lambda: 1615987800)
+        next_close = ClockTimestamp(lambda: 1616011200)
         return Clock(next_open, next_close)
 
     def list_orders(self, *args, **kwargs):
         self.list_orders_call_count += 1
+        if self.list_orders_call_count % 3 == 0:
+            return []
         return [Order('ORDER123', 'DIA', 'short', '14', None, '0', pd.to_datetime('2021-03-17T10:15:00.0Z'), '12'),
                 Order('ORDER123', 'SPY', 'long', '12', None, '1', pd.to_datetime('2021-03-17T10:20:00.0Z'), '13')]
 
@@ -81,7 +83,8 @@ class FakeAlpaca:
             results = [Bar(pd.to_datetime(t, unit='s', utc=True),
                            40, 41, 39, next(self._value_cycle), 40.123, 10)
                        for t in range(int(pd.to_datetime(start).timestamp()),
-                                      int(pd.to_datetime(end).timestamp() + 86400),
+                                      int(pd.to_datetime(
+                                          end).timestamp() + 86400),
                                       86400)
                        if pd.to_datetime(t, unit='s').isoweekday() < 6]
         elif timeframe.value == '5Min':
@@ -89,7 +92,8 @@ class FakeAlpaca:
             results = [Bar(pd.to_datetime(t, unit='s', utc=True),
                            40, 41, 39, next(self._value_cycle), 40.123, 10)
                        for t in range(int(pd.to_datetime(f'{day_str} 09:30:00-04:00').timestamp()),
-                                      int(pd.to_datetime(f'{day_str} 16:05:00-04:00').timestamp()),
+                                      int(pd.to_datetime(
+                                          f'{day_str} 16:05:00-04:00').timestamp()),
                                       300)]
         else:
             raise ValueError('Time frame must be 5 min or 1 day.')
@@ -103,7 +107,8 @@ class FakeAlpaca:
         date = start_date
         while date <= end_date:
             if date.isoweekday() < 6:
-                calendar.append(Calendar(date, datetime.time(9, 30), datetime.time(16, 0)))
+                calendar.append(
+                    Calendar(date, datetime.time(9, 30), datetime.time(16, 0)))
             date += datetime.timedelta(days=1)
         return calendar
 
@@ -126,7 +131,8 @@ class FakePolygon:
             end = pd.to_datetime(to, unit='ms', utc=True)
             results = [Agg(t * 1000, 40, 41, 39, next(self._value_cycle), 40.123, 10)
                        for t in range(int(pd.to_datetime(start.date()).timestamp()),
-                                      int(pd.to_datetime(end.date()).timestamp() + 86400),
+                                      int(pd.to_datetime(
+                                          end.date()).timestamp() + 86400),
                                       86400)
                        if pd.to_datetime(t, unit='s').isoweekday() < 6]
         elif multiplier == 5 and timespan == 'minute':
@@ -158,7 +164,7 @@ class FakeProcessor(trade.Processor):
 
     def process_data(self, context):
         self.process_data_call_count += 1
-        if context.current_time.time() == datetime.time(10, 0) and context.symbol == 'QQQ':
+        if context.current_time.time() == datetime.time(9, 35) and context.symbol == 'QQQ':
             return trade.Action('QQQ', trade.ActionType.BUY_TO_OPEN, 1, 51)
         if context.current_time.time() == datetime.time(10, 0) and context.symbol == 'DIA':
             return trade.Action('DIA', trade.ActionType.BUY_TO_OPEN, 1, 51)
@@ -170,7 +176,7 @@ class FakeProcessor(trade.Processor):
             return trade.Action('DIA', trade.ActionType.SELL_TO_OPEN, 1, 52)
         if context.current_time.time() == datetime.time(13, 10) and context.symbol == 'DIA':
             return trade.Action('DIA', trade.ActionType.BUY_TO_CLOSE, 1, 50)
-        if context.current_time.time() == datetime.time(15, 0) and context.symbol == 'SPY':
+        if context.current_time.time() == datetime.time(16, 0) and context.symbol == 'SPY':
             return trade.Action('SPY', trade.ActionType.BUY_TO_OPEN, 1, 50)
 
 
