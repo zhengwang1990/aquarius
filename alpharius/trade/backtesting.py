@@ -101,8 +101,7 @@ class Backtesting:
     def run(self) -> None:
         self._run_start_time = time.time()
         self._take_snapshot()
-        history_start = self._start_date - \
-                        datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
+        history_start = self._start_date - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
         self._interday_data = load_tradable_history(
             history_start, self._end_date, DEFAULT_DATA_SOURCE)
         self._interday_load_time += time.time() - self._run_start_time
@@ -166,8 +165,7 @@ class Backtesting:
     def _prepare_intraday_lookback(current_interval_start: DATETIME_TYPE, symbol: str,
                                    intraday_datas: Dict[str, pd.DataFrame]) -> Optional[pd.DataFrame]:
         intraday_data = intraday_datas[symbol]
-        intraday_ind = timestamp_to_index(
-            intraday_data.index, current_interval_start)
+        intraday_ind = timestamp_to_index(intraday_data.index, current_interval_start)
         if intraday_ind is None:
             return
         intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
@@ -221,8 +219,7 @@ class Backtesting:
 
         executed_actions = []
         while current_interval_start < market_close:
-            current_time = current_interval_start + \
-                           datetime.timedelta(minutes=5)
+            current_time = current_interval_start + datetime.timedelta(minutes=5)
 
             frequency_to_process = [TradingFrequency.FIVE_MIN]
             if current_interval_start == market_open:
@@ -244,8 +241,7 @@ class Backtesting:
                     current_interval_start, symbol, intraday_datas)
                 if intraday_lookback is None or len(intraday_lookback) == 0:
                     continue
-                interday_lookback = self._prepare_interday_lookback(
-                    day, symbol)
+                interday_lookback = self._prepare_interday_lookback(day, symbol)
                 if interday_lookback is None or len(interday_lookback) == 0:
                     continue
                 intraday_lookback = self._adjust_split(
@@ -266,8 +262,7 @@ class Backtesting:
                     processors.append(processor)
             actions = self._process_data(
                 contexts, processor_stock_universes, processors)
-            current_executed_actions = self._process_actions(
-                current_time, actions)
+            current_executed_actions = self._process_actions(current_time, actions)
             executed_actions.extend(current_executed_actions)
 
             current_interval_start += datetime.timedelta(minutes=5)
@@ -335,8 +330,7 @@ class Backtesting:
     def _close_positions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> List[List[Any]]:
         executed_actions = []
         for action in actions:
-            assert action.type in [
-                ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]
+            assert action.type in [ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]
             symbol = action.symbol
             current_position = self._get_current_position(symbol)
             if current_position is None:
@@ -352,7 +346,8 @@ class Backtesting:
                 self._positions.append(Position(symbol, new_qty,
                                                 current_position.entry_price,
                                                 current_position.entry_time))
-            spread_adjust = 1 - BID_ASK_SPREAD if action.type == ActionType.SELL_TO_CLOSE else 1 + BID_ASK_SPREAD
+            spread_adjust = (1 - BID_ASK_SPREAD
+                             if action.type == ActionType.SELL_TO_CLOSE else 1 + BID_ASK_SPREAD)
             adjusted_action_price = action.price * spread_adjust
             self._cash += adjusted_action_price * qty
             profit = adjusted_action_price / current_position.entry_price - 1
@@ -372,11 +367,9 @@ class Backtesting:
         tradable_cash = self._cash
         for position in self._positions:
             if position.qty < 0:
-                tradable_cash += position.entry_price * \
-                                 position.qty * (1 + SHORT_RESERVE_RATIO)
+                tradable_cash += position.entry_price * position.qty * (1 + SHORT_RESERVE_RATIO)
         for action in actions:
-            assert action.type in [
-                ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]
+            assert action.type in [ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]
             symbol = action.symbol
             cash_to_trade = min(tradable_cash / len(actions),
                                 tradable_cash * action.percent)
@@ -423,8 +416,7 @@ class Backtesting:
                 if interday_ind is not None:
                     close_price = interday_data['Close'][interday_ind]
                     if interday_ind > 0:
-                        daily_change = (
-                                               close_price / interday_data['Close'][interday_ind - 1] - 1) * 100
+                        daily_change = (close_price / interday_data['Close'][interday_ind - 1] - 1) * 100
                 change = (close_price / position.entry_price - 1) * 100 if close_price is not None else None
                 value = close_price * position.qty if close_price is not None else None
                 position_info.append([position.symbol, position.qty, position.entry_price,
@@ -443,8 +435,7 @@ class Backtesting:
             interday_data = self._interday_data[position.symbol]
             close_price = interday_data.loc[day]['Close'] if day in interday_data.index else position.entry_price
             equity += position.qty * close_price
-        profit_pct = (
-                             equity / self._daily_equity[-1] - 1) * 100 if self._daily_equity[-1] else 0
+        profit_pct = (equity / self._daily_equity[-1] - 1) * 100 if self._daily_equity[-1] else 0
         self._daily_equity.append(equity)
         total_profit_pct = ((equity / self._daily_equity[0] - 1) * 100)
         stats = [['Total Gain/Loss',
@@ -467,8 +458,8 @@ class Backtesting:
             s = r / std * np.sqrt(252) if std > 0 else math.nan
             a, b = math.nan, math.nan
             if len(values) == len(m_values) and len(values) > 2:
-                market_profits = [
-                    m_values[k + 1] / m_values[k] - 1 for k in range(len(m_values) - 1)]
+                market_profits = [m_values[k + 1] / m_values[k] - 1
+                                  for k in range(len(m_values) - 1)]
                 mr = np.average(market_profits)
                 mvar = np.var(market_profits)
                 b = np.cov(market_profits, profits, bias=True)[0, 1] / mvar

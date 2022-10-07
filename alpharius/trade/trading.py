@@ -206,8 +206,7 @@ class Trading:
                                   symbol, old_value, price)
             intraday_lookback.at[intraday_lookback.index[-1], 'Close'] = price
         self._logger.info('Intraday data updated for [%d] symbols. Time elapsed [%.2fs]',
-                          len(tasks),
-                          time.time() - update_start)
+                          len(tasks), time.time() - update_start)
 
     def _get_position(self, symbol: str) -> Optional[Position]:
         for position in self._positions:
@@ -233,8 +232,7 @@ class Trading:
         """Closes positions instructed by input actions."""
         self._update_positions()
         for action in actions:
-            assert action.type in [
-                ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]
+            assert action.type in [ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]
             symbol = action.symbol
             current_position = self._get_position(symbol)
             if current_position is None:
@@ -261,8 +259,7 @@ class Trading:
             if position.qty < 0:
                 tradable_cash += position.entry_price * position.qty * (1 + SHORT_RESERVE_RATIO)
         for action in actions:
-            assert action.type in [
-                ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]
+            assert action.type in [ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]
             symbol = action.symbol
             cash_to_trade = min(tradable_cash / len(actions),
                                 tradable_cash * action.percent)

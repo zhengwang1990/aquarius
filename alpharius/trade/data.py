@@ -66,14 +66,11 @@ class DataLoader:
     def _init_alpaca(self) -> None:
         self._alpaca = tradeapi.REST()
         if self._time_interval == TimeInterval.FIVE_MIN:
-            self._time_frame = tradeapi.TimeFrame(
-                5, tradeapi.TimeFrameUnit.Minute)
+            self._time_frame = tradeapi.TimeFrame(5, tradeapi.TimeFrameUnit.Minute)
         elif self._time_interval == TimeInterval.HOUR:
-            self._time_frame = tradeapi.TimeFrame(
-                1, tradeapi.TimeFrameUnit.Hour)
+            self._time_frame = tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Hour)
         elif self._time_interval == TimeInterval.DAY:
-            self._time_frame = tradeapi.TimeFrame(
-                1, tradeapi.TimeFrameUnit.Day)
+            self._time_frame = tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day)
 
     def load_data_point(self, symbol: str, time_point: DATETIME_TYPE) -> pd.DataFrame:
         return self.load_data_list(symbol, time_point, time_point)
@@ -123,8 +120,8 @@ class DataLoader:
             index = pd.DatetimeIndex(
                 [pd.to_datetime(agg.timestamp, unit='ms', utc=True).tz_convert(TIME_ZONE)
                  for agg in aggs])
-        df = pd.DataFrame([[agg.open, agg.high, agg.low, agg.close, agg.volume,
-                            agg.vwap] for agg in aggs],
+        df = pd.DataFrame([[agg.open, agg.high, agg.low, agg.close, agg.volume, agg.vwap]
+                           for agg in aggs],
                           index=index,
                           columns=_DATA_COLUMNS)
         return df
@@ -138,8 +135,8 @@ class DataLoader:
                 f'Yahoo data source is not supported for {self._time_interval}')
         t = yf.Ticker(symbol)
         df = t.history(start=start_time, end=end_time, interval=self._interval)
-        df['VWAP'] = df.apply(lambda row: (
-            row['High'] + row['Low'] + row['Close']) / 3, axis=1)
+        df['VWAP'] = df.apply(lambda row: (row['High'] + row['Low'] + row['Close']) / 3,
+                              axis=1)
         return df[_DATA_COLUMNS]
 
     @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
@@ -155,8 +152,7 @@ class DataLoader:
             split_factor = np.round((prev_value + post_value) / 2 / value)
             if split_factor > 1:
                 return value * split_factor
-            reverse_split_factor = np.round(
-                value * 2 / (prev_value + post_value))
+            reverse_split_factor = np.round(value * 2 / (prev_value + post_value))
             if reverse_split_factor > 1:
                 return value / reverse_split_factor
             return value
@@ -256,8 +252,7 @@ def _load_cached_history(symbols: List[str],
             t = pool.submit(_load_cached_symbol_history, symbol,
                             start_time, end_time, data_loader)
             tasks[symbol] = t
-        iterator = tqdm(
-            tasks.items(), ncols=80) if sys.stdout.isatty() else tasks.items()
+        iterator = tqdm(tasks.items(), ncols=80) if sys.stdout.isatty() else tasks.items()
         for symbol, t in iterator:
             res[symbol] = t.result()
     return res

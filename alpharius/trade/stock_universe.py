@@ -91,8 +91,7 @@ class TopVolumeUniverse(StockUniverse):
             prev_close = hist['Close'][prev_day_ind]
             if prev_close < 5:
                 continue
-            dollar_volumes.append(
-                (symbol, self._get_dollar_volume(symbol, prev_day_ind)))
+            dollar_volumes.append((symbol, self._get_dollar_volume(symbol, prev_day_ind)))
         dollar_volumes.sort(key=lambda s: s[1], reverse=True)
         return [s[0] for s in dollar_volumes[:self._num_stocks]]
 
