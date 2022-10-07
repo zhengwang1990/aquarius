@@ -254,7 +254,8 @@ class Trading:
             symbol = action.symbol
             cash_to_trade = min(tradable_cash / len(actions), tradable_cash * action.percent)
             if cash_to_trade < (self._equity - self._cash_reserve) * 0.01:
-                self._logger.info('Not enough cash to open [%s]. Skipping open.', symbol)
+                self._logger.info('Position too small to open [%s]. Position value [%s]. Skipping open.',
+                                   cash_to_trade, symbol)
                 continue
             side = 'buy' if action.type == ActionType.BUY_TO_OPEN else 'sell'
             self._place_order(symbol, side, notional=cash_to_trade)

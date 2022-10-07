@@ -1,11 +1,13 @@
-import alpharius.trade as trade
 import collections
 import datetime
 import itertools
+
 import pandas as pd
-import unittest.mock as mock
+from alpharius import trade
+
 
 Clock = collections.namedtuple('Clock', ['next_open', 'next_close'])
+ClockTimestamp = collections.namedtuple('ClockTimestamp', ['timestamp'])
 Asset = collections.namedtuple('Asset', ['symbol', 'tradable', 'marginable',
                                          'shortable', 'easy_to_borrow', 'fractionable'])
 Account = collections.namedtuple('Account', ['equity', 'cash'])
@@ -54,14 +56,14 @@ class FakeAlpaca:
 
     def get_clock(self):
         self.get_clock_call_count += 1
-        next_open = mock.Mock()
-        next_open.timestamp.return_value = 1615987800
-        next_close = mock.Mock()
-        next_close.timestamp.return_value = 1616007600
+        next_open = ClockTimestamp(lambda :1615987800)
+        next_close = ClockTimestamp(lambda :1616011200)
         return Clock(next_open, next_close)
 
     def list_orders(self, *args, **kwargs):
         self.list_orders_call_count += 1
+        if self.list_orders_call_count % 3 == 0:
+            return []
         return [Order('ORDER123', 'DIA', 'short', '14', None, '0', pd.to_datetime('2021-03-17T10:15:00.0Z'), '12'),
                 Order('ORDER123', 'SPY', 'long', '12', None, '1', pd.to_datetime('2021-03-17T10:20:00.0Z'), '13')]
 
@@ -158,7 +160,7 @@ class FakeProcessor(trade.Processor):
 
     def process_data(self, context):
         self.process_data_call_count += 1
-        if context.current_time.time() == datetime.time(10, 0) and context.symbol == 'QQQ':
+        if context.current_time.time() == datetime.time(9, 35) and context.symbol == 'QQQ':
             return trade.Action('QQQ', trade.ActionType.BUY_TO_OPEN, 1, 51)
         if context.current_time.time() == datetime.time(10, 0) and context.symbol == 'DIA':
             return trade.Action('DIA', trade.ActionType.BUY_TO_OPEN, 1, 51)
@@ -170,7 +172,7 @@ class FakeProcessor(trade.Processor):
             return trade.Action('DIA', trade.ActionType.SELL_TO_OPEN, 1, 52)
         if context.current_time.time() == datetime.time(13, 10) and context.symbol == 'DIA':
             return trade.Action('DIA', trade.ActionType.BUY_TO_CLOSE, 1, 50)
-        if context.current_time.time() == datetime.time(15, 0) and context.symbol == 'SPY':
+        if context.current_time.time() == datetime.time(16, 0) and context.symbol == 'SPY':
             return trade.Action('SPY', trade.ActionType.BUY_TO_OPEN, 1, 50)
 
 
