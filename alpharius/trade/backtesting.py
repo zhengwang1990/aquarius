@@ -1,6 +1,7 @@
 import collections
 import datetime
 import functools
+import math
 import os
 import signal
 import time
@@ -463,9 +464,9 @@ class Backtesting:
                        1 for k in range(len(values) - 1)]
             r = np.average(profits)
             std = np.std(profits)
-            s = r / std * np.sqrt(252)
-            a, b = None, None
-            if len(values) == len(m_values):
+            s = r / std * np.sqrt(252) if std > 0 else math.nan
+            a, b = math.nan, math.nan
+            if len(values) == len(m_values) and len(values) > 2:
                 market_profits = [
                     m_values[k + 1] / m_values[k] - 1 for k in range(len(m_values) - 1)]
                 mr = np.average(market_profits)

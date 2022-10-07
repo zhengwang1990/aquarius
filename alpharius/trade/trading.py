@@ -22,7 +22,8 @@ _MAX_WORKERS = 10
 class Trading:
 
     def __init__(self, processor_factories: List[ProcessorFactory]) -> None:
-        self._output_dir = os.path.join(OUTPUT_DIR, 'trading', datetime.datetime.now().strftime('%F'))
+        self._output_dir = os.path.join(OUTPUT_DIR, 'trading',
+                                        datetime.datetime.now().strftime('%F'))
         os.makedirs(self._output_dir, exist_ok=True)
         self._logger = logging_config(os.path.join(self._output_dir, 'log.txt'),
                                       detail=True, name='trading')
@@ -47,8 +48,7 @@ class Trading:
         self._market_close = clock.next_close.timestamp()
         if self._market_open > self._market_close:
             self._market_open = pd.to_datetime(
-                pd.Timestamp.combine(self._today.date(),
-                                     MARKET_OPEN)).tz_localize(TIME_ZONE).timestamp()
+                pd.Timestamp.combine(self._today.date(), MARKET_OPEN)).tz_localize(TIME_ZONE).timestamp()
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
     def _update_account(self) -> None:
@@ -189,7 +189,8 @@ class Trading:
         all_symbols = list(all_symbols)
         with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
             for symbol in all_symbols:
-                t = pool.submit(data_loader.load_daily_data, symbol, self._today)
+                t = pool.submit(data_loader.load_daily_data,
+                                symbol, self._today)
                 tasks[symbol] = t
         for symbol, t in tasks.items():
             self._intraday_data[symbol] = t.result()
@@ -232,17 +233,21 @@ class Trading:
         """Closes positions instructed by input actions."""
         self._update_positions()
         for action in actions:
-            assert action.type in [ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]
+            assert action.type in [
+                ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]
             symbol = action.symbol
             current_position = self._get_position(symbol)
             if current_position is None:
-                self._logger.info('Position for [%s] does not exist. Skipping close.', symbol)
+                self._logger.info(
+                    'Position for [%s] does not exist. Skipping close.', symbol)
                 continue
             if action.type == ActionType.BUY_TO_CLOSE and current_position.qty > 0:
-                self._logger.info('Position for [%s] is already long-side. Skipping close.', symbol)
+                self._logger.info(
+                    'Position for [%s] is already long-side. Skipping close.', symbol)
                 continue
             if action.type == ActionType.SELL_TO_CLOSE and current_position.qty < 0:
-                self._logger.info('Position for [%s] is already short-side. Skipping close.', symbol)
+                self._logger.info(
+                    'Position for [%s] is already short-side. Skipping close.', symbol)
                 continue
             qty = abs(current_position.qty) * action.percent
             side = 'buy' if action.type == ActionType.BUY_TO_CLOSE else 'sell'
@@ -259,11 +264,14 @@ class Trading:
             if position.qty < 0:
                 tradable_cash += position.entry_price * position.qty * (1 + SHORT_RESERVE_RATIO)
         for action in actions:
-            assert action.type in [ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]
+            assert action.type in [
+                ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]
             symbol = action.symbol
-            cash_to_trade = min(tradable_cash / len(actions), tradable_cash * action.percent)
-            if cash_to_trade < tradable_cash * 0.01:
-                self._logger.info('Not enough cash to open [%s]. Skipping open.', symbol)
+            cash_to_trade = min(tradable_cash / len(actions),
+                                tradable_cash * action.percent)
+            if cash_to_trade < (self._equity - self._cash_reserve) * 0.01:
+                self._logger.info('Position too small to open [%s]. Position value [%s]. Skipping open.',
+                                  cash_to_trade, symbol)
                 continue
             side = 'buy' if action.type == ActionType.BUY_TO_OPEN else 'sell'
             self._place_order(symbol, side, notional=cash_to_trade)
