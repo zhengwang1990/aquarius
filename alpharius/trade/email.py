@@ -11,7 +11,6 @@ import smtplib
 import time
 from typing import Optional, Union
 
-
 import alpaca_trade_api as tradeapi
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +19,6 @@ import retrying
 from .common import (TimeInterval, DEFAULT_DATA_SOURCE,
                      DATETIME_TYPE, TIME_ZONE, timestamp_to_index)
 from .data import DataLoader
-
 
 _SMTP_HOST = 'smtp.163.com'
 _SMTP_PORT = 25
@@ -79,8 +77,7 @@ class Email:
     def _get_historical_price(self, symbol: str, t: pd.Timestamp) -> Optional[float]:
         intraday_data = self._load_daily_data(symbol, t)
         round_t_str = t.strftime('%F ') + self._round_time(t) + ':00'
-        round_t = pd.to_datetime(round_t_str).tz_localize(
-            TIME_ZONE) - datetime.timedelta(minutes=5)
+        round_t = pd.to_datetime(round_t_str).tz_localize(TIME_ZONE) - datetime.timedelta(minutes=5)
         ind = timestamp_to_index(intraday_data.index, round_t)
         if ind is not None:
             return intraday_data['Close'][ind]

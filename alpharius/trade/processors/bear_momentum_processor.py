@@ -74,8 +74,7 @@ class BearMomentumProcessor(Processor):
 
     def _close_position(self, context: Context) -> Optional[Action]:
         position = self._positions[context.symbol]
-        action_type = ActionType.SELL_TO_CLOSE if position[
-            'side'] == 'long' else ActionType.BUY_TO_CLOSE
+        action_type = ActionType.SELL_TO_CLOSE if position['side'] == 'long' else ActionType.BUY_TO_CLOSE
         action = Action(context.symbol, action_type, 1, context.current_price)
         if context.current_time < position['entry_time'] + datetime.timedelta(minutes=60):
             return

@@ -1816,4 +1816,3 @@ COMPANY_SYMBOLS = [
     'ZTO', 'ZTR', 'ZTS', 'ZUMZ', 'ZUO', 'ZVIA', 'ZVO', 'ZWRK', 'ZWRKU', 'ZWRKW',
     'ZWS', 'ZY', 'ZYME', 'ZYNE', 'ZYXI',
 ]
-

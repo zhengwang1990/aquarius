@@ -99,10 +99,8 @@ class Trading:
             return
 
         # Initialize
-        history_start = self._today - \
-            datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
-        self._interday_data = load_tradable_history(
-            history_start, self._today, DEFAULT_DATA_SOURCE)
+        history_start = self._today - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
+        self._interday_data = load_tradable_history(history_start, self._today, DEFAULT_DATA_SOURCE)
         self._init_processors(history_start)
         self._init_stock_universe()
 
@@ -272,8 +270,7 @@ class Trading:
         tradable_cash = self._cash - self._cash_reserve
         for position in self._positions:
             if position.qty < 0:
-                tradable_cash += position.entry_price * \
-                    position.qty * (1 + SHORT_RESERVE_RATIO)
+                tradable_cash += position.entry_price * position.qty * (1 + SHORT_RESERVE_RATIO)
         for action in actions:
             assert action.type in [
                 ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]

@@ -11,7 +11,6 @@ from .common import (DataSource, DATETIME_TYPE,
 from .constants import COMPANY_SYMBOLS
 from .data import load_tradable_history
 
-
 _STOCK_UNIVERSE_CACHE_ROOT = os.path.join(CACHE_DIR, 'stock_universe')
 
 

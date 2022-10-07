@@ -101,7 +101,7 @@ class Backtesting:
         self._run_start_time = time.time()
         self._take_snapshot()
         history_start = self._start_date - \
-            datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
+                        datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
         self._interday_data = load_tradable_history(
             history_start, self._end_date, DEFAULT_DATA_SOURCE)
         self._interday_load_time += time.time() - self._run_start_time
@@ -221,7 +221,7 @@ class Backtesting:
         executed_actions = []
         while current_interval_start < market_close:
             current_time = current_interval_start + \
-                datetime.timedelta(minutes=5)
+                           datetime.timedelta(minutes=5)
 
             frequency_to_process = [TradingFrequency.FIVE_MIN]
             if current_interval_start == market_open:
@@ -351,8 +351,7 @@ class Backtesting:
                 self._positions.append(Position(symbol, new_qty,
                                                 current_position.entry_price,
                                                 current_position.entry_time))
-            spread_adjust = 1 - \
-                BID_ASK_SPREAD if action.type == ActionType.SELL_TO_CLOSE else 1 + BID_ASK_SPREAD
+            spread_adjust = 1 - BID_ASK_SPREAD if action.type == ActionType.SELL_TO_CLOSE else 1 + BID_ASK_SPREAD
             adjusted_action_price = action.price * spread_adjust
             self._cash += adjusted_action_price * qty
             profit = adjusted_action_price / current_position.entry_price - 1
@@ -373,7 +372,7 @@ class Backtesting:
         for position in self._positions:
             if position.qty < 0:
                 tradable_cash += position.entry_price * \
-                    position.qty * (1 + SHORT_RESERVE_RATIO)
+                                 position.qty * (1 + SHORT_RESERVE_RATIO)
         for action in actions:
             assert action.type in [
                 ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]
@@ -424,9 +423,8 @@ class Backtesting:
                     close_price = interday_data['Close'][interday_ind]
                     if interday_ind > 0:
                         daily_change = (
-                            close_price / interday_data['Close'][interday_ind - 1] - 1) * 100
-                change = (close_price / position.entry_price - 1) * \
-                    100 if close_price is not None else None
+                                               close_price / interday_data['Close'][interday_ind - 1] - 1) * 100
+                change = (close_price / position.entry_price - 1) * 100 if close_price is not None else None
                 value = close_price * position.qty if close_price is not None else None
                 position_info.append([position.symbol, position.qty, position.entry_price,
                                       close_price,
@@ -445,7 +443,7 @@ class Backtesting:
             close_price = interday_data.loc[day]['Close'] if day in interday_data.index else position.entry_price
             equity += position.qty * close_price
         profit_pct = (
-            equity / self._daily_equity[-1] - 1) * 100 if self._daily_equity[-1] else 0
+                             equity / self._daily_equity[-1] - 1) * 100 if self._daily_equity[-1] else 0
         self._daily_equity.append(equity)
         total_profit_pct = ((equity / self._daily_equity[0] - 1) * 100)
         stats = [['Total Gain/Loss',
@@ -492,8 +490,7 @@ class Backtesting:
             return
         summary = [['Time Range', f'{market_dates[0].date()} ~ {market_dates[-1].date()}'],
                    ['Success Rate', f'{success_rate * 100:.2f}%'],
-                   ['Num of Trades',
-                       f'{n_trades} ({n_trades / len(market_dates):.2f} per day)'],
+                   ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)'],
                    ['Output Dir', os.path.relpath(self._output_dir, BASE_DIR)]]
         outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
 
@@ -508,9 +505,8 @@ class Backtesting:
             year_market_last_day_index = timestamp_to_index(
                 self._interday_data[market_symbol].index, date)
             year_market_values = self._interday_data[market_symbol]['Close'][
-                year_market_last_day_index - (i - current_start) - 1:year_market_last_day_index + 1]
-            profit_pct = (
-                self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
+                                 year_market_last_day_index - (i - current_start) - 1:year_market_last_day_index + 1]
+            profit_pct = (self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
             year_profit = [f'{current_year} Gain/Loss',
                            f'{profit_pct:+.2f}%']
             _, _, year_sharpe_ratio = _compute_risks(
@@ -524,8 +520,7 @@ class Backtesting:
                     self._interday_data[symbol].index, date)
                 symbol_values = list(self._interday_data[symbol]['Close'][
                                      last_day_index - (i - current_start) - 1:last_day_index + 1])
-                symbol_profit_pct = (
-                    symbol_values[-1] / symbol_values[0] - 1) * 100
+                symbol_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
                 _, _, symbol_sharpe = _compute_risks(
                     symbol_values, year_market_values)
                 year_profit.append(f'{symbol_profit_pct:+.2f}%')
@@ -534,17 +529,15 @@ class Backtesting:
             stats.append(year_sharpe)
             current_start = i
             current_year += 1
-        total_profit_pct = (
-            self._daily_equity[-1] / self._daily_equity[0] - 1) * 100
+        total_profit_pct = (self._daily_equity[-1] / self._daily_equity[0] - 1) * 100
         total_profit = ['Total Gain/Loss', f'{total_profit_pct:+.2f}%']
         market_first_day_index = timestamp_to_index(
             self._interday_data[market_symbol].index, market_dates[0])
         market_last_day_index = timestamp_to_index(
             self._interday_data[market_symbol].index, market_dates[-1])
         market_values = self._interday_data[market_symbol]['Close'][
-            market_first_day_index - 1:market_last_day_index + 1]
-        my_alpha, my_beta, my_sharpe_ratio = _compute_risks(
-            self._daily_equity, market_values)
+                        market_first_day_index - 1:market_last_day_index + 1]
+        my_alpha, my_beta, my_sharpe_ratio = _compute_risks(self._daily_equity, market_values)
         my_drawdown = _compute_drawdown(self._daily_equity)
         alpha_row = ['Alpha', f'{my_alpha * 100:.2f}%']
         beta_row = ['Beta', f'{my_beta:.2f}']
@@ -557,8 +550,7 @@ class Backtesting:
                 self._interday_data[symbol].index, market_dates[-1])
             symbol_values = self._interday_data[symbol]['Close'][first_day_index -
                                                                  1:last_day_index + 1]
-            symbol_total_profit_pct = (
-                symbol_values[-1] / symbol_values[0] - 1) * 100
+            symbol_total_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
             total_profit.append(f'{symbol_total_profit_pct:+.2f}%')
             symbol_alpha, symbol_beta, symbol_sharpe_ratio = _compute_risks(
                 symbol_values, market_values)
@@ -588,13 +580,11 @@ class Backtesting:
         market_dates = self._market_dates[:len(self._daily_equity) - 1]
         for i, date in enumerate(market_dates):
             dates.append(date)
-            values.append(
-                self._daily_equity[i + 1] / self._daily_equity[current_start])
+            values.append(self._daily_equity[i + 1] / self._daily_equity[current_start])
             if i != len(market_dates) - 1 and market_dates[i + 1].year != current_year + 1:
                 continue
             dates = [dates[0] - datetime.timedelta(days=1)] + dates
-            profit_pct = (
-                self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
+            profit_pct = (self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
             plt.figure(figsize=(10, 4))
             plt.plot(dates, values,
                      label=f'My Portfolio ({profit_pct:+.2f}%)',
