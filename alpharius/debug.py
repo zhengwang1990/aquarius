@@ -1,11 +1,14 @@
-from trade import *
 import argparse
 import datetime
 import os
+
 import mplfinance as fplt
 import pandas as pd
+from trade import DataLoader, DataSource, TimeInterval
 
-CACHE_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), '../cache')
+
+CACHE_ROOT = os.path.join(os.path.dirname(
+    os.path.dirname(os.path.realpath(__file__))), '../cache')
 
 
 def vwap(df):
@@ -27,11 +30,13 @@ def plot(date, symbol):
     current_date = pd.to_datetime(date)
     intraday_data = intraday_loader.load_daily_data(symbol, current_date)
     interday_data = interday_loader.load_data_list(symbol,
-                                                   current_date - datetime.timedelta(days=30),
+                                                   current_date -
+                                                   datetime.timedelta(days=30),
                                                    current_date)
     fplt.plot(intraday_data, type='candle', style='charles', title=f'{symbol} on {date}', figsize=(20, 9),
               alines=vwap(intraday_data), volume=True)
-    fplt.plot(interday_data, type='candle', style='charles', title=f'{symbol}', figsize=(20, 9))
+    fplt.plot(interday_data, type='candle', style='charles',
+              title=f'{symbol}', figsize=(20, 9))
 
 
 def main():

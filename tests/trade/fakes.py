@@ -5,7 +5,6 @@ import itertools
 import pandas as pd
 from alpharius import trade
 
-
 Clock = collections.namedtuple('Clock', ['next_open', 'next_close'])
 ClockTimestamp = collections.namedtuple('ClockTimestamp', ['timestamp'])
 Asset = collections.namedtuple('Asset', ['symbol', 'tradable', 'marginable',
@@ -21,7 +20,8 @@ Bar = collections.namedtuple('Bar', ['t', 'o', 'h', 'l', 'c', 'vw', 'v'])
 History = collections.namedtuple('History', ['equity'])
 Calendar = collections.namedtuple('Calendar', ['date', 'open', 'close'])
 Trade = collections.namedtuple('Trade', ['p'])
-Agg = collections.namedtuple('Agg', ['timestamp', 'open', 'high', 'low', 'close', 'vwap', 'volume'])
+Agg = collections.namedtuple(
+    'Agg', ['timestamp', 'open', 'high', 'low', 'close', 'vwap', 'volume'])
 LastTrade = collections.namedtuple('LastTrade', ['price'])
 
 
@@ -56,8 +56,8 @@ class FakeAlpaca:
 
     def get_clock(self):
         self.get_clock_call_count += 1
-        next_open = ClockTimestamp(lambda :1615987800)
-        next_close = ClockTimestamp(lambda :1616011200)
+        next_open = ClockTimestamp(lambda: 1615987800)
+        next_close = ClockTimestamp(lambda: 1616011200)
         return Clock(next_open, next_close)
 
     def list_orders(self, *args, **kwargs):
@@ -83,7 +83,8 @@ class FakeAlpaca:
             results = [Bar(pd.to_datetime(t, unit='s', utc=True),
                            40, 41, 39, next(self._value_cycle), 40.123, 10)
                        for t in range(int(pd.to_datetime(start).timestamp()),
-                                      int(pd.to_datetime(end).timestamp() + 86400),
+                                      int(pd.to_datetime(
+                                          end).timestamp() + 86400),
                                       86400)
                        if pd.to_datetime(t, unit='s').isoweekday() < 6]
         elif timeframe.value == '5Min':
@@ -91,7 +92,8 @@ class FakeAlpaca:
             results = [Bar(pd.to_datetime(t, unit='s', utc=True),
                            40, 41, 39, next(self._value_cycle), 40.123, 10)
                        for t in range(int(pd.to_datetime(f'{day_str} 09:30:00-04:00').timestamp()),
-                                      int(pd.to_datetime(f'{day_str} 16:05:00-04:00').timestamp()),
+                                      int(pd.to_datetime(
+                                          f'{day_str} 16:05:00-04:00').timestamp()),
                                       300)]
         else:
             raise ValueError('Time frame must be 5 min or 1 day.')
@@ -105,7 +107,8 @@ class FakeAlpaca:
         date = start_date
         while date <= end_date:
             if date.isoweekday() < 6:
-                calendar.append(Calendar(date, datetime.time(9, 30), datetime.time(16, 0)))
+                calendar.append(
+                    Calendar(date, datetime.time(9, 30), datetime.time(16, 0)))
             date += datetime.timedelta(days=1)
         return calendar
 
@@ -128,7 +131,8 @@ class FakePolygon:
             end = pd.to_datetime(to, unit='ms', utc=True)
             results = [Agg(t * 1000, 40, 41, 39, next(self._value_cycle), 40.123, 10)
                        for t in range(int(pd.to_datetime(start.date()).timestamp()),
-                                      int(pd.to_datetime(end.date()).timestamp() + 86400),
+                                      int(pd.to_datetime(
+                                          end.date()).timestamp() + 86400),
                                       86400)
                        if pd.to_datetime(t, unit='s').isoweekday() < 6]
         elif multiplier == 5 and timespan == 'minute':

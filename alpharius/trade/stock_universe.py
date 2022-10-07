@@ -1,11 +1,16 @@
-from .common import *
+import datetime
+import json
+import os
+from typing import List
+
+import alpaca_trade_api as tradeapi
+import numpy as np
+import pandas as pd
+from .common import (DataSource, DATETIME_TYPE,
+                     DAYS_IN_A_MONTH, CACHE_DIR, timestamp_to_index)
 from .constants import COMPANY_SYMBOLS
 from .data import load_tradable_history
-from typing import List
-import alpaca_trade_api as tradeapi
-import datetime
-import numpy as np
-import json
+
 
 _STOCK_UNIVERSE_CACHE_ROOT = os.path.join(CACHE_DIR, 'stock_universe')
 
@@ -16,12 +21,14 @@ class StockUniverse:
                  history_start: DATETIME_TYPE,
                  end_time: DATETIME_TYPE,
                  data_source: DataSource) -> None:
-        self._historical_data = load_tradable_history(history_start, end_time, data_source)
+        self._historical_data = load_tradable_history(
+            history_start, end_time, data_source)
 
         alpaca = tradeapi.REST()
         calendar = alpaca.get_calendar(start=history_start.strftime('%F'),
                                        end=end_time.strftime('%F'))
-        self._market_dates = [pd.to_datetime(market_day.date).date() for market_day in calendar]
+        self._market_dates = [pd.to_datetime(
+            market_day.date).date() for market_day in calendar]
         self._cache_dir = None
 
     def get_prev_day(self, view_time: DATETIME_TYPE):
@@ -85,7 +92,8 @@ class TopVolumeUniverse(StockUniverse):
             prev_close = hist['Close'][prev_day_ind]
             if prev_close < 5:
                 continue
-            dollar_volumes.append((symbol, self._get_dollar_volume(symbol, prev_day_ind)))
+            dollar_volumes.append(
+                (symbol, self._get_dollar_volume(symbol, prev_day_ind)))
         dollar_volumes.sort(key=lambda s: s[1], reverse=True)
         return [s[0] for s in dollar_volumes[:self._num_stocks]]
 
@@ -119,7 +127,8 @@ class IntradayVolatilityStockUniverse(StockUniverse):
     def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
         prev_day = self.get_prev_day(view_time)
         intraday_volatilities = []
-        top_volume_symbols = set(self._top_volumes.get_stock_universe_impl(view_time))
+        top_volume_symbols = set(
+            self._top_volumes.get_stock_universe_impl(view_time))
         for symbol, hist in self._historical_data.items():
             if symbol not in self._stock_symbols:
                 continue
@@ -130,7 +139,8 @@ class IntradayVolatilityStockUniverse(StockUniverse):
             prev_day_ind = timestamp_to_index(hist.index, prev_day)
             if prev_day_ind < DAYS_IN_A_MONTH:
                 continue
-            intraday_volatility = self._get_intraday_range(symbol, prev_day_ind)
+            intraday_volatility = self._get_intraday_range(
+                symbol, prev_day_ind)
             intraday_volatilities.append((symbol, intraday_volatility))
 
         intraday_volatilities.sort(key=lambda s: s[1], reverse=True)
@@ -165,7 +175,8 @@ class MonthlyGainStockUniverse(StockUniverse):
     def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
         prev_day = self.get_prev_day(view_time)
         monthly_returns = []
-        top_volume_symbols = set(self._top_volumes.get_stock_universe_impl(view_time))
+        top_volume_symbols = set(
+            self._top_volumes.get_stock_universe_impl(view_time))
         for symbol, hist in self._historical_data.items():
             if symbol not in self._stock_symbols:
                 continue

@@ -81,9 +81,11 @@ def test_not_run_on_market_close_day(mocker, mock_alpaca):
 
 
 def test_small_position_not_open(mocker, mock_alpaca):
-    fake_processor_factory = FakeProcessorFactory(trade.TradingFrequency.CLOSE_TO_OPEN)
+    fake_processor_factory = FakeProcessorFactory(
+        trade.TradingFrequency.CLOSE_TO_OPEN)
     trading = trade.Trading(processor_factories=[fake_processor_factory])
-    mocker.patch.object(FakeAlpaca, 'get_account', return_value=Account('2000', '0.1'))
+    mocker.patch.object(FakeAlpaca, 'get_account',
+                        return_value=Account('2000', '0.1'))
 
     trading.run()
 

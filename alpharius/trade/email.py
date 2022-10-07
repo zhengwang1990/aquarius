@@ -1,7 +1,3 @@
-from .common import *
-from .data import DataLoader
-from typing import Optional, Union
-import alpaca_trade_api as tradeapi
 import datetime
 import functools
 import email.mime.image as image
@@ -9,13 +5,22 @@ import email.mime.multipart as multipart
 import email.mime.text as text
 import html
 import io
-import matplotlib.pyplot as plt
-import numpy as np
+import logging
 import os
-import pandas as pd
-import retrying
 import smtplib
 import time
+from typing import Optional, Union
+
+
+import alpaca_trade_api as tradeapi
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import retrying
+from .common import (TimeInterval, DEFAULT_DATA_SOURCE,
+                     DATETIME_TYPE, TIME_ZONE, timestamp_to_index)
+from .data import DataLoader
+
 
 _SMTP_HOST = 'smtp.163.com'
 _SMTP_PORT = 25
@@ -35,8 +40,10 @@ class Email:
         self._sender = f'Stock Trading System <{username}@163.com>'
         self._receiver = receiver
         self._alpaca = tradeapi.REST()
-        self._interday_data_loader = DataLoader(TimeInterval.DAY, DEFAULT_DATA_SOURCE)
-        self._intraday_data_loader = DataLoader(TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
+        self._interday_data_loader = DataLoader(
+            TimeInterval.DAY, DEFAULT_DATA_SOURCE)
+        self._intraday_data_loader = DataLoader(
+            TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
         self._create_client(username, password)
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
@@ -72,7 +79,8 @@ class Email:
     def _get_historical_price(self, symbol: str, t: pd.Timestamp) -> Optional[float]:
         intraday_data = self._load_daily_data(symbol, t)
         round_t_str = t.strftime('%F ') + self._round_time(t) + ':00'
-        round_t = pd.to_datetime(round_t_str).tz_localize(TIME_ZONE) - datetime.timedelta(minutes=5)
+        round_t = pd.to_datetime(round_t_str).tz_localize(
+            TIME_ZONE) - datetime.timedelta(minutes=5)
         ind = timestamp_to_index(intraday_data.index, round_t)
         if ind is not None:
             return intraday_data['Close'][ind]
@@ -140,10 +148,13 @@ class Email:
                         order_gain_str = f'<span {self._get_color_style(order_gain)}>{order_gain:+.2f}%</span>'
                         exit_time = entry_time
                         entry_time = self._round_time(prev_filled_at)
-                        theory_entry_price = self._get_historical_price(order.symbol, prev_filled_at)
-                        theory_exit_price = self._get_historical_price(order.symbol, filled_at)
+                        theory_entry_price = self._get_historical_price(
+                            order.symbol, prev_filled_at)
+                        theory_exit_price = self._get_historical_price(
+                            order.symbol, filled_at)
                         if theory_entry_price and theory_exit_price:
-                            theory_gain = (theory_exit_price / theory_entry_price - 1) * 100
+                            theory_gain = (theory_exit_price /
+                                           theory_entry_price - 1) * 100
                             if order_side == 'short':
                                 theory_gain *= -1
                             diff_gain = order_gain - theory_gain
@@ -166,7 +177,8 @@ class Email:
         account_cash = float(account.cash) - cash_reserve
         history_length = 10
         history = self._alpaca.get_portfolio_history(date_start=market_dates[-history_length].strftime('%F'),
-                                                     date_end=market_dates[-2].strftime('%F'),
+                                                     date_end=market_dates[-2].strftime(
+                                                         '%F'),
                                                      timeframe='1D')
         for i in range(len(history.equity)):
             history.equity[i] = (history.equity[i] - cash_reserve
@@ -178,11 +190,13 @@ class Email:
                 equity_denominator = equity
                 historical_start = i
                 break
-        historical_value = [equity / equity_denominator for equity in history.equity]
+        historical_value = [
+            equity / equity_denominator for equity in history.equity]
         historical_value.append(account_equity / equity_denominator)
         for i in range(historical_start):
             historical_value[i] = None
-        historical_date = [market_day for market_day in market_dates[-history_length:]]
+        historical_date = [
+            market_day for market_day in market_dates[-history_length:]]
         market_symbols = ['DIA', 'SPY', 'QQQ']
         market_values = {}
         for symbol in market_symbols:
@@ -222,7 +236,8 @@ class Email:
                  label=f'My Portfolio ({(historical_value[-1] - 1) * 100:+.2f}%)',
                  color=portfolio_color)
         if historical_start > 0:
-            plt.plot([1] * (historical_start + 1), '--', marker='o', color=portfolio_color)
+            plt.plot([1] * (historical_start + 1), '--',
+                     marker='o', color=portfolio_color)
         for symbol in market_symbols:
             if symbol not in market_values:
                 continue
@@ -249,7 +264,8 @@ class Email:
         plt.savefig(buf, format='png')
         buf.seek(0)
         history_image = image.MIMEImage(buf.read())
-        history_image.add_header('Content-Disposition', 'attachment; filename=history.png')
+        history_image.add_header(
+            'Content-Disposition', 'attachment; filename=history.png')
         history_image.add_header('Content-ID', '<history>')
 
         html_template_path = os.path.join(_HTML_DIR,
@@ -268,12 +284,14 @@ class Email:
             return
         else:
             self._logger.info('Sending alert')
-        message = self._create_message('Alert', 'System encountered an unexpected error')
+        message = self._create_message(
+            'Alert', 'System encountered an unexpected error')
         html_template_path = os.path.join(_HTML_DIR,
                                           'alert.html')
         with open(html_template_path, 'r') as f:
             html_template = f.read()
-        error_time = pd.Timestamp(int(time.time()), unit='s', tz=TIME_ZONE).strftime('%F %H:%M')
+        error_time = pd.Timestamp(
+            int(time.time()), unit='s', tz=TIME_ZONE).strftime('%F %H:%M')
         with open(log_file, 'r') as f:
             log_content = f.read()
         error_log = html.escape(log_content)
@@ -283,5 +301,6 @@ class Email:
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
     def _send_mail(self, message):
-        self._client.sendmail(self._sender, [self._receiver], message.as_string())
+        self._client.sendmail(
+            self._sender, [self._receiver], message.as_string())
         self._client.close()

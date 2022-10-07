@@ -1,20 +1,23 @@
-from .common import *
-from .exlcusions import EXCLUSIONS
-from concurrent import futures
-from tqdm import tqdm
-from typing import Dict, List
-import alpaca_trade_api as tradeapi
 import datetime
 import functools
+import os
+import re
+import sys
+from concurrent import futures
+from typing import Dict, List
+
+import alpaca_trade_api as tradeapi
 import numpy as np
 import pandas as pd
 import polygon
-import re
 import retrying
-import sys
 import yfinance as yf
+from tqdm import tqdm
+from .common import (
+    DataSource, TimeInterval, DATETIME_TYPE, TIME_ZONE, CACHE_DIR)
+from .exlcusions import EXCLUSIONS
 
-_MEMORY_CACHE_SIZE = 5000
+
 _DATA_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume', 'VWAP']
 _MAX_WORKERS = 10
 _POLYGON_API_KEY_ENV = 'POLYGON_API_KEY'
@@ -63,11 +66,14 @@ class DataLoader:
     def _init_alpaca(self) -> None:
         self._alpaca = tradeapi.REST()
         if self._time_interval == TimeInterval.FIVE_MIN:
-            self._time_frame = tradeapi.TimeFrame(5, tradeapi.TimeFrameUnit.Minute)
+            self._time_frame = tradeapi.TimeFrame(
+                5, tradeapi.TimeFrameUnit.Minute)
         elif self._time_interval == TimeInterval.HOUR:
-            self._time_frame = tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Hour)
+            self._time_frame = tradeapi.TimeFrame(
+                1, tradeapi.TimeFrameUnit.Hour)
         elif self._time_interval == TimeInterval.DAY:
-            self._time_frame = tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day)
+            self._time_frame = tradeapi.TimeFrame(
+                1, tradeapi.TimeFrameUnit.Day)
 
     def load_data_point(self, symbol: str, time_point: DATETIME_TYPE) -> pd.DataFrame:
         return self.load_data_list(symbol, time_point, time_point)
@@ -128,10 +134,12 @@ class DataLoader:
                               start_time: DATETIME_TYPE,
                               end_time: DATETIME_TYPE) -> pd.DataFrame:
         if self._time_interval != TimeInterval.DAY:
-            raise DataError(f'Yahoo data source is not supported for {self._time_interval}')
+            raise DataError(
+                f'Yahoo data source is not supported for {self._time_interval}')
         t = yf.Ticker(symbol)
         df = t.history(start=start_time, end=end_time, interval=self._interval)
-        df['VWAP'] = df.apply(lambda row: (row['High'] + row['Low'] + row['Close']) / 3, axis=1)
+        df['VWAP'] = df.apply(lambda row: (
+            row['High'] + row['Low'] + row['Close']) / 3, axis=1)
         return df[_DATA_COLUMNS]
 
     @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
@@ -147,7 +155,8 @@ class DataLoader:
             split_factor = np.round((prev_value + post_value) / 2 / value)
             if split_factor > 1:
                 return value * split_factor
-            reverse_split_factor = np.round(value * 2 / (prev_value + post_value))
+            reverse_split_factor = np.round(
+                value * 2 / (prev_value + post_value))
             if reverse_split_factor > 1:
                 return value / reverse_split_factor
             return value
@@ -206,7 +215,6 @@ class DataLoader:
         return trades
 
 
-
 @functools.lru_cache()
 def get_tradable_symbols() -> List[str]:
     alpaca = tradeapi.REST()
@@ -245,9 +253,11 @@ def _load_cached_history(symbols: List[str],
     tasks = {}
     with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
         for symbol in symbols:
-            t = pool.submit(_load_cached_symbol_history, symbol, start_time, end_time, data_loader)
+            t = pool.submit(_load_cached_symbol_history, symbol,
+                            start_time, end_time, data_loader)
             tasks[symbol] = t
-        iterator = tqdm(tasks.items(), ncols=80) if sys.stdout.isatty() else tasks.items()
+        iterator = tqdm(
+            tasks.items(), ncols=80) if sys.stdout.isatty() else tasks.items()
         for symbol, t in iterator:
             res[symbol] = t.result()
     return res
@@ -258,7 +268,8 @@ def _load_cached_symbol_history(symbol: str,
                                 end_time: DATETIME_TYPE,
                                 data_loader: DataLoader) -> pd.DataFrame:
     cache_file = os.path.join(CACHE_DIR, str(TimeInterval.DAY),
-                              start_time.strftime('%F'), end_time.strftime('%F'),
+                              start_time.strftime(
+                                  '%F'), end_time.strftime('%F'),
                               f'history_{symbol}.csv')
     if os.path.isfile(cache_file):
         hist = pd.read_csv(cache_file, index_col=0, parse_dates=True)
