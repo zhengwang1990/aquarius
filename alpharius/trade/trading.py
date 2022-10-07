@@ -238,16 +238,13 @@ class Trading:
             symbol = action.symbol
             current_position = self._get_position(symbol)
             if current_position is None:
-                self._logger.info(
-                    'Position for [%s] does not exist. Skipping close.', symbol)
+                self._logger.info('Position for [%s] does not exist. Skipping close.', symbol)
                 continue
             if action.type == ActionType.BUY_TO_CLOSE and current_position.qty > 0:
-                self._logger.info(
-                    'Position for [%s] is already long-side. Skipping close.', symbol)
+                self._logger.info('Position for [%s] is already long-side. Skipping close.', symbol)
                 continue
             if action.type == ActionType.SELL_TO_CLOSE and current_position.qty < 0:
-                self._logger.info(
-                    'Position for [%s] is already short-side. Skipping close.', symbol)
+                self._logger.info('Position for [%s] is already short-side. Skipping close.', symbol)
                 continue
             qty = abs(current_position.qty) * action.percent
             side = 'buy' if action.type == ActionType.BUY_TO_CLOSE else 'sell'
