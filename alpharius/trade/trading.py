@@ -24,11 +24,13 @@ class Trading:
     def __init__(self, processor_factories: List[ProcessorFactory]) -> None:
         self._output_dir = os.path.join(OUTPUT_DIR, 'trading', datetime.datetime.now().strftime('%F'))
         os.makedirs(self._output_dir, exist_ok=True)
-        self._logger = logging_config(os.path.join(self._output_dir, 'log.txt'), detail=True, name='trading')
+        self._logger = logging_config(os.path.join(self._output_dir, 'log.txt'),
+                                      detail=True, name='trading')
         self._equity, self._cash = 0, 0
         self._cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         self._today = pd.to_datetime(
-            pd.Timestamp.combine(datetime.datetime.today().date(), datetime.time(0, 0))).tz_localize(TIME_ZONE)
+            pd.Timestamp.combine(datetime.datetime.today().date(),
+                                 datetime.time(0, 0))).tz_localize(TIME_ZONE)
         self._processor_factories = processor_factories
         self._alpaca = tradeapi.REST()
         self._update_account()
@@ -45,7 +47,8 @@ class Trading:
         self._market_close = clock.next_close.timestamp()
         if self._market_open > self._market_close:
             self._market_open = pd.to_datetime(
-                pd.Timestamp.combine(self._today.date(), MARKET_OPEN)).tz_localize(TIME_ZONE).timestamp()
+                pd.Timestamp.combine(self._today.date(),
+                                     MARKET_OPEN)).tz_localize(TIME_ZONE).timestamp()
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
     def _update_account(self) -> None:
