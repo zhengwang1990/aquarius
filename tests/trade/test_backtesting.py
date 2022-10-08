@@ -1,10 +1,8 @@
-import alpaca_trade_api as tradeapi
-import matplotlib.pyplot as plt
 import pandas as pd
 import pytest
 from alpharius import trade
 from alpharius.trade import processors
-from .fakes import FakeProcessorFactory
+from ..fakes import FakeProcessorFactory
 
 
 @pytest.mark.parametrize("trading_frequency",

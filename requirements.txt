@@ -1,5 +1,6 @@
 alpaca-trade-api
 bs4
+coverage
 flask
 matplotlib
 mplfinance

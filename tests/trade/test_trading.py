@@ -8,7 +8,7 @@ import smtplib
 import pytest
 from alpharius import trade
 from alpharius.trade import processors
-from .fakes import Account, FakeAlpaca, FakeProcessorFactory
+from ..fakes import Account, FakeAlpaca, FakeProcessorFactory
 
 
 @pytest.fixture(autouse=True)
@@ -28,7 +28,7 @@ def mock_email(mocker):
 
 
 @pytest.fixture(autouse=True)
-def mock_cash_reserve(mocker):
+def mock_cash_reserve():
     os.environ['CASH_RESERVE'] = '0'
 
 

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import polygon
 import pytest
-from . import fakes
+from .. import fakes
 
 
 @pytest.fixture(autouse=True)

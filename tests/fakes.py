@@ -1,6 +1,7 @@
 import collections
 import datetime
 import itertools
+import time
 
 import pandas as pd
 from alpharius import trade
@@ -17,7 +18,7 @@ Position = collections.namedtuple('Position', ['symbol', 'qty', 'current_price',
 Order = collections.namedtuple('Order', ['id', 'symbol', 'side', 'qty', 'notional',
                                          'filled_qty', 'filled_at', 'filled_avg_price'])
 Bar = collections.namedtuple('Bar', ['t', 'o', 'h', 'l', 'c', 'vw', 'v'])
-History = collections.namedtuple('History', ['equity'])
+History = collections.namedtuple('History', ['equity', 'timestamp'])
 Calendar = collections.namedtuple('Calendar', ['date', 'open', 'close'])
 Trade = collections.namedtuple('Trade', ['p'])
 Agg = collections.namedtuple(
@@ -60,12 +61,17 @@ class FakeAlpaca:
         next_close = ClockTimestamp(lambda: 1616011200)
         return Clock(next_open, next_close)
 
-    def list_orders(self, *args, **kwargs):
+    def list_orders(self, status=None, direction=None, *args, **kwargs):
         self.list_orders_call_count += 1
-        if self.list_orders_call_count % 3 == 0:
+        if self.list_orders_call_count % 3 == 0 and status != 'closed':
             return []
-        return [Order('ORDER123', 'DIA', 'short', '14', None, '0', pd.to_datetime('2021-03-17T10:15:00.0Z'), '12'),
-                Order('ORDER123', 'SPY', 'long', '12', None, '1', pd.to_datetime('2021-03-17T10:20:00.0Z'), '13')]
+        orders = [Order('ORDER123', 'DIA', 'short', '14', None, '0', pd.to_datetime('2021-03-17T10:15:00.0Z'), '12'),
+                  Order('ORDER124', 'SPY', 'long', '12', None, '1', pd.to_datetime('2021-03-17T10:20:00.0Z'), '13'),
+                  Order('ORDER125', 'QQQ', 'long', None, '100.1', '10',
+                        pd.to_datetime(time.time(), utc=True, unit='s'), '9.1')]
+        if direction == 'desc':
+            orders = orders[::-1]
+        return orders
 
     def submit_order(self, *args, **kwargs):
         self.submit_order_call_count += 1
@@ -75,7 +81,9 @@ class FakeAlpaca:
 
     def get_portfolio_history(self, *args, **kwargs):
         self.get_portfolio_history_call_count += 1
-        return History([i + 100 for i in range(10)])
+        current_time = time.time()
+        return History([i + 100 for i in range(10)],
+                       [current_time - i * 300 for i in range(9, -1, -1)])
 
     def get_bars(self, symbol, timeframe, start, end, *args, **kwargs):
         self.get_bars_call_count += 1

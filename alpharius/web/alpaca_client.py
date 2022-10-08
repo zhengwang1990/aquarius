@@ -43,9 +43,9 @@ def get_colored_value(value: str, color: str, with_arrow: bool = False):
     arrow = ''
     if with_arrow:
         if color == 'green':
-            arrow = '<i class="uil uil-arrow-up"></i> '
+            arrow = '<i class="uil uil-arrow-up"></i>'
         else:
-            arrow = '<i class="uil uil-arrow-down"></i> '
+            arrow = '<i class="uil uil-arrow-down"></i>'
     return f'<span style="color:{color};">{arrow}{value}</span>'
 
 
