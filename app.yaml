@@ -3,7 +3,14 @@ runtime: python310
 entrypoint: waitress-serve --port $PORT --call 'alpharius.web:create_app'
 
 handlers:
-- url: /static
-  static_dir: alpharius/web/static
-- url: /.*
-  script: auto
+  - url: /static
+    static_dir: alpharius/web/static
+  - url: /.*
+    script: auto
+
+env_variables:
+  - APCA_API_BASE_URL: ""
+  - APCA_API_KEY_ID: ""
+  - APCA_API_SECRET_KEY: ""
+  - CASH_RESERVE: ""
+  - SECRET_KEY: ""
