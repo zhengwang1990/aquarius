@@ -1,3 +1,5 @@
+from concurrent import futures
+
 import flask
 from .alpaca_client import AlpacaClient
 
@@ -8,5 +10,14 @@ _client = AlpacaClient()
 
 @bp.route("/")
 def dashboard():
-    histories = _client.get_portfolio_histories()
-    return flask.render_template('dashboard.html', histories=histories)
+    tasks = dict()
+    with futures.ThreadPoolExecutor(max_workers=3) as pool:
+        tasks['histories'] = pool.submit(_client.get_portfolio_histories)
+        tasks['orders'] = pool.submit(_client.get_recent_orders)
+        tasks['positions'] = pool.submit(_client.get_current_positions)
+        tasks['watch'] = pool.submit(_client.get_market_watch)
+    return flask.render_template('dashboard.html',
+                                 histories=tasks['histories'].result(),
+                                 orders=tasks['orders'].result(),
+                                 positions=tasks['positions'].result(),
+                                 watch=tasks['watch'].result())
