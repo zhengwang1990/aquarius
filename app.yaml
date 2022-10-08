@@ -1,0 +1,9 @@
+runtime: python310
+
+entrypoint: waitress-serve --port $PORT --call 'alpharius.web:create_app'
+
+handlers:
+- url: /static
+  static_dir: alpharius/web/static
+- url: /.*
+  script: auto
