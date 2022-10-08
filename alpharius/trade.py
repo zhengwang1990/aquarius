@@ -3,7 +3,7 @@ import trade
 import datetime
 
 from trade import processors
-from dateutil import relativedelta
+from dateutil.relativedelta import relativedelta
 
 
 def main():
@@ -26,8 +26,7 @@ def main():
     ]
     today = datetime.datetime.today()
     if args.mode == 'backtest':
-        default_start_date = (
-            today - relativedelta.relativedelta(years=1)).strftime('%F')
+        default_start_date = (today - relativedelta(years=1)).strftime('%F')
         default_end_date = (today + datetime.timedelta(days=1)).strftime('%F')
         start_date = args.start_date or default_start_date
         end_date = args.end_date or default_end_date

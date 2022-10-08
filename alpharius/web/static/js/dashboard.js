@@ -1,150 +1,59 @@
 
-let current_graph = localStorage.getItem("graph");
-var active_graph = "portforlio-1d";
-if (current_graph && current_graph != active_graph) {
-    change_graph(active_graph, current_graph);
-    active_graph = current_graph;
-}
-console.log(current_graph);
-var active_button = "btn-radio-" + active_graph.split("-")[1];
-document.getElementById(active_button).checked = true;
-document.getElementById("btn-radio-1d").addEventListener("click", () => {
-    change_graph(active_graph, "portforlio-1d");
-});
-document.getElementById("btn-radio-10d").addEventListener("click", () => {
-    change_graph(active_graph, "portforlio-10d");
-});
-document.getElementById("btn-radio-1m").addEventListener("click", () => {
-    change_graph(active_graph, "portforlio-1m");
-});
-document.getElementById("btn-radio-6m").addEventListener("click", () => {
-    change_graph(active_graph, "portforlio-6m");
-});
-document.getElementById("btn-radio-1y").addEventListener("click", () => {
-    change_graph(active_graph, "portforlio-1y");
-});
-document.getElementById("btn-radio-5y").addEventListener("click", () => {
-    change_graph(active_graph, "portforlio-5y");
-});
+let current_time_period = localStorage.getItem("time_period");
+if (!current_time_period) change_time_period = "1d";
+const graph_time_periods = ["1d", "1w", "1m", "6m", "1y", "5y"];
 
-
-function change_graph(old_graph, new_graph) {
-    if (old_graph === new_graph) {
+var active_time_period = null;
+function change_time_period(time_period) {
+    if (active_time_period === time_period) {
         return;
     }
-    document.getElementById(old_graph).style.display = "none";
-    document.getElementById(new_graph).style.removeProperty("display");
-    active_graph = new_graph;
-    localStorage.setItem("graph", new_graph);
+    if (active_time_period) {
+        document.getElementById("graph-" + active_time_period).style.display = "none";
+    }
+    document.getElementById("graph-" + time_period).style.removeProperty("display");
+    document.getElementById("currnet-change").style.color = HISTORIES["color_" + time_period];
+    document.getElementById("currnet-change").innerHTML = HISTORIES["change_" + time_period];
+    active_time_period = time_period;
+    localStorage.setItem("time_period", time_period);
 }
 
-const data_1d = {
-labels: ["09:30", "09:35", "09:40", "09:45", "09:50", "09:55", "10:00", "09:30", "09:35", "09:40", "09:45", "09:50", "09:55", "10:00", "09:30", "09:35", "09:40", "09:45", "09:50", "09:55", "10:00", "09:30", "09:35", "09:40", "09:45", "09:50", "09:55", "10:00"],
-datasets: [
-    {
-        label: "value",
-        backgroundColor: "green",
-        borderColor: "green",
-        radius: 1,
-        data: [0, 10, 5, 2, 20, 30, 41, 15, 10, 5, 2, 20, 30, 33, 15, 10, 5, 2, 20, 30, 35, 37, 38, 39, 45],
-    },
-    {
-        label: "previous close",
-        backgroundColor: "green",
-        borderColor: "green",
-        borderDash: [10, 15],
-        radius: 0,
-        data: Array(25).fill(5),
-    },
-]
+change_time_period(current_time_period);
+document.getElementById("btn-radio-" + active_time_period).checked = true;
+for (const time_period of graph_time_periods) {
+    document.getElementById("btn-radio-" + time_period).addEventListener("click", () => {
+        change_time_period(time_period);
+    });
+}
+
+const graph_granularity = {
+    "1d": "fine", "1w": "coarse", "1m": "coarse",
+    "6m": "fine", "1y": "fine", "5y": "fine",
 };
 
-const data_10d = {
-    labels: ["10-01", "10-02", "10-04", "10-05", "10-09", "10-11", "10-12", "10-13", "10-14", "10-15"],
-    datasets: [
-        {
-            label: "value",
-            backgroundColor: "green",
-            borderColor: "green",
-            radius: 4,
-            data: [0, 10, 5, 2, 20, 30, 45, 15, 10, 5, 2, 20],
-        },
-    ]
-};
-
-const data_1m = {
-    labels: ["10-01", "10-02", "10-04", "10-05", "10-09", "10-11", "10-12", "10-13", "10-14", "10-15", "10-17", "10-18"],
-    datasets: [
-        {
-            label: "value",
-            backgroundColor: "green",
-            borderColor: "green",
-            radius: 4,
-            data: [7, 10,0, 10, 5, 2, 20, 30, 45, 15, 10, 5, 2, 20],
-        },
-    ]
-};
-
-const data_6m = {
-    labels: ["01-01", "01-25", "02-11", "03-05", "04-09", "05-11", "06-12", "07-13", "08-12", "09-15", "09-17", "09-18", "10-11", "10-12", "10-13", "10-14", "10-15", "10-17", "10-18"],
-    datasets: [
-        {
-            label: "value",
-            backgroundColor: "green",
-            borderColor: "green",
-            radius: 1,
-            data: [7, 10,0, 32, 5, 2, 20, 30, 45, 15, 10, 5, 2, 20, 7, 10,0, 10, 5, 2, 20, 30, 45, 15, 10, 5, 2, 20],
-        },
-    ]
-};
-
-const data_1y = {
-    labels: ["2022-01-01", "", "", "2022-02-02", "", "", "2022-03-04", "", "", "2022-04-01", "", "", "2022-05-01", "", "", "2022-06-01", "", "", "2022-10-01"],
-    datasets: [
-        {
-            label: "value",
-            backgroundColor: "green",
-            borderColor: "green",
-            radius: 1,
-            data: [7, 10,0, 32, 5, 2, 20, 30, 45, 15, 10, 5, 2, 15, 7, 23,0, 10, 5, 2, 1, 32, 44, 1, 10, 5, 24, 11],
-        },
-    ]
-};
-
-const data_5y = {
-    labels: ["01-01", "01-25", "02-11", "03-05", "04-09", "05-11", "06-12", "07-13", "08-12", "09-15", "09-17", "09-18", "10-11", "10-12", "10-13", "10-14", "10-15", "10-17", "10-18"],
-    datasets: [
-        {
-            label: "value",
-            backgroundColor: "red",
-            borderColor: "red",
-            radius: 1,
-            data: [7, 10,0, 32, 5, 2, 20, 30, 45, 15, 10, 5, 2, 20, 7, 10,0, 10, 5, 2, 20, 30, 45, 15, 10, 5, 2, 20],
-        },
-    ]
-};
-
-const config_fine = {
-    type: "line",
-    options: {
-        interaction: {
-            intersect: false,
-        },
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
-        },
-        scales: {
-            x: {
-                grid: {
-                    display: false,
-                }
-            }
-        }
-    }
-};
+var graph_data = {}
+for (const time_period of graph_time_periods) {
+    graph_data[time_period] = {
+        labels: HISTORIES["time_" + time_period],
+        datasets: [
+            {
+                label: "value",
+                backgroundColor: HISTORIES["color_" + time_period],
+                borderColor: HISTORIES["color_" + time_period],
+                radius: graph_granularity[time_period] === "fine" ? 1 : 4,
+                data: HISTORIES["equity_" + time_period],
+            },
+        ],
+    };
+}
+graph_data["1d"]["datasets"].push({
+    label: "previous close",
+    backgroundColor: HISTORIES["color_1d"],
+    borderColor: HISTORIES["color_1d"],
+    borderDash: [6, 6],
+    radius: 0,
+    data: Array(HISTORIES["time_1d"].length).fill(HISTORIES["prev_close"]),
+});
 
 const config_coarse = {
     type: "line",
@@ -158,29 +67,22 @@ const config_coarse = {
                 display: false
             }
         },
+        scales: {
+            x: {
+                ticks: {
+                    autoSkip: true,
+                    autoSkipPadding: 15,
+                    maxRotation: 0,
+                }
+            }
+        }
     }
 };
+const config_fine = Object.assign({options: {scales: {x: {display: false}}}}, config_coarse);
 
-const config_1d = {data: data_1d};
-Object.assign(config_1d, config_fine);
-new Chart(document.getElementById("portforlio-1d"), config_1d);
-
-const config_10d = {data: data_10d};
-Object.assign(config_10d, config_coarse);
-new Chart(document.getElementById("portforlio-10d"), config_10d);
-
-const config_1m = {data: data_1m};
-Object.assign(config_1m, config_coarse);
-new Chart(document.getElementById("portforlio-1m"), config_1m);
-
-const config_6m = {data: data_6m};
-Object.assign(config_6m, config_fine);
-new Chart(document.getElementById("portforlio-6m"), config_6m);
-
-const config_1y = {data: data_1y};
-Object.assign(config_1y, config_fine);
-new Chart(document.getElementById("portforlio-1y"), config_1y);
-
-const config_5y = {data: data_5y};
-Object.assign(config_5y, config_fine);
-new Chart(document.getElementById("portforlio-5y"), config_5y);
+for (const time_period of graph_time_periods) {
+    var config = {data: graph_data[time_period]};
+    var base_config = graph_granularity[time_period] === "fine" ? config_fine : config_coarse;
+    Object.assign(config, base_config);
+    new Chart(document.getElementById("graph-" + time_period), config);
+}

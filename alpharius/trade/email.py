@@ -38,10 +38,8 @@ class Email:
         self._sender = f'Stock Trading System <{username}@163.com>'
         self._receiver = receiver
         self._alpaca = tradeapi.REST()
-        self._interday_data_loader = DataLoader(
-            TimeInterval.DAY, DEFAULT_DATA_SOURCE)
-        self._intraday_data_loader = DataLoader(
-            TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
+        self._interday_data_loader = DataLoader(TimeInterval.DAY, DEFAULT_DATA_SOURCE)
+        self._intraday_data_loader = DataLoader(TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
         self._create_client(username, password)
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
@@ -174,8 +172,7 @@ class Email:
         account_cash = float(account.cash) - cash_reserve
         history_length = 10
         history = self._alpaca.get_portfolio_history(date_start=market_dates[-history_length].strftime('%F'),
-                                                     date_end=market_dates[-2].strftime(
-                                                         '%F'),
+                                                     date_end=market_dates[-2].strftime('%F'),
                                                      timeframe='1D')
         for i in range(len(history.equity)):
             history.equity[i] = (history.equity[i] - cash_reserve
@@ -187,13 +184,11 @@ class Email:
                 equity_denominator = equity
                 historical_start = i
                 break
-        historical_value = [
-            equity / equity_denominator for equity in history.equity]
+        historical_value = [equity / equity_denominator for equity in history.equity]
         historical_value.append(account_equity / equity_denominator)
         for i in range(historical_start):
             historical_value[i] = None
-        historical_date = [
-            market_day for market_day in market_dates[-history_length:]]
+        historical_date = [market_day for market_day in market_dates[-history_length:]]
         market_symbols = ['DIA', 'SPY', 'QQQ']
         market_values = {}
         for symbol in market_symbols:

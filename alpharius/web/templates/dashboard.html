@@ -116,8 +116,8 @@
                 <div class="card">
                     <div class="card-header"><span class="card-title">Portfolio Value</span></div>
                     <div id="portforlio-info"> 
-                        <span id="current-equity" class="mb-0 number-font">4,321</span> 
-                        <span id="currnet-change" class="number-font" style="color:green;">+50.25 (+1.2%) </span>
+                        <span id="current-equity" class="mb-0 number-font"> {{ histories['current_equity'] }} </span>
+                        <span id="currnet-change" class="number-font"></span>
                     </div>
                     <div class="card-body">
                         <div class="row" id="button-row">
@@ -126,9 +126,9 @@
                                         autocomplete="off">
                                 <label class="btn my-btn-outline-primary" for="btn-radio-1d">1 D</label>
 
-                                <input type="radio" class="btn-check" name="btnradio" id="btn-radio-10d"
+                                <input type="radio" class="btn-check" name="btnradio" id="btn-radio-1w"
                                         autocomplete="off">
-                                <label class="btn my-btn-outline-primary" for="btn-radio-10d">10 D</label>
+                                <label class="btn my-btn-outline-primary" for="btn-radio-1w">1 W</label>
 
                                 <input type="radio" class="btn-check" name="btnradio" id="btn-radio-1m"
                                         autocomplete="off">
@@ -150,12 +150,12 @@
                         </div>
                     </div>
                     <div id="chart-container">
-                        <canvas id="portforlio-1d"></canvas>
-                        <canvas id="portforlio-10d" style="display:none;"></canvas>
-                        <canvas id="portforlio-1m" style="display:none;"></canvas>
-                        <canvas id="portforlio-6m" style="display:none;"></canvas>
-                        <canvas id="portforlio-1y" style="display:none;"></canvas>
-                        <canvas id="portforlio-5y" style="display:none;"></canvas>
+                        <canvas id="graph-1d"></canvas>
+                        <canvas id="graph-1w" style="display:none;"></canvas>
+                        <canvas id="graph-1m" style="display:none;"></canvas>
+                        <canvas id="graph-6m" style="display:none;"></canvas>
+                        <canvas id="graph-1y" style="display:none;"></canvas>
+                        <canvas id="graph-5y" style="display:none;"></canvas>
                     </div>
                 </div>
             </div>
@@ -239,6 +239,9 @@
     </div>
 </section>
 
+<script>
+    const HISTORIES = {{ histories | safe }};
+</script>
 <script src="{{ url_for('static', filename='/js/base.js') }}"></script>
 <script src="{{ url_for('static', filename='/js/dashboard.js') }}"></script>
 </body>
