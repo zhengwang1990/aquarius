@@ -27,6 +27,11 @@ def get_time_vs_equity(history_equity: List[float],
             continue
         equity_list.append(max(e - cash_reserve, 0))
         time_list.append(dt.strftime(time_format))
+    start = 0
+    while start < len(equity_list) and equity_list[start] == 0:
+        start += 1
+    time_list = time_list[start:]
+    equity_list = equity_list[start:]
     if len(time_list) > 1 and time_list[-2] == time_list[-1]:
         time_list.pop(-2)
         equity_list.pop(-2)
@@ -124,9 +129,11 @@ class AlpacaClient:
                     break
         for time_period in ['1d', '1w', '1m', '6m', '1y', '5y']:
             if time_period == '1d':
-                base_value = result['prev_close']
+                base_value = (result['prev_close']
+                              if result['prev_close'] > 0 else current_equity)
             else:
-                base_value = result['equity_' + time_period][0]
+                base_value = (result['equity_' + time_period][0]
+                              if result['equity_' + time_period] else current_equity)
             change = current_equity - base_value
             percent = current_equity / base_value - 1
             result['change_' + time_period] = get_colored_value(

@@ -86,8 +86,8 @@ class FakeAlpaca:
     def get_portfolio_history(self, *args, **kwargs):
         self.get_portfolio_history_call_count += 1
         current_time = time.time()
-        return History([i + 100 for i in range(10)],
-                       [current_time - i * 300 for i in range(9, -1, -1)])
+        return History([0] * 10 + [i + 100 for i in range(10)],
+                       [current_time - i * 300 for i in range(19, -1, -1)])
 
     def get_bars(self, symbol, timeframe, start, end, *args, **kwargs):
         self.get_bars_call_count += 1
