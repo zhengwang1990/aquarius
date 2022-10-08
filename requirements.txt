@@ -18,4 +18,5 @@ scikit-learn
 ta
 tabulate
 tqdm
+waitress
 yfinance
