@@ -1,5 +1,3 @@
-import json
-
 import flask
 from .alpaca_client import AlpacaClient
 
