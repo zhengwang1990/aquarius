@@ -1,6 +1,5 @@
-
 let current_time_period = localStorage.getItem("time_period");
-if (!current_time_period) change_time_period = "1d";
+if (!current_time_period) current_time_period = "1d";
 const graph_time_periods = ["1d", "1w", "1m", "6m", "1y", "5y"];
 
 var active_time_period = null;
@@ -40,22 +39,28 @@ for (const time_period of graph_time_periods) {
                 label: "value",
                 backgroundColor: HISTORIES["color_" + time_period],
                 borderColor: HISTORIES["color_" + time_period],
-                radius: graph_granularity[time_period] === "fine" ? 1 : 4,
+                borderWidth: 2,
+                radius: graph_granularity[time_period] === "fine" ? 0 : 3,
                 data: HISTORIES["equity_" + time_period],
             },
         ],
     };
 }
+
+const light_color = HISTORIES['color_1d'] === "red" ? 'rgba(252, 0, 0, 0.25)' : 'rgba(0, 128, 0, 0.25)'
+graph_data["1d"]["datasets"][0]["segment"] = {
+    borderColor: ctx => HISTORIES["time_1d"][ctx.p1DataIndex] > HISTORIES['market_close'] ? light_color : undefined,
+};
 graph_data["1d"]["datasets"].push({
     label: "previous close",
-    backgroundColor: HISTORIES["color_1d"],
-    borderColor: HISTORIES["color_1d"],
+    borderColor: 'grey',
     borderDash: [6, 6],
+    borderWidth: 1,
     radius: 0,
     data: Array(HISTORIES["time_1d"].length).fill(HISTORIES["prev_close"]),
 });
 
-const config_coarse = {
+const config_base = {
     type: "line",
     options: {
         maintainAspectRatio: false,
@@ -78,11 +83,9 @@ const config_coarse = {
         }
     }
 };
-const config_fine = Object.assign({options: {scales: {x: {display: false}}}}, config_coarse);
 
 for (const time_period of graph_time_periods) {
     var config = {data: graph_data[time_period]};
-    var base_config = graph_granularity[time_period] === "fine" ? config_fine : config_coarse;
-    Object.assign(config, base_config);
+    Object.assign(config, config_base);
     new Chart(document.getElementById("graph-" + time_period), config);
 }

@@ -113,6 +113,6 @@
     background-color: rgba(83, 145, 237, 0.1);
 }
 
-#position-card {
+.dash-content .bottom-card {
     height: calc(100% - 20px);
 }

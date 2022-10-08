@@ -46,6 +46,7 @@ class AlpacaClient:
         if datetime.datetime.now().time() < datetime.time(4, 0):
             last_day -= datetime.timedelta(days=1)
         calendar = self.get_calendar(last_day.strftime('%F'))
+        result['market_close'] = calendar[-1].close.strftime('%H:%M')
         market_dates = [c.date for c in calendar]
         histories = dict()
         for start_index, timeframe in [(-1, '5Min'), (-5, '15Min'), (0, '1D')]:
@@ -98,4 +99,18 @@ class AlpacaClient:
             percent = current_equity / base_value - 1
             result['change_' + time_period] = f'{change : .2f} ({percent * 100:+.2f}%)'
             result['color_' + time_period] = 'green' if change > 0 else 'red'
+        i = 0
+        for j in range(len(result['time_5y'])):
+            if j % 3 == 0 or j == len(result['time_5y']) - 1:
+                result['time_5y'][i] = result['time_5y'][j]
+                result['equity_5y'][i] = result['equity_5y'][j]
+                i += 1
+        result['time_5y'] = result['time_5y'][:i]
+        result['equity_5y'] = result['equity_5y'][:i]
+        if result['time_1d'][-1] > '09:30':
+            for i in range(len(result['time_1d'])):
+                if result['time_1d'][i] >= '09:30':
+                    result['time_1d'] = result['time_1d'][i:]
+                    result['equity_1d'] = result['equity_1d'][i:]
+                    break
         return result
