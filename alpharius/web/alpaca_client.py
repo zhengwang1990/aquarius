@@ -130,7 +130,7 @@ class AlpacaClient:
             change = current_equity - base_value
             percent = current_equity / base_value - 1
             result['change_' + time_period] = get_colored_value(
-                f'{change : .2f} ({percent * 100:+.2f}%)',
+                f'{change:+.2f} ({percent * 100:+.2f}%)',
                 'green' if change > 0 else 'red',
                 with_arrow=True)
             result['color_' + time_period] = 'green' if change > 0 else 'red'
