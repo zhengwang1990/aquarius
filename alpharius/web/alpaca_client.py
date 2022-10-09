@@ -177,7 +177,7 @@ class AlpacaClient:
             qty = float(order.filled_qty)
             order_obj = {'symbol': order.symbol,
                          'side': order.side,
-                         'price': f'{price:.5g}',
+                         'price': f'{price:.4g}',
                          'value': f'{price * qty:.2f}',
                          'time': round_time(filled_at)}
             if order.symbol in position_symbols:
@@ -217,7 +217,7 @@ class AlpacaClient:
             result.append({
                 'symbol': symbol,
                 'current_price': f'{current_price:.4g}',
-                'value': f'{value:.2f}',
+                'value': f'{value:.2f}' if value < 1000 else f'{value:.0f}',
                 'side': side,
                 'change_today': get_signed_percentage(info['change']),
                 'gl': get_signed_percentage(gl),
