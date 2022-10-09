@@ -11,7 +11,7 @@ function change_time_period(time_period) {
         document.getElementById("graph-" + active_time_period).style.display = "none";
     }
     document.getElementById("graph-" + time_period).style.removeProperty("display");
-    document.getElementById("currnet-change").innerHTML = HISTORIES["change_" + time_period];
+    document.getElementById("current-change").innerHTML = HISTORIES["change_" + time_period];
     active_time_period = time_period;
     localStorage.setItem("time_period", time_period);
 }

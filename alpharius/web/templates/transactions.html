@@ -13,8 +13,8 @@
                             <span class="xs-show">SYMB</span>
                         </th>
                         <th scope="col">SIDE</th>
-                        <th scope="col">ENTRY PRICE</th>
-                        <th scope="col">EXIT PRICE</th>
+                        <th scope="col" class="xs-hidden">ENTRY PRICE</th>
+                        <th scope="col" class="xs-hidden">EXIT PRICE</th>
                         <th scope="col">ENTRY TIME</th>
                         <th scope="col">EXIT TIME</th>
                         <th scope="col">
@@ -32,8 +32,8 @@
                                     {{ transaction['side'] }}
                                 </span>
                             </td>
-                            <td>{{ transaction['entry_price'] }}</td>
-                            <td>{{ transaction['price'] }}</td>
+                            <td class="xs-hidden">{{ transaction['entry_price'] }}</td>
+                            <td class="xs-hidden">{{ transaction['price'] }}</td>
                             <td>{{ transaction['entry_time'] | safe }}</td>
                             <td>{{ transaction['time'] | safe }}</td>
                             <td>{{ transaction['gl'] | safe }}</td>

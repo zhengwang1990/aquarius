@@ -322,11 +322,6 @@ nav.close ~ .dashboard .top{
     margin: 10px 0 10px 0;
 }
 
-.dash-content .card .btn {
-    font-size: 13px;
-    margin-left: 15px;
-    width: 70px;
-}
 .dash-content .card .card-body {
     padding: 10px 16px 10px 16px;
 }
