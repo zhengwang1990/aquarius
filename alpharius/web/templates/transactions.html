@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block header %}
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><span class="card-title">Transactions</span></div>
+    <div class="card-body">
+        <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">
+                            <span class="xs-hidden">SYMBOL</span>
+                            <span class="xs-show">SYMB</span>
+                        </th>
+                        <th scope="col">SIDE</th>
+                        <th scope="col">ENTRY PRICE</th>
+                        <th scope="col">EXIT PRICE</th>
+                        <th scope="col">ENTRY TIME</th>
+                        <th scope="col">EXIT TIME</th>
+                        <th scope="col">
+                            <span class="xs-hidden">GAIN / LOSS</span>
+                            <span class="xs-show">G/L</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                        <tr>
+                            <td>{{ transaction['symbol'] }}</td>
+                            <td>
+                                <span class="badge-shape {{ 'badge-blue' if transaction['side'] == 'long' else 'badge-orange'}}">
+                                    {{ transaction['side'] }}
+                                </span>
+                            </td>
+                            <td>{{ transaction['entry_price'] }}</td>
+                            <td>{{ transaction['price'] }}</td>
+                            <td>{{ transaction['entry_time'] | safe }}</td>
+                            <td>{{ transaction['time'] | safe }}</td>
+                            <td>{{ transaction['gl'] | safe }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

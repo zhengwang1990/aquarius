@@ -26,13 +26,13 @@
 
     <div class="menu-items">
         <ul class="nav-links">
-            <li><a href="#">
-                <i class="uil uil-estate active"></i>
-                <span class="link-name active">Dahsboard</span>
+            <li><a href="{{ '#' if url_for(request.endpoint) == '/' else url_for('web.dashboard')}}">
+                <i class="uil uil-estate {{ 'active' if url_for(request.endpoint) == '/' else ''}}"></i>
+                <span class="link-name {{ 'active' if url_for(request.endpoint) == '/' else ''}}">Dahsboard</span>
             </a></li>
-            <li><a href="#">
-                <i class="uil uil-transaction"></i>
-                <span class="link-name">Transactions</span>
+            <li><a href="{{ '#' if url_for(request.endpoint) == '/transactions' else url_for('web.transactions')}}">
+                <i class="uil uil-transaction {{ 'active' if url_for(request.endpoint) == '/transactions' else ''}}"></i>
+                <span class="link-name {{ 'active' if url_for(request.endpoint) == '/transactions' else ''}}">Transactions</span>
             </a></li>
             <li><a href="#">
                 <i class="uil uil-chart"></i>

@@ -270,3 +270,80 @@ nav.close ~ .dashboard .top{
         width: 100%;
     }
 }
+
+.card .card-body .xs-show {
+    display: none;
+}
+
+.card .card-body table {
+    margin-bottom: 0;
+    font-size: 15px;
+}
+
+.card .card-body tbody > tr:last-child > td {
+    border-bottom: 0;
+}
+
+.badge-shape {
+    padding: 0.5em 0.75em 0.5em 0.75em;
+    display: inline-block;
+    text-align: center;
+    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 50rem;
+    line-height: 1;
+}
+
+.badge-orange {
+    color: #f79a05;
+    background-color: rgba(255, 162, 43, 0.1);
+}
+
+.badge-blue {
+    color: #0967b5;
+    background-color: rgba(83, 145, 237, 0.1);
+}
+
+.dash-content .bottom-card {
+    height: calc(100% - 20px);
+}
+
+.dash-content .card .card-header {
+    background-color: #fff;
+}
+
+.card .card-header .card-title {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.dash-content .card {
+    margin: 10px 0 10px 0;
+}
+
+.dash-content .card .btn {
+    font-size: 13px;
+    margin-left: 15px;
+    width: 70px;
+}
+.dash-content .card .card-body {
+    padding: 10px 16px 10px 16px;
+}
+
+@media (max-width: 800px) {
+    .card .card-body .xs-hidden {
+        display: none;
+    }
+    .card .card-body .xs-show {
+        display: inline;
+    }
+
+    .card .card-body table {
+        font-size: 13px;
+    }
+
+    .badge-shape {
+        font-size: 12px;
+    }
+}

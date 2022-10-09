@@ -38,8 +38,8 @@ def get_time_vs_equity(history_equity: List[float],
     return time_list, equity_list
 
 
-def round_time(t: pd.Timestamp):
-    fmt = '<span class="xs-hidden">%m-%d </span>%H:%M'
+def round_time(t: pd.Timestamp, time_fmt_with_year: bool):
+    fmt = f'<span class="xs-hidden">{"%Y-" if time_fmt_with_year else ""}%m-%d </span>%H:%M'
     if t.second < 30:
         return t.strftime(fmt)
     return (t + datetime.timedelta(minutes=1)).strftime(fmt)
@@ -103,7 +103,7 @@ class AlpacaClient:
             histories['5Min'].timestamp,
             '%H:%M',
             cash_reserve)
-        result['current_equity'] = f'{current_equity:.2f}'
+        result['current_equity'] = f'{current_equity:,.2f}'
         result['time_5y'], result['equity_5y'] = get_time_vs_equity(
             histories['1D'].equity,
             histories['1D'].timestamp,
@@ -154,18 +154,21 @@ class AlpacaClient:
                     break
         return result
 
-    @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
     def get_recent_orders(self):
+        return self.get_orders(-1, False)
+
+    @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
+    def get_orders(self, calendar_index: int, time_fmt_with_year: bool):
         result = []
         last_day = get_last_day()
         calendar = self.get_calendar(last_day.strftime('%F'))
         orders = self._alpaca.list_orders(status='closed',
-                                          after=calendar[-2].date.strftime('%F'),
+                                          after=calendar[calendar_index - 1].date.strftime('%F'),
                                           direction='desc')
         orders_used = [False] * len(orders)
         positions = self._alpaca.list_positions()
         position_symbols = set([position.symbol for position in positions])
-        cut_time = calendar[-1].date.tz_localize(TIME_ZONE)
+        cut_time = calendar[calendar_index].date.tz_localize(TIME_ZONE)
         for i in range(len(orders)):
             order = orders[i]
             if order.filled_at is None:
@@ -179,11 +182,12 @@ class AlpacaClient:
                          'side': order.side,
                          'price': f'{price:.4g}',
                          'value': f'{price * qty:.2f}',
-                         'time': round_time(filled_at)}
+                         'time': round_time(filled_at, time_fmt_with_year)}
             if order.symbol in position_symbols:
                 position_symbols.remove(order.symbol)
             elif not orders_used[i]:
-                for j, prev_order in enumerate(orders):
+                for j in range(i + 1, len(orders)):
+                    prev_order = orders[j]
                     if prev_order.filled_at is None or prev_order.symbol != order.symbol:
                         continue
                     prev_filled_at = prev_order.filled_at.tz_convert(TIME_ZONE)
@@ -192,6 +196,8 @@ class AlpacaClient:
                         order_gl = price / entry_price - 1
                         if prev_order.side == 'sell':
                             order_gl *= -1
+                        order_obj['entry_price'] = f'{entry_price:.4g}'
+                        order_obj['entry_time'] = round_time(prev_filled_at, time_fmt_with_year)
                         order_obj['gl'] = get_signed_percentage(order_gl)
                         orders_used[j] = True
                         break
@@ -249,4 +255,13 @@ class AlpacaClient:
         for symbol, info in infos.items():
             result[symbol] = {'price': f'{info["price"]:.2f}',
                               'change': get_signed_percentage(info['change'], with_arrow=True)}
+        return result
+
+    def get_transactions(self):
+        orders = self.get_orders(-10, True)
+        result = []
+        for order in orders:
+            if 'gl' in order:
+                order['side'] = 'long' if order['side'] == 'sell' else 'short'
+                result.append(order)
         return result

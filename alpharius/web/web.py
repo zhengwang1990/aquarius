@@ -3,7 +3,7 @@ from concurrent import futures
 import flask
 from .alpaca_client import AlpacaClient
 
-bp = flask.Blueprint('dashboard', __name__)
+bp = flask.Blueprint('web', __name__)
 
 
 @bp.route('/')
@@ -20,3 +20,10 @@ def dashboard():
                                  orders=tasks['orders'].result(),
                                  positions=tasks['positions'].result(),
                                  watch=tasks['watch'].result())
+
+
+@bp.route('/transactions')
+def transactions():
+    client = AlpacaClient()
+    return flask.render_template('transactions.html',
+                                 transactions=client.get_transactions())

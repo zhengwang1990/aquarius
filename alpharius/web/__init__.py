@@ -1,7 +1,7 @@
 import os
 
 from flask import Flask
-from . import dashboard
+from . import web
 
 
 def create_app(test_config=None):
@@ -12,6 +12,6 @@ def create_app(test_config=None):
     if test_config:
         app.config.from_mapping(test_config)
 
-    app.register_blueprint(dashboard.bp)
+    app.register_blueprint(web.bp)
 
     return app

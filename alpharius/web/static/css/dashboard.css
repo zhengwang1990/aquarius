@@ -1,16 +1,7 @@
-.dash-content .card .card-header {
-    background-color: #fff;
-}
-
 .dash-content .row {
     display: flex;
     margin-left: -0.75em;
     margin-right: -0.75em;
-}
-
-.card .card-header .card-title {
-    font-size: 16px;
-    font-weight: 500;
 }
 
 .dash-content .card .my-btn-outline-primary {
@@ -30,33 +21,24 @@
     --bs-gradient: none;
 }
 
-.dash-content .card {
-    margin: 10px 0 10px 0;
-}
-
-.dash-content .card .btn {
-    font-size: 13px;
-    margin-left: 15px;
-    width: 70px;
-}
-.dash-content .card .card-body {
-    padding: 10px 16px 10px 16px;
-}
 #portforlio-info {
     margin-top: 15px;
     margin-left: 20px;
     float: left;
 }
+
 #current-equity {
     color: #202124;
     font-size: 32px;
     font-weight: 400;
 }
+
 #button-row {
     margin-top: 8px;
     margin-right: 15px;
     float: left;
 }
+
 #button-row .button-col {
     padding: 0 0 0 10px;
     margin-top: 4px;
@@ -74,51 +56,4 @@
 
 .dash-content .footnote {
     font-size: 13px;
-}
-
-.card .card-body table {
-    margin-bottom: 0;
-    font-size: 15px;
-}
-
-.card .card-body tbody > tr:last-child > td {
-    border-bottom: 0;
-}
-
-.badge-shape {
-    padding: 0.5em 0.75em 0.5em 0.75em;
-    display: inline-block;
-    text-align: center;
-    white-space: nowrap;
-    font-size: 14px;
-    font-weight: 500;
-    border-radius: 50rem;
-    line-height: 1;
-}
-
-.badge-orange {
-    color: #f79a05;
-    background-color: rgba(255, 162, 43, 0.1);
-}
-
-.badge-blue {
-    color: #0967b5;
-    background-color: rgba(83, 145, 237, 0.1);
-}
-
-.dash-content .bottom-card {
-    height: calc(100% - 20px);
-}
-
-.card .card-body .xs-show {
-    display: none;
-}
-
-@media (max-width: 600px) {
-    .card .card-body .xs-hidden {
-        display: none;
-    }
-    .card .card-body .xs-show {
-        display: inline;
-    }
 }
