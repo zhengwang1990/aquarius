@@ -97,6 +97,7 @@ class AlpacaClient:
         current_equity = histories['5Min'].equity[-1]
         histories['1D'].equity[-1] = current_equity
         cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
+        current_equity -= cash_reserve
         result['time_1d'], result['equity_1d'] = get_time_vs_equity(
             histories['5Min'].equity,
             histories['5Min'].timestamp,
