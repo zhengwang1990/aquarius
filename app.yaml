@@ -4,7 +4,8 @@ entrypoint: waitress-serve --port $PORT --call 'alpharius.web:create_app'
 
 handlers:
   - url: /static
-    static_dir: alpharius/web/static
+    static_files: alpharius/web/static
+    upload: alpharius/web/static/(.+)
   - url: /.*
     script: auto
 
@@ -14,3 +15,5 @@ env_variables:
   APCA_API_BASE_URL: ""
   CASH_RESERVE: ""
   SECRET_KEY: ""
+
+instance_class: F1
