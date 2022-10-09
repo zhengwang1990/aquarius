@@ -39,9 +39,10 @@ def get_time_vs_equity(history_equity: List[float],
 
 
 def round_time(t: pd.Timestamp):
+    fmt = '<span class="xs-hidden">%m-%d </span>%H:%M'
     if t.second < 30:
-        return t.strftime('%m-%d %H:%M')
-    return (t + datetime.timedelta(minutes=1)).strftime('%m-%d %H:%M')
+        return t.strftime(fmt)
+    return (t + datetime.timedelta(minutes=1)).strftime(fmt)
 
 
 def get_colored_value(value: str, color: str, with_arrow: bool = False):
@@ -93,21 +94,15 @@ class AlpacaClient:
                 date_end=market_dates[-1].strftime('%F'),
                 timeframe=timeframe,
                 extended_hours=extended_hours)
+        current_equity = histories['5Min'].equity[-1]
+        histories['1D'].equity[-1] = current_equity
         cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         result['time_1d'], result['equity_1d'] = get_time_vs_equity(
             histories['5Min'].equity,
             histories['5Min'].timestamp,
             '%H:%M',
             cash_reserve)
-        current_equity = result['equity_1d'][-1]
         result['current_equity'] = f'{current_equity:.2f}'
-        result['time_1w'], result['equity_1w'] = get_time_vs_equity(
-            histories['15Min'].equity,
-            histories['15Min'].timestamp,
-            '%m-%d %H:%M',
-            cash_reserve,
-            lambda dt: dt.time() not in [
-                datetime.time(9, 30), datetime.time(13, 0), datetime.time(16, 0)])
         result['time_5y'], result['equity_5y'] = get_time_vs_equity(
             histories['1D'].equity,
             histories['1D'].timestamp,
@@ -115,7 +110,8 @@ class AlpacaClient:
             cash_reserve)
         result['prev_close'] = (result['equity_5y'][-2]
                                 if len(result['equity_5y']) > 2 else math.nan)
-        for time_period, time_delta in [('1m', relativedelta(months=1)),
+        for time_period, time_delta in [('1w', relativedelta(weeks=1)),
+                                        ('1m', relativedelta(months=1)),
                                         ('6m', relativedelta(months=6)),
                                         ('1y', relativedelta(years=1))]:
             cut = (last_day - time_delta).strftime('%F')
@@ -123,7 +119,7 @@ class AlpacaClient:
             equity_str = 'equity_' + time_period
             result[time_str] = result[equity_str] = []
             for i in range(len(result['time_5y'])):
-                if result['time_5y'][i] > cut:
+                if result['time_5y'][i] > cut and result['equity_5y'][i] > 0:
                     result[time_str] = result['time_5y'][i:]
                     result[equity_str] = result['equity_5y'][i:]
                     break

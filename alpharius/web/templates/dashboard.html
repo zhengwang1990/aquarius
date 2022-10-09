@@ -88,9 +88,12 @@
                             <th scope="col">SYMBOL</th>
                             <th scope="col">SIDE</th>
                             <th scope="col">PRICE</th>
-                            <th scope="col">VALUE</th>
+                            <th scope="col" class="xs-hidden">VALUE</th>
                             <th scope="col">TIME</th>
-                            <th scope="col">GAIN / LOSS</th>
+                            <th scope="col">
+                                <span class="xs-hidden">GAIN / LOSS</span>
+                                <span class="xs-show">G/L</span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -103,8 +106,8 @@
                                     </span>
                                 </td>
                                 <td>{{ order['price'] }}</td>
-                                <td>{{ order['value'] }}</td>
-                                <td>{{ order['time'] }}</td>
+                                <td class="xs-hidden">{{ order['value'] }}</td>
+                                <td>{{ order['time'] | safe }}</td>
                                 <td>{{ order['gl'] | safe }}</td>
                             </tr>
                         {% endfor %}
@@ -125,8 +128,11 @@
                             <th scope="col">SIDE</th>
                             <th scope="col">PRICE</th>
                             <th scope="col">VALUE</th>
-                            <th scope="col">CHANGE TODAY</th>
-                            <th scope="col">GAIN / LOSS</th>
+                            <th scope="col" class="xs-hidden">CHANGE TODAY</th>
+                            <th scope="col">
+                                <span class="xs-hidden">GAIN / LOSS</span>
+                                <span class="xs-show">G/L</span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -140,7 +146,7 @@
                             </td>
                             <td>{{ position['current_price'] }}</td>
                             <td>{{ position['value'] }}</td>
-                            <td>{{ position['change_today'] | safe }}</td>
+                            <td class="xs-hidden">{{ position['change_today'] | safe }}</td>
                             <td>{{ position['gl'] | safe }}</td>
                         </tr>
                         {% endfor %}

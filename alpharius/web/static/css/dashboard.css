@@ -109,3 +109,16 @@
 .dash-content .bottom-card {
     height: calc(100% - 20px);
 }
+
+.card .card-body .xs-show {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .card .card-body .xs-hidden {
+        display: none;
+    }
+    .card .card-body .xs-show {
+        display: inline;
+    }
+}
