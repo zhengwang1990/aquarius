@@ -24,9 +24,9 @@ for (const time_period of graph_time_periods) {
     });
 }
 
-const graph_granularity = {
-    "1d": "fine", "1w": "coarse", "1m": "coarse",
-    "6m": "fine", "1y": "fine", "5y": "fine",
+const graph_point_radius = {
+    "1d": 0, "1w": 3, "1m": 3,
+    "6m": 0, "1y": 0, "5y": 0,
 };
 
 var graph_data = {}
@@ -39,7 +39,7 @@ for (const time_period of graph_time_periods) {
                 backgroundColor: HISTORIES["color_" + time_period],
                 borderColor: HISTORIES["color_" + time_period],
                 borderWidth: 2,
-                radius: graph_granularity[time_period] === "fine" ? 0 : 3,
+                radius: graph_point_radius[time_period],
                 data: HISTORIES["equity_" + time_period],
             },
         ],
