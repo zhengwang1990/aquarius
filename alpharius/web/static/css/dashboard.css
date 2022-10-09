@@ -58,9 +58,9 @@
     float: left;
 }
 #button-row .button-col {
-    padding: 0px;
-    margin-top: 3px;
-    margin-bottom: 3px;
+    padding: 0 0 0 10px;
+    margin-top: 4px;
+    margin-bottom: 4px;
 }
 
 .dash-content #chart-container {
