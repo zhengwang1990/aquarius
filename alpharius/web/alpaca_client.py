@@ -161,7 +161,7 @@ class AlpacaClient:
                     result['time_1d'] = result['time_1d'][i:]
                     result['equity_1d'] = result['equity_1d'][i:]
                     break
-        app.logger.info('Time cost for get_portfolio_histories: [%.2f]', time.time() - start)
+        app.logger.info('Time cost for get_portfolio_histories: [%.2fs]', time.time() - start)
         return result
 
     def get_recent_orders(self):
@@ -213,7 +213,7 @@ class AlpacaClient:
                         orders_used[j] = True
                         break
             result.append(order_obj)
-        app.logger.info('Time cost for get_orders: [%.2f]', time.time() - start)
+        app.logger.info('Time cost for get_orders: [%.2fs]', time.time() - start)
         return result
 
     @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
@@ -242,7 +242,7 @@ class AlpacaClient:
                 'gl': get_signed_percentage(gl),
             })
         result.sort(key=lambda p: p['symbol'])
-        app.logger.info('Time cost for get_current_positions: [%.2f]', time.time() - start)
+        app.logger.info('Time cost for get_current_positions: [%.2fs]', time.time() - start)
         return result
 
     @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
@@ -276,7 +276,7 @@ class AlpacaClient:
         for symbol, info in infos.items():
             result[symbol] = {'price': f'{info["price"]:.2f}',
                               'change': get_signed_percentage(info['change'], with_arrow=True)}
-        app.logger.info('Time cost for get_market_watch: [%.2f]', time.time() - start)
+        app.logger.info('Time cost for get_market_watch: [%.2fs]', time.time() - start)
         return result
 
     def get_transactions(self):
@@ -287,5 +287,5 @@ class AlpacaClient:
             if 'gl' in order:
                 order['side'] = 'long' if order['side'] == 'sell' else 'short'
                 result.append(order)
-        app.logger.info('Time cost for get_transactions: [%.2f]', time.time() - start)
+        app.logger.info('Time cost for get_transactions: [%.2fs]', time.time() - start)
         return result
