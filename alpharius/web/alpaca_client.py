@@ -111,7 +111,6 @@ class AlpacaClient:
             '%H:%M',
             cash_reserve)
         current_equity = result['equity_1d'][-1]
-        current_equity -= cash_reserve
         result['current_equity'] = f'{current_equity:,.2f}'
         result['time_5y'], result['equity_5y'] = get_time_vs_equity(
             histories['1D'].equity,
