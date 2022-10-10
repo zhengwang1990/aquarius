@@ -247,6 +247,8 @@ class AlpacaClient:
 
     @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
     def get_info_today(self, symbols: List[str]):
+        if not symbols:
+            return dict()
         result = dict()
         last_day = get_last_day()
         calendar = self.get_calendar(last_day.strftime('%F'))
