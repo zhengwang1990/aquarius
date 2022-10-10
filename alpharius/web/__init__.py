@@ -1,3 +1,4 @@
+import logging
 import os
 
 from flask import Flask
@@ -12,6 +13,7 @@ def create_app(test_config=None):
     if test_config:
         app.config.from_mapping(test_config)
 
+    app.logger.setLevel(logging.INFO)
     app.register_blueprint(web.bp)
 
     return app

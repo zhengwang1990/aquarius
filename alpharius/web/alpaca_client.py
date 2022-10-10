@@ -2,6 +2,8 @@ import datetime
 import functools
 import math
 import os
+import time
+from concurrent import futures
 from typing import List, Tuple
 
 import alpaca_trade_api as tradeapi
@@ -9,8 +11,11 @@ import pandas as pd
 import pytz
 import retrying
 from dateutil.relativedelta import relativedelta
+from flask import Flask
 
 TIME_ZONE = pytz.timezone('America/New_York')
+
+app = Flask(__name__)
 
 
 def get_time_vs_equity(history_equity: List[float],
@@ -61,16 +66,17 @@ def get_signed_percentage(value: float, with_arrow: bool = False):
 
 
 def get_last_day():
-    last_day = datetime.date.today()
-    if datetime.datetime.now().time() < datetime.time(4, 0):
+    last_day = pd.to_datetime(time.time(), utc=True, unit='s').tz_convert(TIME_ZONE)
+    if last_day.time() < datetime.time(4, 0):
         last_day -= datetime.timedelta(days=1)
-    return last_day
+    return last_day.date()
 
 
 class AlpacaClient:
 
     def __init__(self):
         self._alpaca = tradeapi.REST()
+        self._pool = futures.ThreadPoolExecutor(max_workers=10)
 
     @functools.lru_cache(maxsize=5)
     def get_calendar(self, last_day: str):
@@ -81,34 +87,38 @@ class AlpacaClient:
 
     @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
     def get_portfolio_histories(self):
+        start = time.time()
         result = dict()
         last_day = get_last_day()
         calendar = self.get_calendar(last_day.strftime('%F'))
         result['market_close'] = calendar[-1].close.strftime('%H:%M')
         market_dates = [c.date for c in calendar]
-        histories = dict()
-        for start_index, timeframe in [(-1, '5Min'), (-5, '15Min'), (0, '1D')]:
+        tasks = dict()
+        for start_index, timeframe in [(-1, '5Min'), (0, '1D')]:
             extended_hours = True if start_index == - 1 else False
-            histories[timeframe] = self._alpaca.get_portfolio_history(
-                date_start=market_dates[start_index].strftime('%F'),
-                date_end=market_dates[-1].strftime('%F'),
-                timeframe=timeframe,
-                extended_hours=extended_hours)
-        current_equity = histories['5Min'].equity[-1]
-        histories['1D'].equity[-1] = current_equity
+            tasks[timeframe] = self._pool.submit(self._alpaca.get_portfolio_history,
+                                                 date_start=market_dates[start_index].strftime('%F'),
+                                                 date_end=market_dates[-1].strftime('%F'),
+                                                 timeframe=timeframe,
+                                                 extended_hours=extended_hours)
+        histories = dict()
+        for timeframe in ['5Min', '1D']:
+            histories[timeframe] = tasks[timeframe].result()
         cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
-        current_equity -= cash_reserve
         result['time_1d'], result['equity_1d'] = get_time_vs_equity(
             histories['5Min'].equity,
             histories['5Min'].timestamp,
             '%H:%M',
             cash_reserve)
+        current_equity = result['equity_1d'][-1]
+        current_equity -= cash_reserve
         result['current_equity'] = f'{current_equity:,.2f}'
         result['time_5y'], result['equity_5y'] = get_time_vs_equity(
             histories['1D'].equity,
             histories['1D'].timestamp,
             '%F',
             cash_reserve)
+        result['equity_5y'][-1] = current_equity
         result['prev_close'] = (result['equity_5y'][-2]
                                 if len(result['equity_5y']) > 2 else math.nan)
         for time_period, time_delta in [('1w', relativedelta(weeks=1)),
@@ -152,6 +162,7 @@ class AlpacaClient:
                     result['time_1d'] = result['time_1d'][i:]
                     result['equity_1d'] = result['equity_1d'][i:]
                     break
+        app.logger.info('Time cost for get_portfolio_histories: [%.2f]', time.time() - start)
         return result
 
     def get_recent_orders(self):
@@ -159,6 +170,7 @@ class AlpacaClient:
 
     @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
     def get_orders(self, calendar_index: int, time_fmt_with_year: bool):
+        start = time.time()
         result = []
         last_day = get_last_day()
         calendar = self.get_calendar(last_day.strftime('%F'))
@@ -202,10 +214,12 @@ class AlpacaClient:
                         orders_used[j] = True
                         break
             result.append(order_obj)
+        app.logger.info('Time cost for get_orders: [%.2f]', time.time() - start)
         return result
 
     @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
     def get_current_positions(self):
+        start = time.time()
         result = []
         positions = self._alpaca.list_positions()
         infos = self.get_info_today([p.symbol for p in positions])
@@ -229,8 +243,10 @@ class AlpacaClient:
                 'gl': get_signed_percentage(gl),
             })
         result.sort(key=lambda p: p['symbol'])
+        app.logger.info('Time cost for get_current_positions: [%.2f]', time.time() - start)
         return result
 
+    @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
     def get_info_today(self, symbols: List[str]):
         result = dict()
         last_day = get_last_day()
@@ -238,30 +254,37 @@ class AlpacaClient:
         trades = self._alpaca.get_latest_trades(symbols)
         current_prices = {symbol: trade.p for symbol, trade in trades.items()}
         prev_day = calendar[-2].date.strftime('%F')
+        tasks = dict()
         for symbol in symbols:
-            bars = self._alpaca.get_bars(symbol,
-                                         tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
-                                         prev_day,
-                                         prev_day)
+            tasks[symbol] = self._pool.submit(self._alpaca.get_bars,
+                                              symbol,
+                                              tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
+                                              prev_day,
+                                              prev_day)
+        for symbol in symbols:
+            bars = tasks[symbol].result()
             result[symbol] = {'price': current_prices[symbol],
                               'change': current_prices[symbol] / bars[0].c - 1}
         return result
 
-    @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
     def get_market_watch(self):
+        start = time.time()
         result = dict()
         watch_symbols = ['QQQ', 'SPY', 'DIA', 'TQQQ']
         infos = self.get_info_today(watch_symbols)
         for symbol, info in infos.items():
             result[symbol] = {'price': f'{info["price"]:.2f}',
                               'change': get_signed_percentage(info['change'], with_arrow=True)}
+        app.logger.info('Time cost for get_market_watch: [%.2f]', time.time() - start)
         return result
 
     def get_transactions(self):
+        start = time.time()
         orders = self.get_orders(-10, True)
         result = []
         for order in orders:
             if 'gl' in order:
                 order['side'] = 'long' if order['side'] == 'sell' else 'short'
                 result.append(order)
+        app.logger.info('Time cost for get_transactions: [%.2f]', time.time() - start)
         return result
