@@ -20,9 +20,9 @@ class BearMomentumProcessor(Processor):
         super().__init__()
         self._positions = dict()
         self._output_dir = output_dir
-        self._logger = logging_config(os.path.join(self._output_dir, 'bear_etf_processor.txt'),
+        self._logger = logging_config(os.path.join(self._output_dir, 'bear_momentum_processor.txt'),
                                       detail=True,
-                                      name='bear_etf_processor')
+                                      name='bear_momentum_processor')
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
