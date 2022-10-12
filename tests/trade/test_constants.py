@@ -1,12 +1,15 @@
 import pandas as pd
+import pytest
 from alpharius import trade
 
 
-def test_get_nasdaq100():
-    nasdaq100_symbols = trade.get_nasdaq100(pd.to_datetime('2015-01-01'))
+@pytest.mark.parametrize("view_time", ['2015-01-01', '2022-01-01'])
+def test_get_nasdaq100(view_time):
+    nasdaq100_symbols = trade.get_nasdaq100(pd.to_datetime(view_time))
     assert 'AAPL' in nasdaq100_symbols
 
 
-def test_get_sp500():
-    sp500_symbols = trade.get_sp500(pd.to_datetime('1999-01-01'))
+@pytest.mark.parametrize("view_time", ['1999-01-01', '2022-01-01'])
+def test_get_sp500(view_time):
+    sp500_symbols = trade.get_sp500(pd.to_datetime(view_time))
     assert 'AAPL' in sp500_symbols

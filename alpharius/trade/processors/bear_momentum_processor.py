@@ -9,7 +9,7 @@ from ..common import (
 
 ENTRY_TIME = datetime.time(10, 0)
 EXIT_TIME = datetime.time(14, 0)
-N = {'TQQQ': 8, 'UCO': 9, 'FAS': 9}
+CONFIG = {'TQQQ': 8, 'UCO': 9, 'FAS': 9, 'NUGT': 9}
 
 
 class BearMomentumProcessor(Processor):
@@ -28,7 +28,7 @@ class BearMomentumProcessor(Processor):
         return TradingFrequency.FIVE_MIN
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
-        return ['TQQQ', 'UCO', 'FAS']
+        return list(CONFIG.keys())
 
     def process_data(self, context: Context) -> Optional[Action]:
         if context.symbol in self._positions:
@@ -44,7 +44,7 @@ class BearMomentumProcessor(Processor):
         while context.intraday_lookback.index[market_open_ind].time() < datetime.time(9, 30):
             market_open_ind += 1
         intraday_closes = context.intraday_lookback['Close'][market_open_ind:]
-        n = N.get(context.symbol, 8)
+        n = CONFIG[context.symbol]
         if len(intraday_closes) < n + 1:
             return
         interday_closes = context.interday_lookback['Close'][-DAYS_IN_A_MONTH * 2:]
