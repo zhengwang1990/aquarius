@@ -65,7 +65,8 @@ class FakeAlpaca:
         self.list_orders_call_count += 1
         if self.list_orders_call_count % 3 == 0 and status != 'closed':
             return []
-        orders = [Order('ORDER123', 'DIA', 'sell', '14', None, '0', pd.to_datetime('2021-03-17T10:14:57.0Z'), '12'),
+        orders = [Order('ORDER122', 'DIA', 'sell', '14', None, '0', pd.to_datetime('2021-03-17T10:14:57.0Z'), '12'),
+                  Order('ORDER123', 'DIA', 'buy', '14', None, '0', pd.to_datetime('2021-03-17T10:15:57.0Z'), '9'),
                   Order('ORDER124', 'SPY', 'buy', '12', None, '1', pd.to_datetime('2021-03-17T10:20:00.0Z'), '13'),
                   Order('ORDER125', 'QQQ', 'buy', None, '100.1', '10',
                         pd.to_datetime(time.time() - 2, utc=True, unit='s'), '9.1'),

@@ -16,4 +16,3 @@ retrying
 tabulate
 tqdm
 waitress
-yfinance

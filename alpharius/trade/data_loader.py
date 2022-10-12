@@ -11,12 +11,10 @@ import numpy as np
 import pandas as pd
 import polygon
 import retrying
-import yfinance as yf
 from tqdm import tqdm
 from .common import (
     DataSource, TimeInterval, DATETIME_TYPE, TIME_ZONE, CACHE_DIR)
 from .exlcusions import EXCLUSIONS
-
 
 _DATA_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume', 'VWAP']
 _MAX_WORKERS = 10
@@ -35,8 +33,6 @@ class DataLoader:
         self._timeout = timeout
         if data_source == DataSource.POLYGON:
             self._init_polygon()
-        elif data_source == DataSource.YAHOO:
-            self._init_yahoo()
         elif data_source == DataSource.ALPACA:
             self._init_alpaca()
 
@@ -54,14 +50,6 @@ class DataLoader:
         elif self._time_interval == TimeInterval.DAY:
             self._multiplier = 1
             self._timespan = 'day'
-
-    def _init_yahoo(self) -> None:
-        if self._time_interval == TimeInterval.FIVE_MIN:
-            self._interval = '5m'
-        elif self._time_interval == TimeInterval.HOUR:
-            self._interval = '1h'
-        elif self._time_interval == TimeInterval.DAY:
-            self._interval = '1d'
 
     def _init_alpaca(self) -> None:
         self._alpaca = tradeapi.REST()
@@ -93,9 +81,7 @@ class DataLoader:
         res = None
         if self._data_source == DataSource.POLYGON:
             res = self._polygon_load_data_list(symbol, start_time, end_time)
-        if self._data_source == DataSource.YAHOO:
-            res = self._yahoo_load_data_list(symbol, start_time, end_time)
-        if self._data_source == DataSource.ALPACA:
+        elif self._data_source == DataSource.ALPACA:
             res = self._alpaca_load_data_list(symbol, start_time, end_time)
         if res is None:
             raise DataError(f'{self._data_source} is not supported')
@@ -125,19 +111,6 @@ class DataLoader:
                           index=index,
                           columns=_DATA_COLUMNS)
         return df
-
-    def _yahoo_load_data_list(self,
-                              symbol: str,
-                              start_time: DATETIME_TYPE,
-                              end_time: DATETIME_TYPE) -> pd.DataFrame:
-        if self._time_interval != TimeInterval.DAY:
-            raise DataError(
-                f'Yahoo data source is not supported for {self._time_interval}')
-        t = yf.Ticker(symbol)
-        df = t.history(start=start_time, end=end_time, interval=self._interval)
-        df['VWAP'] = df.apply(lambda row: (row['High'] + row['Low'] + row['Close']) / 3,
-                              axis=1)
-        return df[_DATA_COLUMNS]
 
     @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
     def _alpaca_load_data_list(self,
@@ -263,8 +236,8 @@ def _load_cached_symbol_history(symbol: str,
                                 end_time: DATETIME_TYPE,
                                 data_loader: DataLoader) -> pd.DataFrame:
     cache_file = os.path.join(CACHE_DIR, str(TimeInterval.DAY),
-                              start_time.strftime(
-                                  '%F'), end_time.strftime('%F'),
+                              start_time.strftime('%F'),
+                              end_time.strftime('%F'),
                               f'history_{symbol}.csv')
     if os.path.isfile(cache_file):
         hist = pd.read_csv(cache_file, index_col=0, parse_dates=True)

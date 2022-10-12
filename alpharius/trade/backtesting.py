@@ -19,7 +19,7 @@ from .common import (
     TradingFrequency, Mode, BASE_DIR, DATETIME_TYPE, MARKET_OPEN, MARKET_CLOSE, OUTPUT_DIR,
     DEFAULT_DATA_SOURCE, INTERDAY_LOOKBACK_LOAD, TIME_ZONE, EPSILON, BID_ASK_SPREAD,
     SHORT_RESERVE_RATIO, logging_config, timestamp_to_index, get_unique_actions, get_header)
-from .data import load_cached_daily_data, load_tradable_history
+from .data_loader import load_cached_daily_data, load_tradable_history
 
 _MAX_WORKERS = 20
 

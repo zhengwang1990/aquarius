@@ -9,7 +9,7 @@ import pandas as pd
 from .common import (DataSource, DATETIME_TYPE,
                      DAYS_IN_A_MONTH, CACHE_DIR, timestamp_to_index)
 from .constants import COMPANY_SYMBOLS
-from .data import load_tradable_history
+from .data_loader import load_tradable_history
 
 _STOCK_UNIVERSE_CACHE_ROOT = os.path.join(CACHE_DIR, 'stock_universe')
 

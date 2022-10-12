@@ -13,7 +13,7 @@ from .common import (
     TimeInterval, Position, MARKET_OPEN, DATETIME_TYPE, DEFAULT_DATA_SOURCE,
     INTERDAY_LOOKBACK_LOAD, TIME_ZONE, OUTPUT_DIR, SHORT_RESERVE_RATIO,
     logging_config, get_unique_actions)
-from .data import load_tradable_history, DataLoader
+from .data_loader import load_tradable_history, DataLoader
 from .email import Email
 
 _MAX_WORKERS = 10

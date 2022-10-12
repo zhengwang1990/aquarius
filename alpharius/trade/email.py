@@ -18,7 +18,7 @@ import pandas as pd
 import retrying
 from .common import (TimeInterval, DEFAULT_DATA_SOURCE,
                      DATETIME_TYPE, TIME_ZONE, timestamp_to_index)
-from .data import DataLoader
+from .data_loader import DataLoader
 
 _SMTP_HOST = 'smtp.163.com'
 _SMTP_PORT = 25

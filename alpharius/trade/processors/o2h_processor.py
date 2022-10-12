@@ -7,7 +7,7 @@ from ..common import (
     Action, ActionType, Context, Processor, ProcessorFactory, TradingFrequency, Position,
     DataSource, Mode, DATETIME_TYPE, DAYS_IN_A_MONTH, logging_config)
 from ..stock_universe import IntradayVolatilityStockUniverse
-from ..data import get_shortable_symbols
+from ..data_loader import get_shortable_symbols
 
 NUM_UNIVERSE_SYMBOLS = 15
 EXIT_TIME = datetime.time(11, 0)
