@@ -168,7 +168,7 @@ class DataLoader:
     def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
         if self._data_source == DataSource.ALPACA:
             return self._alpaca_get_last_trades(symbols)
-        if self._data_source == DataSource.POLYGON:
+        elif self._data_source == DataSource.POLYGON:
             return self._polygon_get_last_trades(symbols)
         raise DataError(f'{self._data_source} is not supported')
 
@@ -215,8 +215,7 @@ def _load_cached_history(symbols: List[str],
                          data_source: DataSource) -> Dict[str, pd.DataFrame]:
     cache_dir = os.path.join(CACHE_DIR, str(TimeInterval.DAY),
                              start_time.strftime('%F'), end_time.strftime('%F'))
-    if symbols:
-        os.makedirs(cache_dir, exist_ok=True)
+    os.makedirs(cache_dir, exist_ok=True)
     data_loader = DataLoader(TimeInterval.DAY, data_source)
     res = {}
     tasks = {}
@@ -261,8 +260,7 @@ def load_cached_daily_data(symbol: str,
                            data_source: DataSource) -> pd.DataFrame:
     assert time_interval in [TimeInterval.FIVE_MIN, TimeInterval.HOUR]
     cache_dir = os.path.join(CACHE_DIR, str(time_interval), day.strftime('%F'))
-    if not os.path.isdir(cache_dir):
-        os.makedirs(cache_dir, exist_ok=True)
+    os.makedirs(cache_dir, exist_ok=True)
     cache_file = os.path.join(cache_dir, f'history_{symbol}.csv')
     if os.path.isfile(cache_file):
         hist = pd.read_csv(cache_file, index_col=0, parse_dates=True)
