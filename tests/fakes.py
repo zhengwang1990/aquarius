@@ -53,7 +53,8 @@ class FakeAlpaca:
 
     def list_positions(self):
         self.list_positions_call_count += 1
-        return [Position('QQQ', '10', '10.0', '100.0', '99.0', '9.9', '0.01', '0')]
+        return [Position('QQQ', '10', '10.0', '100.0', '99.0', '9.9', '0.01', '0'),
+                Position('GOOG', '-10', '94.4', '100.0', '99.0', '9.9', '0.01', '0')]
 
     def get_clock(self):
         self.get_clock_call_count += 1
@@ -66,8 +67,8 @@ class FakeAlpaca:
         if self.list_orders_call_count % 3 == 0 and status != 'closed':
             return []
         orders = [Order('ORDER122', 'DIA', 'sell', '14', None, '0', pd.to_datetime('2021-03-17T10:14:57.0Z'), '12'),
-                  Order('ORDER123', 'DIA', 'buy', '14', None, '0', pd.to_datetime('2021-03-17T10:15:57.0Z'), '9'),
                   Order('ORDER124', 'SPY', 'buy', '12', None, '1', pd.to_datetime('2021-03-17T10:20:00.0Z'), '13'),
+                  Order('ORDER123', 'DIA', 'buy', '14', None, '0', pd.to_datetime('2021-03-17T10:15:57.0Z'), '9'),
                   Order('ORDER125', 'QQQ', 'buy', None, '100.1', '10',
                         pd.to_datetime(time.time() - 2, utc=True, unit='s'), '9.1'),
                   Order('ORDER125', 'QQQ', 'sell', None, '100.1', '10',
@@ -93,24 +94,19 @@ class FakeAlpaca:
     def get_bars(self, symbol, timeframe, start, end, *args, **kwargs):
         self.get_bars_call_count += 1
         if timeframe.value == '1Day':
-            results = [Bar(pd.to_datetime(t, unit='s', utc=True),
-                           40, 41, 39, next(self._value_cycle), 40.123, 10)
-                       for t in range(int(pd.to_datetime(start).timestamp()),
-                                      int(pd.to_datetime(
-                                          end).timestamp() + 86400),
-                                      86400)
-                       if pd.to_datetime(t, unit='s').isoweekday() < 6]
+            time_interval = 86400
+        elif timeframe.value == '1Hour':
+            time_interval = 3600
         elif timeframe.value == '5Min':
-            day_str = pd.to_datetime(start).strftime('%F')
-            results = [Bar(pd.to_datetime(t, unit='s', utc=True),
-                           40, 41, 39, next(self._value_cycle), 40.123, 10)
-                       for t in range(int(pd.to_datetime(f'{day_str} 09:30:00-04:00').timestamp()),
-                                      int(pd.to_datetime(
-                                          f'{day_str} 16:05:00-04:00').timestamp()),
-                                      300)]
+            time_interval = 300
         else:
-            raise ValueError('Time frame must be 5 min or 1 day.')
-        return results
+            raise ValueError('Time frame must be 5 min, 1 hour or 1 day.')
+        return [Bar(pd.to_datetime(t, unit='s', utc=True),
+                    40, 41, 39, next(self._value_cycle), 40.123, 10)
+                for t in range(int(pd.to_datetime(start).timestamp()),
+                               int(pd.to_datetime(end).timestamp() + time_interval),
+                               time_interval)
+                if pd.to_datetime(t, unit='s').isoweekday() < 6]
 
     def get_calendar(self, start, end, *args, **kwargs):
         self.get_calendar_call_count += 1
@@ -139,22 +135,22 @@ class FakePolygon:
 
     def get_aggs(self, ticker, multiplier, timespan, from_, to, *args, **kwargs):
         self.get_aggs_call_count += 1
+        start = pd.to_datetime(from_, unit='ms', utc=True)
+        end = pd.to_datetime(to, unit='ms', utc=True)
         if multiplier == 1 and timespan == 'day':
-            start = pd.to_datetime(from_, unit='ms', utc=True)
-            end = pd.to_datetime(to, unit='ms', utc=True)
-            results = [Agg(t * 1000, 40, 41, 39, next(self._value_cycle), 40.123, 10)
-                       for t in range(int(pd.to_datetime(start.date()).timestamp()),
-                                      int(pd.to_datetime(
-                                          end.date()).timestamp() + 86400),
-                                      86400)
-                       if pd.to_datetime(t, unit='s').isoweekday() < 6]
+            time_interval = 86400
+        elif multiplier == 1 and timespan == 'hour':
+            time_interval = 3600
         elif multiplier == 5 and timespan == 'minute':
-            results = [Agg(t * 1000, 40, 41, 39, next(self._value_cycle), 40.123, 10)
-                       for t in range(from_ // 1000, to // 1000 + 300, 300)]
+            time_interval = 300
         else:
-            raise ValueError('Time frame must be 5 min or 1 day.')
+            raise ValueError('Time frame must be 5 min, 1 hour or 1 day.')
 
-        return results
+        return [Agg(t * 1000, 40, 41, 39, next(self._value_cycle), 40.123, 10)
+                for t in range(int(pd.to_datetime(start.date()).timestamp()),
+                               int(pd.to_datetime(end.date()).timestamp() + time_interval),
+                               time_interval)
+                if pd.to_datetime(t, unit='s').isoweekday() < 6]
 
     def get_last_trade(self, symbol, *args, **kwargs):
         self.get_last_trade_call_count += 1
