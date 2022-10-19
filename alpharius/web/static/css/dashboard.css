@@ -38,8 +38,7 @@
 }
 
 #button-row {
-    margin-top: 8px;
-    margin-right: 15px;
+    margin-bottom: 5px;
     float: left;
 }
 
@@ -64,7 +63,8 @@
 
 .dash-content .card .btn {
     font-size: 13px;
-    margin-left: 15px;
+    margin-left: 5px;
+    margin-right: 10px;
     width: 70px;
 }
 
