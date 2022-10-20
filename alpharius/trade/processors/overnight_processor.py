@@ -6,7 +6,7 @@ import numpy as np
 import tabulate
 from ..common import (
     Action, ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, DATETIME_TYPE, DAYS_IN_A_YEAR, MARKET_OPEN, logging_config, get_header)
+    Position, DATETIME_TYPE, DAYS_IN_A_YEAR, logging_config, get_header)
 from ..stock_universe import TopVolumeUniverse
 
 NUM_UNIVERSE_SYMBOLS = 200
@@ -89,7 +89,6 @@ class OvernightProcessor(Processor):
     @staticmethod
     def _get_performance(context: Context) -> float:
         interday_lookback = context.interday_lookback
-        intraday_lookback = context.intraday_lookback
         if len(interday_lookback) < DAYS_IN_A_YEAR:
             return 0
         closes = interday_lookback['Close'][-DAYS_IN_A_YEAR:]
@@ -100,12 +99,7 @@ class OvernightProcessor(Processor):
         std = np.std(profits)
         if (profits[-1] - r) / std < -1:
             return 0
-        p = None
-        for i in range(len(intraday_lookback)):
-            if intraday_lookback.index[i].time() >= MARKET_OPEN:
-                p = i
-                break
-        today_open = intraday_lookback['Open'][p]
+        today_open = context.today_open
         opens = np.append(
             interday_lookback['Open'][-DAYS_IN_A_YEAR + 1:], today_open)
         overnight_returns = []

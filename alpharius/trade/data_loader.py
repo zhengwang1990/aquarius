@@ -120,7 +120,7 @@ class DataLoader:
         def adjust_split(value, prev_value, post_value):
             if value == 0 or prev_value == 0 or post_value == 0:
                 return value
-            if np.round(prev_value / post_value) != 1:
+            if np.round(prev_value / post_value) != 1 or abs(prev_value / post_value - 1) > 0.1:
                 return value
             split_factor = np.round((prev_value + post_value) / 2 / value)
             if split_factor > 1:

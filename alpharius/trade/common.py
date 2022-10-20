@@ -183,12 +183,15 @@ class Context:
         return res
 
     @property
-    def today_open(self) -> float:
-        p = None
+    def market_open_index(self) -> Optional[int]:
         for i in range(len(self.intraday_lookback)):
             if self.intraday_lookback.index[i].time() >= MARKET_OPEN:
-                p = i
-                break
+                return i
+        return None
+
+    @property
+    def today_open(self) -> float:
+        p = self.market_open_index
         return self.intraday_lookback['Open'][p] if p is not None else None
 
 

@@ -23,6 +23,7 @@ def main():
         processors.O2lProcessorFactory(),
         processors.O2hProcessorFactory(),
         processors.BearMomentumProcessorFactory(),
+        processors.HourlyReversionProcessorFactory(),
     ]
     today = datetime.datetime.today()
     if args.mode == 'backtest':

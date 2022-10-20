@@ -3,3 +3,4 @@ from .overnight_processor import OvernightProcessorFactory
 from .o2l_processor import O2lProcessorFactory
 from .o2h_processor import O2hProcessorFactory
 from .bear_momentum_processor import BearMomentumProcessorFactory
+from .hourly_reversion_processor import HourlyReversionProcessorFactory

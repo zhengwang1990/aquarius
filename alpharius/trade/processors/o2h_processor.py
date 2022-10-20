@@ -62,10 +62,7 @@ class O2hProcessor(Processor):
         o2h_gains = [h / o - 1 for o, h in zip(interday_opens, interday_highs)]
         o2h_avg = np.average(o2h_gains)
         o2h_std = np.std(o2h_gains)
-        market_open_ind = 0
-        while context.intraday_lookback.index[market_open_ind].time() < datetime.time(9, 30):
-            market_open_ind += 1
-        market_open_price = context.intraday_lookback['Open'][market_open_ind]
+        market_open_price = context.today_open
         current_gain = context.current_price / market_open_price - 1
         z_score = (current_gain - o2h_avg) / (o2h_std + 1E-7)
         is_trade = 3 > z_score > 2

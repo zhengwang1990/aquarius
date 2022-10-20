@@ -40,10 +40,8 @@ class BearMomentumProcessor(Processor):
         t = context.current_time.time()
         if t <= ENTRY_TIME or t >= EXIT_TIME:
             return
-        market_open_ind = 0
-        while context.intraday_lookback.index[market_open_ind].time() < datetime.time(9, 30):
-            market_open_ind += 1
-        intraday_closes = context.intraday_lookback['Close'][market_open_ind:]
+        market_open_index = context.market_open_index
+        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         n = CONFIG[context.symbol]
         if len(intraday_closes) < n + 1:
             return

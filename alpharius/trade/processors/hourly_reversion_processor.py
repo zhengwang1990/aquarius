@@ -1,19 +1,18 @@
 import datetime
 import os
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 from ..common import (
     Action, ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
     Position, Mode, DAYS_IN_A_MONTH, DATETIME_TYPE, logging_config)
-from ..stock_universe import MonthlyGainStockUniverse
+from ..stock_universe import IntradayVolatilityStockUniverse
 
-NUM_UNIVERSE_SYMBOLS = 15
-EXIT_TIME = datetime.time(13, 0)
+NUM_UNIVERSE_SYMBOLS = 20
+EXIT_TIME = datetime.time(16, 0)
 
 
-class O2lProcessor(Processor):
-    """Open to low processor predicts intraday lows based on market open prices."""
+class HourlyReversionProcessor(Processor):
 
     def __init__(self,
                  lookback_start_date: DATETIME_TYPE,
@@ -22,14 +21,14 @@ class O2lProcessor(Processor):
                  output_dir: str) -> None:
         super().__init__()
         self._positions = dict()
-        self._stock_universe = MonthlyGainStockUniverse(lookback_start_date,
-                                                        lookback_end_date,
-                                                        data_source,
-                                                        num_stocks=NUM_UNIVERSE_SYMBOLS)
+        self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
+                                                               lookback_end_date,
+                                                               data_source,
+                                                               num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._output_dir = output_dir
-        self._logger = logging_config(os.path.join(self._output_dir, 'o2l_processor.txt'),
+        self._logger = logging_config(os.path.join(self._output_dir, 'hourly_reversion_processor.txt'),
                                       detail=True,
-                                      name='o2l_processor')
+                                      name='hourly_reversion_processor')
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -50,27 +49,35 @@ class O2lProcessor(Processor):
         else:
             return self._open_position(context)
 
+    @staticmethod
+    def _get_thresholds(context: Context) -> Tuple[float, float]:
+        interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
+        interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
+        h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
+        h2l_avg = np.average(h2l_losses)
+        h2l_std = np.std(h2l_losses)
+        lower_threshold = max(h2l_avg - 3 * h2l_std, -0.5)
+        upper_threshold = h2l_avg - 1 * h2l_std
+        return lower_threshold, upper_threshold
+
     def _open_position(self, context: Context) -> Optional[Action]:
         t = context.current_time.time()
         if t >= EXIT_TIME:
             return
         market_open_index = context.market_open_index
-        market_open_price = context.intraday_lookback['Open'][market_open_index]
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
-        if intraday_closes[-1] > np.min(intraday_closes):
+        if len(intraday_closes) < 13:
             return
-        interday_opens = context.interday_lookback['Open'][-DAYS_IN_A_MONTH:]
-        interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
-        o2l_losses = [l / o - 1 for o, l in zip(interday_opens, interday_lows)]
-        o2l_avg = np.average(o2l_losses)
-        o2l_std = np.std(o2l_losses)
-        curent_loss = context.current_price / market_open_price - 1
-        upper_threshold = o2l_avg - 4 * o2l_std
-        lower_threshold = o2l_avg - 6 * o2l_std
-        is_trade = lower_threshold < curent_loss < upper_threshold
-        if is_trade or (context.mode == Mode.TRADE and curent_loss < o2l_avg):
+        if context.current_price > np.min(intraday_closes):
+            return
+        if abs(context.current_price / context.prev_day_close - 1) > 0.5:
+            return
+        hourly_loss = context.current_price / intraday_closes[-13] - 1
+        lower_threshold, upper_threshold = self._get_thresholds(context)
+        is_trade = lower_threshold < hourly_loss < upper_threshold
+        if is_trade or (context.mode == Mode.TRADE and hourly_loss < upper_threshold * 0.8):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                               f'Current loss: {curent_loss * 100:.2f}%. '
+                               f'Hourly loss: {hourly_loss * 100:.2f}%. '
                                f'Threshold: {lower_threshold * 100:.2f}% ~ {upper_threshold * 100:.2f}%. '
                                f'Current price {context.current_price}.')
         if is_trade:
@@ -82,13 +89,21 @@ class O2lProcessor(Processor):
         position = self._positions[context.symbol]
         if position['status'] != 'active':
             return
-        if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=15) or
+        intraday_closes = context.intraday_lookback['Close']
+        index = -13 - (context.current_time - position['entry_time']).seconds // 300
+        if len(intraday_closes) >= abs(index):
+            loss = context.current_price / intraday_closes[index] - 1
+            lower_threshold, _ = self._get_thresholds(context)
+            if loss < lower_threshold:
+                position['status'] = 'inactive'
+                return Action(context.symbol, ActionType.SELL_TO_CLOSE, 1, context.current_price)
+        if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
                 context.current_time.time() >= EXIT_TIME):
             position['status'] = 'inactive'
             return Action(context.symbol, ActionType.SELL_TO_CLOSE, 1, context.current_price)
 
 
-class O2lProcessorFactory(ProcessorFactory):
+class HourlyReversionProcessorFactory(ProcessorFactory):
 
     def __init__(self):
         super().__init__()
@@ -98,5 +113,5 @@ class O2lProcessorFactory(ProcessorFactory):
                lookback_end_date: DATETIME_TYPE,
                data_source: DataSource,
                output_dir: str,
-               *args, **kwargs) -> O2lProcessor:
-        return O2lProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
+               *args, **kwargs) -> HourlyReversionProcessor:
+        return HourlyReversionProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
