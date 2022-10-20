@@ -1,19 +1,27 @@
 #!/bin/bash
 bin_dir=$(dirname "$0")
-base_dir=$(dirname "$bin_dir")
+if [[ ${bin_dir} == "." ]]
+then
+  base_dir=".."
+else
+  base_dir=$(dirname "$bin_dir")
+fi
 rm -f "${base_dir}/console.txt"
 
-directories=("${base_dir}/cache/DAY" "${base_dir}/outputs/trading")
+directories=("${base_dir}/cache/DAY" "${base_dir}/cache/stock_universe"/* "${base_dir}/outputs/trading")
 for directory in "${directories[@]}"
 do
-  for filename in "${directory}"/*
-  do
-    days_to_live=$(( 90 - ($(date +%s) - $(stat -c %Y "${filename}")) / 86400 ))
-    if [[ ${days_to_live} -le 0 ]]
-    then
-      rm -rf "${filename}"
-    fi
-  done
+  if [[ -d "${directory}" ]]
+  then
+    for filename in "${directory}"/*
+    do
+      days_to_live=$(( 90 - ($(date +%s) - $(stat -c %Y "${filename}")) / 86400 ))
+      if [[ ${days_to_live} -le 0 ]]
+      then
+        rm -rf "${filename}"
+      fi
+    done
+  fi
 done
 
 ln -sf "${base_dir}/outputs/trading/$(date +'%Y-%m-%d')/log.txt" "${base_dir}/log.txt"
