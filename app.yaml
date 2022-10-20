@@ -10,10 +10,10 @@ handlers:
     script: auto
 
 env_variables:
-  APCA_API_KEY_ID: ""
-  APCA_API_SECRET_KEY: ""
-  APCA_API_BASE_URL: ""
-  CASH_RESERVE: ""
-  SECRET_KEY: ""
+  APCA_API_KEY_ID: "AKNSO95FT336OWUD1TL5"
+  APCA_API_SECRET_KEY: "T8r3y2extuBbNVMQ67xeNh1sZvOItv80PxbYDLs1"
+  APCA_API_BASE_URL: "https://api.alpaca.markets"
+  CASH_RESERVE: "25000"
+  SECRET_KEY: "7132f8bd5d4991ada8bbdfb20d2b37b8bbbd861f684d57ff0ca2242ee1ec5c39"
 
 instance_class: F1

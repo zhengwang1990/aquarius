@@ -1,4 +1,6 @@
 import datetime
+import hashlib
+import inspect
 import json
 import os
 from typing import List
@@ -38,8 +40,15 @@ class StockUniverse:
                 raise ValueError(f'{view_time} is too early')
         return pd.to_datetime(prev_day.strftime('%F'))
 
-    def set_cache_dir(self, cache_dir):
-        self._cache_dir = os.path.join(_STOCK_UNIVERSE_CACHE_ROOT, cache_dir)
+    def set_cache_dir(self, suffix: str) -> None:
+        source_file = inspect.getfile(self.__class__)
+        with open(source_file, 'r') as f:
+            content = f.read()
+        class_name = self.__class__.__name__
+        cache_name = '_'.join([class_name,
+                               hashlib.md5(content.encode('utf-8')).hexdigest(),
+                               suffix])
+        self._cache_dir = os.path.join(_STOCK_UNIVERSE_CACHE_ROOT, cache_name)
         os.makedirs(self._cache_dir, exist_ok=True)
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
@@ -110,6 +119,7 @@ class IntradayVolatilityStockUniverse(StockUniverse):
                                               lookback_end_date,
                                               data_source,
                                               num_top_volume)
+        self.set_cache_dir(f'{num_stocks}_{num_top_volume}')
         self._num_stocks = num_stocks
 
     def _get_intraday_range(self, symbol: str, prev_day_ind: int) -> float:
@@ -159,6 +169,7 @@ class MonthlyGainStockUniverse(StockUniverse):
                                               lookback_end_date,
                                               data_source,
                                               num_top_volume)
+        self.set_cache_dir(f'{num_stocks}_{num_top_volume}')
         self._num_stocks = num_stocks
 
     def _get_monthly_gain(self, symbol: str, prev_day_ind: int) -> float:
