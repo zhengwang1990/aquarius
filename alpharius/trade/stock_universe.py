@@ -78,6 +78,7 @@ class TopVolumeUniverse(StockUniverse):
                  num_stocks: int = 100):
         super().__init__(lookback_start_date, lookback_end_date, data_source)
         self._stock_symbols = set(COMPANY_SYMBOLS)
+        self.set_cache_dir(str(num_stocks))
         self._num_stocks = num_stocks
 
     def _get_dollar_volume(self, symbol: str, prev_day_ind: int) -> float:
