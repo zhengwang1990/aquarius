@@ -1,3 +1,4 @@
+import json
 from concurrent import futures
 
 import flask
@@ -16,7 +17,7 @@ def dashboard():
         tasks['positions'] = pool.submit(client.get_current_positions)
         tasks['watch'] = pool.submit(client.get_market_watch)
     return flask.render_template('dashboard.html',
-                                 histories=tasks['histories'].result(),
+                                 histories=json.dumps(tasks['histories'].result()),
                                  orders=tasks['orders'].result(),
                                  positions=tasks['positions'].result(),
                                  watch=tasks['watch'].result())

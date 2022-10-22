@@ -2,7 +2,7 @@ const body = document.querySelector("body");
 const sidebar = body.querySelector("nav");
 const sidebarToggle = body.querySelector(".sidebar-toggle");
 
-let getStatus = localStorage.getItem("status");
+let getStatus = sessionStorage.getItem("status");
 if(getStatus && getStatus ==="close"){
     sidebar.classList.toggle("close");
 }
@@ -10,8 +10,8 @@ if(getStatus && getStatus ==="close"){
 sidebarToggle.addEventListener("click", () => {
     sidebar.classList.toggle("close");
     if(sidebar.classList.contains("close")){
-        localStorage.setItem("status", "close");
+        sessionStorage.setItem("status", "close");
     }else{
-        localStorage.setItem("status", "open");
+        sessionStorage.setItem("status", "open");
     }
 })

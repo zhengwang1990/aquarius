@@ -19,7 +19,9 @@
                                 <h2 class="mb-0">{{ watch[symbol]['price'] }}</h2>
                             </div>
                         </div>
-                        <span class="text-muted footnote"> {{ watch[symbol]['change'] | safe }} Today</span>
+                        <span class="text-muted footnote">
+                            {{ watch[symbol]['change'] | safe }} {{ watch[symbol]['date'] }}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -32,46 +34,37 @@
         <div class="card">
             <div class="card-header"><span class="card-title">Portfolio Value</span></div>
             <div id="portfolio-info">
-                <span id="current-equity" class="mb-0 number-font"> {{ histories['current_equity'] }} </span>
+                <span id="current-equity" class="mb-0 number-font"></span>
                 <span id="current-change" class="number-font"></span>
             </div>
-            <div class="card-body">
-                <div class="row" id="button-row">
-                    <div class="col-sm-12 col-md-6 col-lg-6 col-xl-6 button-col">
-                        <input type="radio" class="btn-check" name="btnradio" id="btn-radio-1d"
-                                autocomplete="off">
-                        <label class="btn my-btn-outline-primary" for="btn-radio-1d">1 D</label>
-
-                        <input type="radio" class="btn-check" name="btnradio" id="btn-radio-1w"
-                                autocomplete="off">
-                        <label class="btn my-btn-outline-primary" for="btn-radio-1w">1 W</label>
-
-                        <input type="radio" class="btn-check" name="btnradio" id="btn-radio-1m"
-                                autocomplete="off">
-                        <label class="btn my-btn-outline-primary" for="btn-radio-1m">1 M</label>
+            <div class="card-body" id="button-card">
+                <div class="button-title"><i class="uil uil-graph-bar"></i> COMPARE</div>
+                <div class="row">
+                    <div class="button-row compare-row">
+                        {% for symbol in ['qqq', 'spy', 'tqqq'] %}
+                        <span class="btn my-btn-outline my-btn-{{symbol}}"  id="btn-{{symbol}}">{{ symbol | upper }}</span>
+                        {% endfor %}
                     </div>
+                </div>
+                <div class="button-title"><i class="uil uil-clock"></i> TIMEFRAME</div>
+                <div class="row button-row">
+                    {% for timeframe in ['1d', '1w', '1m', '6m', '1y', '5y'] %}
+                    {% if loop.index0 % 3 == 0 %}
                     <div class="col-sm-12 col-md-6 col-lg-6 col-xl-6 button-col">
-                        <input type="radio" class="btn-check" name="btnradio" id="btn-radio-6m"
-                                autocomplete="off">
-                        <label class="btn my-btn-outline-primary" for="btn-radio-6m">6 M</label>
-
-                        <input type="radio" class="btn-check" name="btnradio" id="btn-radio-1y"
-                                autocomplete="off">
-                        <label class="btn my-btn-outline-primary" for="btn-radio-1y">1 Y</label>
-
-                        <input type="radio" class="btn-check" name="btnradio" id="btn-radio-5y"
-                                autocomplete="off">
-                        <label class="btn my-btn-outline-primary" for="btn-radio-5y">5 Y</label>
+                    {% endif %}
+                        <span class="btn my-btn-outline my-btn-primary" id="btn-{{timeframe}}">
+                            {{timeframe[0] + ' ' + timeframe[1] | upper}}
+                        </span>
+                    {% if loop.index0 % 3 == 2 %}
                     </div>
+                    {% endif %}
+                    {% endfor %}
                 </div>
             </div>
             <div id="chart-container">
-                <canvas id="graph-1d" style="display:none;"></canvas>
-                <canvas id="graph-1w" style="display:none;"></canvas>
-                <canvas id="graph-1m" style="display:none;"></canvas>
-                <canvas id="graph-6m" style="display:none;"></canvas>
-                <canvas id="graph-1y" style="display:none;"></canvas>
-                <canvas id="graph-5y" style="display:none;"></canvas>
+                {% for timeframe in ['1d', '1w', '1m', '6m', '1y', '5y'] %}
+                <canvas id="graph-{{timeframe}}" style="display:none;"></canvas>
+                {% endfor %}
             </div>
         </div>
     </div>
@@ -101,21 +94,21 @@
                     </thead>
                     <tbody>
                         {% for order in orders %}
-                            <tr>
-                                <td>{{ order['symbol'] }}</td>
-                                <td>
-                                    <span class="badge-shape {{ 'badge-blue' if order['side'] == 'buy' else 'badge-orange'}}">
-                                        {{ order['side'] }}
-                                    </span>
-                                </td>
-                                <td>{{ order['price'] }}</td>
-                                <td class="xs-hidden">{{ order['value'] }}</td>
-                                <td>{{ order['time'] | safe }}</td>
-                                <td>{{ order['gl'] | safe }}</td>
-                            </tr>
+                        <tr>
+                            <td>{{ order['symbol'] }}</td>
+                            <td>
+                                <span class="badge-shape {{ 'badge-blue' if order['side'] == 'buy' else 'badge-orange'}}">
+                                    {{ order['side'] }}
+                                </span>
+                            </td>
+                            <td>{{ order['price'] }}</td>
+                            <td class="xs-hidden">{{ order['value'] }}</td>
+                            <td>{{ order['time'] | safe }}</td>
+                            <td>{{ order['gl'] | safe }}</td>
+                        </tr>
                         {% endfor %}
                     </tbody>
-                  </table>
+                </table>
             </div>
         </div>
     </div>
@@ -134,7 +127,7 @@
                             <th scope="col">SIDE</th>
                             <th scope="col">PRICE</th>
                             <th scope="col">VALUE</th>
-                            <th scope="col" class="xs-hidden">CHANGE TODAY</th>
+                            <th scope="col" class="xs-hidden">DAY CHANGE</th>
                             <th scope="col">
                                 <span class="xs-hidden">GAIN / LOSS</span>
                                 <span class="xs-show">G/L</span>
@@ -152,12 +145,12 @@
                             </td>
                             <td>{{ position['current_price'] }}</td>
                             <td>{{ position['value'] }}</td>
-                            <td class="xs-hidden">{{ position['change_today'] | safe }}</td>
+                            <td class="xs-hidden">{{ position['day_change'] | safe }}</td>
                             <td>{{ position['gl'] | safe }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
-                  </table>
+                </table>
             </div>
         </div>
     </div>

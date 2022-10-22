@@ -40,7 +40,7 @@ class FakeAlpaca:
         self.get_bars_call_count = 0
         self.get_calendar_call_count = 0
         self.get_latest_trades_call_count = 0
-        self._value_cycle = itertools.cycle([40, 41, 43, 42, 41.5, 50])
+        self._value_cycle = itertools.cycle([30, 40, 41, 43, 42, 41.5, 50])
 
     def get_account(self):
         self.get_account_call_count += 1
@@ -85,11 +85,23 @@ class FakeAlpaca:
     def cancel_order(self, *args, **kwargs):
         self.cancel_order_call_count += 1
 
-    def get_portfolio_history(self, *args, **kwargs):
+    def get_portfolio_history(self, date_start, date_end, timeframe, *args, **kwargs):
         self.get_portfolio_history_call_count += 1
-        current_time = time.time()
-        return History([0] * 10 + [i * (-1) ** i + 100 for i in range(10)],
-                       [current_time - i * 300 for i in range(19, -1, -1)])
+        if timeframe == '1D':
+            time_interval = 86400
+        elif timeframe == '1H':
+            time_interval = 3600
+        elif timeframe == '5Min':
+            time_interval = 300
+        else:
+            raise ValueError('Time frame must be 5Min, 1H or 1D.')
+        start_time = int(pd.to_datetime(date_start).timestamp())
+        start_time -= start_time % time_interval
+        end_time = int(pd.to_datetime(date_end).timestamp()) + 86401
+        timestamps = [t for t in range(start_time, end_time, time_interval)
+                      if pd.to_datetime(t, unit='s', utc=True).isoweekday() < 6]
+        return History([0] * 10 + [i * (-1) ** i + len(timestamps) + 1 for i in range(len(timestamps))],
+                       timestamps)
 
     def get_bars(self, symbol, timeframe, start, end, *args, **kwargs):
         self.get_bars_call_count += 1
@@ -101,12 +113,14 @@ class FakeAlpaca:
             time_interval = 300
         else:
             raise ValueError('Time frame must be 5 min, 1 hour or 1 day.')
+        start_timestamp = int(pd.to_datetime(start).timestamp())
+        start_timestamp -= start_timestamp % time_interval
         return [Bar(pd.to_datetime(t, unit='s', utc=True),
                     40, 41, 39, next(self._value_cycle), 40.123, 10)
-                for t in range(int(pd.to_datetime(start).timestamp()),
+                for t in range(start_timestamp,
                                int(pd.to_datetime(end).timestamp() + time_interval),
                                time_interval)
-                if pd.to_datetime(t, unit='s').isoweekday() < 6]
+                if pd.to_datetime(t, unit='s', utc=True).isoweekday() < 6]
 
     def get_calendar(self, start, end, *args, **kwargs):
         self.get_calendar_call_count += 1
@@ -145,12 +159,13 @@ class FakePolygon:
             time_interval = 300
         else:
             raise ValueError('Time frame must be 5 min, 1 hour or 1 day.')
-
+        start_timestamp = int(start.timestamp())
+        start_timestamp -= start_timestamp % time_interval
         return [Agg(t * 1000, 40, 41, 39, next(self._value_cycle), 40.123, 10)
-                for t in range(int(pd.to_datetime(start.date()).timestamp()),
-                               int(pd.to_datetime(end.date()).timestamp() + time_interval),
+                for t in range(start_timestamp,
+                               int(end.timestamp()) + time_interval,
                                time_interval)
-                if pd.to_datetime(t, unit='s').isoweekday() < 6]
+                if pd.to_datetime(t, unit='s', utc=True).isoweekday() < 6]
 
     def get_last_trade(self, symbol, *args, **kwargs):
         self.get_last_trade_call_count += 1

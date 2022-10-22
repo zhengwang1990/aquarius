@@ -2,6 +2,7 @@ import datetime
 import functools
 import math
 import os
+import threading
 import time
 from concurrent import futures
 from typing import List, Tuple
@@ -74,6 +75,7 @@ class AlpacaClient:
     def __init__(self):
         self._alpaca = tradeapi.REST()
         self._pool = futures.ThreadPoolExecutor(max_workers=10)
+        self._lock = threading.RLock()
 
     @functools.lru_cache(maxsize=5)
     def get_calendar(self, last_day: str):
@@ -121,7 +123,7 @@ class AlpacaClient:
                                         ('1m', relativedelta(months=1)),
                                         ('6m', relativedelta(months=6)),
                                         ('1y', relativedelta(years=1))]:
-            cut = (last_day - time_delta).strftime('%F')
+            cut = (last_day - time_delta - relativedelta(days=1)).strftime('%F')
             time_str = 'time_' + time_period
             equity_str = 'equity_' + time_period
             result[time_str] = result[equity_str] = []
@@ -158,8 +160,54 @@ class AlpacaClient:
                     result['time_1d'] = result['time_1d'][i:]
                     result['equity_1d'] = result['equity_1d'][i:]
                     break
+        compare_symbols = ['QQQ', 'SPY', 'TQQQ']
+        for symbol in compare_symbols:
+            tasks[symbol] = self._pool.submit(self.get_compare_symbol, symbol,
+                                              market_dates[-1].date(), result)
+        for symbol in compare_symbols:
+            tasks[symbol].result()
         app.logger.info('Time cost for get_portfolio_histories: [%.2fs]', time.time() - start)
         return result
+
+    def get_compare_symbol(self, symbol: str, last_day, portfolio_histories):
+        day_bars = self._alpaca.get_bars(
+            symbol,
+            tradeapi.TimeFrame(5, tradeapi.TimeFrameUnit.Minute),
+            pd.Timestamp.combine(last_day, datetime.time(0, 0)).tz_localize(TIME_ZONE).isoformat(),
+            pd.Timestamp.combine(last_day, datetime.time(23, 0)).tz_localize(TIME_ZONE).isoformat())
+        dict_1d = dict()
+        for bar in day_bars:
+            t = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime('%H:%M')
+            dict_1d[t] = bar.o
+        year_bars = self._alpaca.get_bars(
+            symbol,
+            tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
+            portfolio_histories['time_5y'][0],
+            portfolio_histories['time_5y'][-1])
+        dict_5y = dict()
+        for bar in year_bars:
+            t = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime('%F')
+            dict_5y[t] = bar.c
+        symbol_values = dict()
+        for timeframe in ['1d', '1w', '1m', '6m', '1y', '5y']:
+            symbol_values[timeframe] = []
+            timeline = portfolio_histories['time_' + timeframe]
+            dict_ref = dict_1d if timeframe == '1d' else dict_5y
+            for t in timeline:
+                symbol_values[timeframe].append(dict_ref.get(t))
+            symbol_values[timeframe][-1] = day_bars[-1].c
+        for timeframe in ['1d', '1w', '1m', '6m', '1y', '5y']:
+            if timeframe == '1d':
+                symbol_base = symbol_values['5y'][-2]
+                portfolio_base = portfolio_histories['prev_close']
+            else:
+                symbol_base = symbol_values[timeframe][0]
+                portfolio_base = portfolio_histories['equity_' + timeframe][0]
+            for i in range(len(symbol_values[timeframe])):
+                if symbol_values[timeframe][i] is not None:
+                    symbol_values[timeframe][i] = symbol_values[timeframe][i] / symbol_base * portfolio_base
+            with self._lock:
+                portfolio_histories[symbol.lower() + '_' + timeframe] = symbol_values[timeframe]
 
     def get_recent_orders(self):
         return self.get_orders(-1, False)
@@ -235,7 +283,7 @@ class AlpacaClient:
                 'current_price': f'{current_price:.4g}',
                 'value': f'{value:.2f}' if value < 1000 else f'{value:.0f}',
                 'side': side,
-                'change_today': get_signed_percentage(info['change']),
+                'day_change': get_signed_percentage(info['change']),
                 'gl': get_signed_percentage(gl),
             })
         result.sort(key=lambda p: p['symbol'])
@@ -259,10 +307,13 @@ class AlpacaClient:
                                               tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
                                               prev_day,
                                               prev_day)
+        today_str = datetime.datetime.today().astimezone(TIME_ZONE).strftime('%b %d')
+        trading_day = calendar[-1].date.strftime('%b %d')
         for symbol in symbols:
             bars = tasks[symbol].result()
             result[symbol] = {'price': current_prices[symbol],
-                              'change': current_prices[symbol] / bars[0].c - 1}
+                              'change': current_prices[symbol] / bars[0].c - 1,
+                              'date': trading_day if trading_day != today_str else 'Today'}
         return result
 
     def get_market_watch(self):
@@ -272,7 +323,8 @@ class AlpacaClient:
         infos = self.get_info_today(watch_symbols)
         for symbol, info in infos.items():
             result[symbol] = {'price': f'{info["price"]:.2f}',
-                              'change': get_signed_percentage(info['change'], with_arrow=True)}
+                              'change': get_signed_percentage(info['change'], with_arrow=True),
+                              'date': info['date']}
         app.logger.info('Time cost for get_market_watch: [%.2fs]', time.time() - start)
         return result
 
