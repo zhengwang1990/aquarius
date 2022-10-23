@@ -9,7 +9,7 @@ var active_timeframe = null;
 var active_compares = new Set();
 var charts = {};
 const graph_point_radius = {
-    "1d": 0, "1w": 3, "1m": 3,
+    "1d": 0, "1w": 3, "1m": 2,
     "6m": 0, "1y": 0, "5y": 0,
 };
 const symbol_colors = {
