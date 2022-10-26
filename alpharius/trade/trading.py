@@ -267,8 +267,15 @@ class Trading:
                 self._logger.info('Position too small to open [%s]. Position value [%s]. Skipping open.',
                                   cash_to_trade, symbol)
                 continue
-            side = 'buy' if action.type == ActionType.BUY_TO_OPEN else 'sell'
-            self._place_order(symbol, side, notional=cash_to_trade)
+            if action.type == ActionType.BUY_TO_OPEN:
+                side = 'buy'
+                qty = None
+                notional = cash_to_trade
+            else:
+                side = 'sell'
+                qty = int(cash_to_trade / action.price)
+                notional = None
+            self._place_order(symbol, side, notional)
 
         self._wait_for_order_to_fill()
 
