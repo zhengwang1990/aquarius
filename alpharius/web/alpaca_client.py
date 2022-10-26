@@ -1,3 +1,4 @@
+import copy
 import datetime
 import functools
 import math
@@ -116,6 +117,7 @@ class AlpacaClient:
             histories['1D'].timestamp,
             '%F',
             cash_reserve)
+        time_points = copy.copy(result['time_5y'])
         result['equity_5y'][-1] = current_equity
         result['prev_close'] = (result['equity_5y'][-2]
                                 if len(result['equity_5y']) > 2 else math.nan)
@@ -163,13 +165,13 @@ class AlpacaClient:
         compare_symbols = ['QQQ', 'SPY', 'TQQQ']
         for symbol in compare_symbols:
             tasks[symbol] = self._pool.submit(self.get_compare_symbol, symbol,
-                                              market_dates[-1].date(), result)
+                                              market_dates[-1].date(), time_points, result)
         for symbol in compare_symbols:
             tasks[symbol].result()
         app.logger.info('Time cost for get_portfolio_histories: [%.2fs]', time.time() - start)
         return result
 
-    def get_compare_symbol(self, symbol: str, last_day, portfolio_histories):
+    def get_compare_symbol(self, symbol: str, last_day, time_points, portfolio_histories):
         day_bars = self._alpaca.get_bars(
             symbol,
             tradeapi.TimeFrame(5, tradeapi.TimeFrameUnit.Minute),
@@ -182,8 +184,8 @@ class AlpacaClient:
         year_bars = self._alpaca.get_bars(
             symbol,
             tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
-            portfolio_histories['time_5y'][0],
-            portfolio_histories['time_5y'][-1])
+            time_points[0],
+            time_points[-1])
         dict_5y = dict()
         for bar in year_bars:
             t = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime('%F')
@@ -198,7 +200,7 @@ class AlpacaClient:
             symbol_values[timeframe][-1] = day_bars[-1].c
         for timeframe in ['1d', '1w', '1m', '6m', '1y', '5y']:
             if timeframe == '1d':
-                symbol_base = symbol_values['5y'][-2]
+                symbol_base = dict_5y[time_points[-2]]
                 portfolio_base = portfolio_histories['prev_close']
             else:
                 symbol_base = symbol_values[timeframe][0]
