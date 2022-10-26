@@ -13,7 +13,7 @@ $ make
 
 ### Run tests
 ```shell
-$ python -m unittest discover
+$ pytest
 ```
 
 ### Run backtesting
@@ -24,4 +24,11 @@ $ python alpharius/trade.py --mode backtest --start_date 2017-01-01 --end_date 2
 ### Run realtime trading
 ```shell
 $ python alpharius/trade.py --mode trade
+```
+
+## Web
+
+### Local web service
+```shell
+flask --app alpharius.web --debug run
 ```
