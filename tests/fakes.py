@@ -54,7 +54,7 @@ class FakeAlpaca:
     def list_positions(self):
         self.list_positions_call_count += 1
         return [Position('QQQ', '10', '10.0', '100.0', '99.0', '9.9', '0.01', '0'),
-                Position('GOOG', '-10', '94.4', '100.0', '99.0', '9.9', '0.01', '0')]
+                Position('GOOG', '-10', '94.4', '100.0', '99.0', '10', '0.01', '0')]
 
     def get_clock(self):
         self.get_clock_call_count += 1

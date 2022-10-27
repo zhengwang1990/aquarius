@@ -14,7 +14,7 @@ from ..fakes import Account, FakeAlpaca, FakeProcessorFactory
 @pytest.fixture(autouse=True)
 def mock_time(mocker):
     mocker.patch.object(time, 'sleep')
-    mocker.patch.object(time, 'time', side_effect=itertools.count(1615987700))
+    mocker.patch.object(time, 'time', side_effect=itertools.count(1615987700, 5))
 
 
 @pytest.fixture(autouse=True)
@@ -91,3 +91,28 @@ def test_small_position_not_open(mocker, mock_alpaca):
     trading.run()
 
     assert mock_alpaca.submit_order_call_count == 0
+
+
+def test_trade(mocker, mock_alpaca):
+    trading = trade.Trading(processor_factories=[])
+    expected_transactions = [
+        {'symbol': 'A', 'action_type': trade.ActionType.BUY_TO_OPEN,
+         'qty': None, 'side': 'buy', 'notional': 900},
+        {'symbol': 'B', 'action_type': trade.ActionType.SELL_TO_OPEN,
+         'qty': 9, 'side': 'sell', 'notional': None},
+        {'symbol': 'QQQ', 'action_type': trade.ActionType.SELL_TO_CLOSE,
+         'qty': 10, 'side': 'sell', 'notional': None},
+        {'symbol': 'GOOG', 'action_type': trade.ActionType.BUY_TO_CLOSE,
+         'qty': 10, 'side': 'buy', 'notional': None},
+    ]
+    actions = [trade.Action(t['symbol'], t['action_type'], 1, 100)
+               for t in expected_transactions]
+    mocker.patch.object(FakeAlpaca, 'submit_order')
+
+    trading._trade(actions)
+
+    for t in expected_transactions:
+        mock_alpaca.submit_order.assert_any_call(
+            symbol=t['symbol'], qty=t['qty'], side=t['side'],
+            type='market', time_in_force='day', notional=t['notional'],
+            limit_price=None)
