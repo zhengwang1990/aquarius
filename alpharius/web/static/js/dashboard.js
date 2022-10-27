@@ -151,3 +151,12 @@ if (current_compares !== null) {
         change_compare(symbol);
     }
 }
+
+const buttons = document.getElementsByClassName("my-btn-outline");
+for (var button of buttons) {
+    if (isMobile) {
+        button.classList.add("my-btn-outline-no-hover");
+    } else {
+        button.classList.add("my-btn-outline-hover");
+    }
+}
