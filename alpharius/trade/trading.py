@@ -275,7 +275,7 @@ class Trading:
                 side = 'sell'
                 qty = int(cash_to_trade / action.price)
                 notional = None
-            self._place_order(symbol, side, notional)
+            self._place_order(symbol, side, qty=qty, notional=notional)
 
         self._wait_for_order_to_fill()
 
