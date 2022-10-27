@@ -93,7 +93,7 @@ def test_small_position_not_open(mocker, mock_alpaca):
     assert mock_alpaca.submit_order_call_count == 0
 
 
-def test_trade(mocker, mock_alpaca):
+def test_trade_transactions_executed(mocker, mock_alpaca):
     trading = trade.Trading(processor_factories=[])
     expected_transactions = [
         {'symbol': 'A', 'action_type': trade.ActionType.BUY_TO_OPEN,
@@ -116,3 +116,13 @@ def test_trade(mocker, mock_alpaca):
             symbol=t['symbol'], qty=t['qty'], side=t['side'],
             type='market', time_in_force='day', notional=t['notional'],
             limit_price=None)
+
+
+def test_trade_transactions_skipped(mock_alpaca):
+    trading = trade.Trading(processor_factories=[])
+    actions = [trade.Action('QQQ', trade.ActionType.BUY_TO_CLOSE, 1, 100),
+               trade.Action('GOOG', trade.ActionType.SELL_TO_CLOSE, 1, 100)]
+
+    trading._trade(actions)
+
+    assert mock_alpaca.submit_order_call_count == 0
