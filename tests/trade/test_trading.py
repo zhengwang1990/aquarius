@@ -14,7 +14,7 @@ from ..fakes import Account, FakeAlpaca, FakeProcessorFactory
 @pytest.fixture(autouse=True)
 def mock_time(mocker):
     mocker.patch.object(time, 'sleep')
-    mocker.patch.object(time, 'time', side_effect=itertools.count(1615987700, 5))
+    mocker.patch.object(time, 'time', side_effect=itertools.count(1615987700))
 
 
 @pytest.fixture(autouse=True)
@@ -121,7 +121,8 @@ def test_trade_transactions_executed(mocker, mock_alpaca):
 def test_trade_transactions_skipped(mock_alpaca):
     trading = trade.Trading(processor_factories=[])
     actions = [trade.Action('QQQ', trade.ActionType.BUY_TO_CLOSE, 1, 100),
-               trade.Action('GOOG', trade.ActionType.SELL_TO_CLOSE, 1, 100)]
+               trade.Action('GOOG', trade.ActionType.SELL_TO_CLOSE, 1, 100),
+               trade.Action('AAPL', trade.ActionType.SELL_TO_CLOSE, 1, 100)]
 
     trading._trade(actions)
 
