@@ -12,7 +12,7 @@ from .common import (
     Action, ActionType, ProcessorFactory, TradingFrequency, Context, Mode,
     TimeInterval, Position, MARKET_OPEN, DATETIME_TYPE, DEFAULT_DATA_SOURCE,
     INTERDAY_LOOKBACK_LOAD, TIME_ZONE, OUTPUT_DIR, SHORT_RESERVE_RATIO,
-    logging_config, get_unique_actions)
+    logging_config, get_unique_actions, get_processor_name)
 from .data_loader import load_tradable_history, DataLoader
 from .email import Email
 
@@ -78,7 +78,7 @@ class Trading:
 
     def _init_stock_universe(self) -> None:
         for processor in self._processors:
-            processor_name = type(processor).__name__
+            processor_name = get_processor_name(processor)
             processor_stock_universe = processor.get_stock_universe(self._today)
             self._processor_stock_universes[processor_name] = processor_stock_universe
             self._stock_universe[processor.get_trading_frequency()].update(processor_stock_universe)
@@ -165,14 +165,18 @@ class Trading:
         for processor in self._processors:
             if processor.get_trading_frequency() not in frequency_to_process:
                 continue
-            processor_name = type(processor).__name__
+            processor_name = get_processor_name(processor)
             stock_universe = self._processor_stock_universes[processor_name]
             processor_contexts = []
             for symbol in stock_universe:
                 context = contexts.get(symbol)
                 if context:
                     processor_contexts.append(context)
-            actions.extend(processor.process_all_data(processor_contexts))
+            processor_actions = processor.process_all_data(processor_contexts)
+            actions.extend([Action(pa.symbol, pa.type, pa.percent,
+                                   contexts[pa.symbol].current_price,
+                                   processor_name)
+                            for pa in processor_actions])
         self._logger.info('Got [%d] actions to process.', len(actions))
 
         self._trade(actions)

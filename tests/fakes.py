@@ -189,19 +189,19 @@ class FakeProcessor(trade.Processor):
     def process_data(self, context):
         self.process_data_call_count += 1
         if context.current_time.time() == datetime.time(9, 35) and context.symbol == 'QQQ':
-            return trade.Action('QQQ', trade.ActionType.BUY_TO_OPEN, 1, 51)
+            return trade.ProcessorAction('QQQ', trade.ActionType.BUY_TO_OPEN)
         if context.current_time.time() == datetime.time(10, 0) and context.symbol == 'DIA':
-            return trade.Action('DIA', trade.ActionType.BUY_TO_OPEN, 1, 51)
+            return trade.ProcessorAction('DIA', trade.ActionType.BUY_TO_OPEN)
         if context.current_time.time() == datetime.time(11, 30) and context.symbol == 'QQQ':
-            return trade.Action('QQQ', trade.ActionType.SELL_TO_CLOSE, 1, 52)
+            return trade.ProcessorAction('QQQ', trade.ActionType.SELL_TO_CLOSE, 0.5)
         if context.current_time.time() == datetime.time(12, 0) and context.symbol == 'DIA':
-            return trade.Action('DIA', trade.ActionType.SELL_TO_CLOSE, 1, 52)
+            return trade.ProcessorAction('DIA', trade.ActionType.SELL_TO_CLOSE)
         if context.current_time.time() == datetime.time(13, 0) and context.symbol == 'DIA':
-            return trade.Action('DIA', trade.ActionType.SELL_TO_OPEN, 1, 52)
+            return trade.ProcessorAction('DIA', trade.ActionType.SELL_TO_OPEN)
         if context.current_time.time() == datetime.time(13, 10) and context.symbol == 'DIA':
-            return trade.Action('DIA', trade.ActionType.BUY_TO_CLOSE, 1, 50)
+            return trade.ProcessorAction('DIA', trade.ActionType.BUY_TO_CLOSE)
         if context.current_time.time() == datetime.time(16, 0) and context.symbol == 'SPY':
-            return trade.Action('SPY', trade.ActionType.BUY_TO_OPEN, 1, 50)
+            return trade.ProcessorAction('SPY', trade.ActionType.BUY_TO_OPEN)
 
 
 class FakeProcessorFactory(trade.ProcessorFactory):

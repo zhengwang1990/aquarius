@@ -73,7 +73,8 @@ class TradingFrequency(Enum):
         return self.name
 
 
-Action = collections.namedtuple('Action', ['symbol', 'type', 'percent', 'price'])
+ProcessorAction = collections.namedtuple('ProcessorAction', ['symbol', 'type', 'percent'], defaults=(1,))
+Action = collections.namedtuple('Action', ['symbol', 'type', 'percent', 'price', 'processor'])
 Position = collections.namedtuple('Position', ['symbol', 'qty', 'entry_price', 'entry_time'])
 DEFAULT_DATA_SOURCE = DataSource.ALPACA
 
@@ -203,10 +204,10 @@ class Processor:
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         raise NotImplementedError('Calling parent interface')
 
-    def process_data(self, context: Context) -> Optional[Action]:
+    def process_data(self, context: Context) -> Optional[ProcessorAction]:
         return None
 
-    def process_all_data(self, contexts: List[Context]) -> List[Action]:
+    def process_all_data(self, contexts: List[Context]) -> List[ProcessorAction]:
         actions = []
         for context in contexts:
             action = self.process_data(context)
@@ -241,3 +242,10 @@ class ProcessorFactory:
         with open(snapshot_file, 'w') as f_snapshot:
             with open(self._source_file, 'r') as f_source:
                 f_snapshot.write(f_source.read())
+
+
+def get_processor_name(processor: Processor) -> str:
+    processor_name = type(processor).__name__
+    suffix = 'Processor'
+    assert processor_name.endswith(suffix)
+    return processor_name[:-len(suffix)]

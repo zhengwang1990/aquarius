@@ -4,7 +4,7 @@ from typing import List, Optional
 
 import numpy as np
 from ..common import (
-    Action, ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
+    ProcessorAction, ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
     DATETIME_TYPE, DAYS_IN_A_MONTH, logging_config)
 
 ENTRY_TIME = datetime.time(10, 0)
@@ -30,13 +30,13 @@ class BearMomentumProcessor(Processor):
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(CONFIG.keys())
 
-    def process_data(self, context: Context) -> Optional[Action]:
+    def process_data(self, context: Context) -> Optional[ProcessorAction]:
         if context.symbol in self._positions:
             return self._close_position(context)
         else:
             return self._open_position(context)
 
-    def _open_position(self, context: Context) -> Optional[Action]:
+    def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
         if t <= ENTRY_TIME or t >= EXIT_TIME:
             return
@@ -64,16 +64,16 @@ class BearMomentumProcessor(Processor):
         if down == n and context.current_price < context.prev_day_close:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'side': 'short'}
-            return Action(context.symbol, ActionType.SELL_TO_OPEN, 1, context.current_price)
+            return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN)
         if up == n and context.current_price > context.prev_day_close:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'side': 'long'}
-            return Action(context.symbol, ActionType.BUY_TO_OPEN, 1, context.current_price)
+            return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN)
 
-    def _close_position(self, context: Context) -> Optional[Action]:
+    def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
         action_type = ActionType.SELL_TO_CLOSE if position['side'] == 'long' else ActionType.BUY_TO_CLOSE
-        action = Action(context.symbol, action_type, 1, context.current_price)
+        action = ProcessorAction(context.symbol, action_type)
         if context.current_time < position['entry_time'] + datetime.timedelta(minutes=60):
             return
         self._positions.pop(context.symbol)

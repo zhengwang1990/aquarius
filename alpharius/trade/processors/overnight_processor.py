@@ -5,8 +5,8 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import tabulate
 from ..common import (
-    Action, ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, DATETIME_TYPE, DAYS_IN_A_YEAR, logging_config, get_header)
+    ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
+    Position, ProcessorAction, DATETIME_TYPE, DAYS_IN_A_YEAR, logging_config, get_header)
 from ..stock_universe import TopVolumeUniverse
 
 NUM_UNIVERSE_SYMBOLS = 200
@@ -42,7 +42,7 @@ class OvernightProcessor(Processor):
             view_time)
         return list(set(hold_symbols + self._universe_symbols))
 
-    def process_all_data(self, contexts: List[Context]) -> List[Action]:
+    def process_all_data(self, contexts: List[Context]) -> List[ProcessorAction]:
         current_prices = {
             context.symbol: context.current_price for context in contexts}
         if not contexts:
@@ -51,9 +51,11 @@ class OvernightProcessor(Processor):
         if current_time.time() < datetime.time(10, 0):
             actions = []
             for position in self._hold_positions:
+                if position.symbol not in current_prices:
+                    self._logger.warning('Position [%s] not found in contexts', position.symbol)
+                    continue
                 action_type = ActionType.SELL_TO_CLOSE if position.qty >= 0 else ActionType.BUY_TO_CLOSE
-                actions.append(Action(position.symbol, action_type, 1,
-                                      current_prices.get(position.symbol, position.entry_price)))
+                actions.append(ProcessorAction(position.symbol, action_type))
             return actions
 
         contexts_selected = [
@@ -70,8 +72,7 @@ class OvernightProcessor(Processor):
 
         actions = []
         for symbol in long_symbols:
-            actions.append(
-                Action(symbol, ActionType.BUY_TO_OPEN, 1, current_prices[symbol]))
+            actions.append(ProcessorAction(symbol, ActionType.BUY_TO_OPEN))
         return actions
 
     def _logging(self,

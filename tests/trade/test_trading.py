@@ -105,7 +105,7 @@ def test_trade_transactions_executed(mocker, mock_alpaca):
         {'symbol': 'GOOG', 'action_type': trade.ActionType.BUY_TO_CLOSE,
          'qty': 10, 'side': 'buy', 'notional': None},
     ]
-    actions = [trade.Action(t['symbol'], t['action_type'], 1, 100)
+    actions = [trade.Action(t['symbol'], t['action_type'], 1, 100, 'Processor')
                for t in expected_transactions]
     mocker.patch.object(FakeAlpaca, 'submit_order')
 
@@ -120,9 +120,9 @@ def test_trade_transactions_executed(mocker, mock_alpaca):
 
 def test_trade_transactions_skipped(mock_alpaca):
     trading = trade.Trading(processor_factories=[])
-    actions = [trade.Action('QQQ', trade.ActionType.BUY_TO_CLOSE, 1, 100),
-               trade.Action('GOOG', trade.ActionType.SELL_TO_CLOSE, 1, 100),
-               trade.Action('AAPL', trade.ActionType.SELL_TO_CLOSE, 1, 100)]
+    actions = [trade.Action('QQQ', trade.ActionType.BUY_TO_CLOSE, 1, 100, 'Processor'),
+               trade.Action('GOOG', trade.ActionType.SELL_TO_CLOSE, 1, 100, 'Processor'),
+               trade.Action('AAPL', trade.ActionType.SELL_TO_CLOSE, 1, 100, 'Processor')]
 
     trading._trade(actions)
 

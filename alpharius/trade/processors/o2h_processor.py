@@ -4,8 +4,8 @@ from typing import List, Optional
 
 import numpy as np
 from ..common import (
-    Action, ActionType, Context, Processor, ProcessorFactory, TradingFrequency, Position,
-    DataSource, Mode, DATETIME_TYPE, DAYS_IN_A_MONTH, logging_config)
+    ActionType, Context, Processor, ProcessorFactory, TradingFrequency, Position,
+    ProcessorAction, DataSource, Mode, DATETIME_TYPE, DAYS_IN_A_MONTH, logging_config)
 from ..stock_universe import IntradayVolatilityStockUniverse
 from ..data_loader import get_shortable_symbols
 
@@ -43,13 +43,13 @@ class O2hProcessor(Processor):
         return list(set(self._stock_universe.get_stock_universe(view_time) +
                         list(self._positions.keys())) & self._shortable_symbols)
 
-    def process_data(self, context: Context) -> Optional[Action]:
+    def process_data(self, context: Context) -> Optional[ProcessorAction]:
         if context.symbol in self._positions:
             return self._close_position(context)
         else:
             return self._open_position(context)
 
-    def _open_position(self, context: Context) -> Optional[Action]:
+    def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
         if t >= EXIT_TIME:
             return
@@ -73,16 +73,16 @@ class O2hProcessor(Processor):
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'status': 'active'}
-            return Action(context.symbol, ActionType.SELL_TO_OPEN, 1, context.current_price)
+            return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN)
 
-    def _close_position(self, context: Context) -> Optional[Action]:
+    def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
         if position['status'] != 'active':
             return
         if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
                 context.current_time.time() >= EXIT_TIME):
             position['status'] = 'inactive'
-            return Action(context.symbol, ActionType.BUY_TO_CLOSE, 1, context.current_price)
+            return ProcessorAction(context.symbol, ActionType.BUY_TO_CLOSE)
 
 
 class O2hProcessorFactory(ProcessorFactory):

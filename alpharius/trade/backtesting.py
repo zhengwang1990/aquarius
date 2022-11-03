@@ -18,7 +18,8 @@ from .common import (
     Action, ActionType, Context, Position, Processor, ProcessorFactory, TimeInterval,
     TradingFrequency, Mode, BASE_DIR, DATETIME_TYPE, MARKET_OPEN, MARKET_CLOSE, OUTPUT_DIR,
     DEFAULT_DATA_SOURCE, INTERDAY_LOOKBACK_LOAD, TIME_ZONE, EPSILON, BID_ASK_SPREAD,
-    SHORT_RESERVE_RATIO, logging_config, timestamp_to_index, get_unique_actions, get_header)
+    SHORT_RESERVE_RATIO, logging_config, timestamp_to_index, get_unique_actions, get_header,
+    get_processor_name)
 from .data_loader import load_cached_daily_data, load_tradable_history
 
 _MAX_WORKERS = 20
@@ -122,7 +123,7 @@ class Backtesting:
         processor_stock_universes = dict()
         stock_universe = collections.defaultdict(set)
         for processor in self._processors:
-            processor_name = type(processor).__name__
+            processor_name = get_processor_name(processor)
             processor_stock_universe = processor.get_stock_universe(day)
             processor_stock_universes[processor_name] = processor_stock_universe
             stock_universe[processor.get_trading_frequency()].update(
@@ -138,14 +139,18 @@ class Backtesting:
 
         actions = []
         for processor in processors:
-            processor_name = type(processor).__name__
+            processor_name = get_processor_name(processor)
             processor_stock_universe = stock_universes[processor_name]
             processor_contexts = []
             for symbol in processor_stock_universe:
                 context = contexts.get(symbol)
                 if context:
                     processor_contexts.append(context)
-            actions.extend(processor.process_all_data(processor_contexts))
+            processor_actions = processor.process_all_data(processor_contexts)
+            actions.extend([Action(pa.symbol, pa.type, pa.percent,
+                                   contexts[pa.symbol].current_price,
+                                   processor_name)
+                            for pa in processor_actions])
 
         self._data_process_time += time.time() - data_process_start
         return actions
@@ -169,18 +174,6 @@ class Backtesting:
         if intraday_ind is None:
             return
         intraday_lookback = intraday_data.iloc[:intraday_ind + 1]
-        return intraday_lookback
-
-    @staticmethod
-    def _adjust_split(intraday_lookback: pd.DataFrame, interday_lookback: pd.DataFrame) -> pd.DataFrame:
-        prev_close = interday_lookback['Close'][-1]
-        intraday_open = intraday_lookback['Open'][0]
-        split_factor = np.round(intraday_open / prev_close)
-        if split_factor > 1:
-            intraday_lookback = intraday_lookback.apply(
-                lambda x: x / split_factor)
-            intraday_lookback['Volume'] = intraday_lookback['Volume'].apply(
-                lambda x: x * split_factor ** 2)
         return intraday_lookback
 
     def _load_intraday_data(self,
@@ -244,8 +237,6 @@ class Backtesting:
                 interday_lookback = self._prepare_interday_lookback(day, symbol)
                 if interday_lookback is None or len(interday_lookback) == 0:
                     continue
-                intraday_lookback = self._adjust_split(
-                    intraday_lookback, interday_lookback)
                 current_price = intraday_lookback['Close'][-1]
                 context = Context(symbol=symbol,
                                   current_time=current_time,
@@ -357,7 +348,8 @@ class Backtesting:
                 self._num_win += 1
             else:
                 self._num_lose += 1
-            executed_actions.append([symbol, current_position.entry_time.time(), current_time.time(),
+            executed_actions.append([symbol, action.processor,
+                                     current_position.entry_time.time(), current_time.time(),
                                      'long' if action.type == ActionType.SELL_TO_CLOSE else 'short',
                                      qty, current_position.entry_price,
                                      action.price, f'{profit * 100:+.2f}%'])
@@ -401,8 +393,8 @@ class Backtesting:
 
         if executed_actions:
             trade_info = tabulate.tabulate(executed_actions,
-                                           headers=['Symbol', 'Entry Time', 'Exit Time', 'Side', 'Qty',
-                                                    'Entry Price', 'Exit Price', 'Gain/Loss'],
+                                           headers=['Symbol', 'Processor', 'Entry Time', 'Exit Time', 'Side',
+                                                    'Qty', 'Entry Price', 'Exit Price', 'Gain/Loss'],
                                            tablefmt='grid')
             outputs.append('[ Trades ]')
             outputs.append(trade_info)
