@@ -55,7 +55,7 @@ class OvernightProcessor(Processor):
                     self._logger.warning('Position [%s] not found in contexts', position.symbol)
                     continue
                 action_type = ActionType.SELL_TO_CLOSE if position.qty >= 0 else ActionType.BUY_TO_CLOSE
-                actions.append(ProcessorAction(position.symbol, action_type))
+                actions.append(ProcessorAction(position.symbol, action_type, 1))
             return actions
 
         contexts_selected = [
@@ -72,7 +72,7 @@ class OvernightProcessor(Processor):
 
         actions = []
         for symbol in long_symbols:
-            actions.append(ProcessorAction(symbol, ActionType.BUY_TO_OPEN))
+            actions.append(ProcessorAction(symbol, ActionType.BUY_TO_OPEN, 1))
         return actions
 
     def _logging(self,

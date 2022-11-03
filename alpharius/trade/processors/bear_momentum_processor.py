@@ -64,16 +64,16 @@ class BearMomentumProcessor(Processor):
         if down == n and context.current_price < context.prev_day_close:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'side': 'short'}
-            return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN)
+            return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
         if up == n and context.current_price > context.prev_day_close:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'side': 'long'}
-            return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN)
+            return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
         action_type = ActionType.SELL_TO_CLOSE if position['side'] == 'long' else ActionType.BUY_TO_CLOSE
-        action = ProcessorAction(context.symbol, action_type)
+        action = ProcessorAction(context.symbol, action_type, 1)
         if context.current_time < position['entry_time'] + datetime.timedelta(minutes=60):
             return
         self._positions.pop(context.symbol)

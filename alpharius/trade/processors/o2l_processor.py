@@ -76,7 +76,7 @@ class O2lProcessor(Processor):
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'status': 'active'}
-            return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN)
+            return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
@@ -85,7 +85,7 @@ class O2lProcessor(Processor):
         if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=15) or
                 context.current_time.time() >= EXIT_TIME):
             position['status'] = 'inactive'
-            return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE)
+            return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
 
 
 class O2lProcessorFactory(ProcessorFactory):

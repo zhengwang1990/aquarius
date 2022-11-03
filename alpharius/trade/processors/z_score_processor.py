@@ -71,14 +71,14 @@ class ZScoreProcessor(Processor):
         if not is_trade:
             return
         self._positions[context.symbol] = {'entry_time': context.current_time}
-        return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN)
+        return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
         if context.current_time < position['entry_time'] + datetime.timedelta(minutes=5):
             return
         self._positions.pop(context.symbol)
-        return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE)
+        return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
 
 
 class ZScoreProcessorFactory(ProcessorFactory):

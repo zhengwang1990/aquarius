@@ -73,7 +73,7 @@ class TradingFrequency(Enum):
         return self.name
 
 
-ProcessorAction = collections.namedtuple('ProcessorAction', ['symbol', 'type', 'percent'], defaults=(1,))
+ProcessorAction = collections.namedtuple('ProcessorAction', ['symbol', 'type', 'percent'])
 Action = collections.namedtuple('Action', ['symbol', 'type', 'percent', 'price', 'processor'])
 Position = collections.namedtuple('Position', ['symbol', 'qty', 'entry_price', 'entry_time'])
 DEFAULT_DATA_SOURCE = DataSource.ALPACA

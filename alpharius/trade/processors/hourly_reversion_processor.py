@@ -83,7 +83,7 @@ class HourlyReversionProcessor(Processor):
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'status': 'active'}
-            return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN)
+            return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
@@ -96,11 +96,11 @@ class HourlyReversionProcessor(Processor):
             lower_threshold, _ = self._get_thresholds(context)
             if loss < lower_threshold:
                 position['status'] = 'inactive'
-                return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE)
+                return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
         if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
                 context.current_time.time() >= EXIT_TIME):
             position['status'] = 'inactive'
-            return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE)
+            return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
 
 
 class HourlyReversionProcessorFactory(ProcessorFactory):
