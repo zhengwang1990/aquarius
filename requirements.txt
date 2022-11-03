@@ -1,3 +1,4 @@
+Flask-APScheduler
 alpaca-trade-api
 bs4
 coverage

@@ -26,7 +26,10 @@ done
 
 ln -sf "${base_dir}/outputs/trading/$(date +'%Y-%m-%d')/log.txt" "${base_dir}/log.txt"
 
-source "${base_dir}/bin/envs.sh"
+if [[ -f "${base_dir}/bin/envs.sh" ]]
+then
+  source "${base_dir}/bin/envs.sh"
+fi
 
 python3 "${base_dir}/alpharius/trade.py" --mode "trade" >> "${base_dir}/console.txt" 2>&1
 
