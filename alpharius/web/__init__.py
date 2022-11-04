@@ -23,7 +23,7 @@ def create_app(test_config=None):
     scheduler.start()
 
     @scheduler.task('cron', id='trade', day_of_week='mon-fri',
-                    hour=8, minute=45, timezone='America/New_York')
+                    hour=21, minute=0, timezone='America/New_York')
     def trade():
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
         bin_file = os.path.join(base_dir, 'bin', 'cron.sh')
