@@ -1,4 +1,3 @@
-import os
 import textwrap
 
 from alpharius.web import web
