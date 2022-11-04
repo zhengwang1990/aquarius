@@ -1,0 +1,33 @@
+.message-cells {
+    white-space: pre-line;
+}
+
+.table .fit-content-cells {
+    width: 1%;
+    white-space: nowrap;
+    padding-right: 1rem;
+}
+
+.table .type-cells {
+    text-align: center;
+}
+
+.badge-debug {
+    color: #6b696e;
+    background-color: rgba(170, 169, 171, 0.2);
+}
+
+.badge-info {
+    color: #0967b5;
+    background-color: rgba(83, 145, 237, 0.1);
+}
+
+.badge-warning {
+    color: #f79a05;
+    background-color: rgba(255, 162, 43, 0.1);
+}
+
+.badge-error {
+    color: #d93d21;
+    background-color: rgba(250, 193, 182, 0.3);
+}

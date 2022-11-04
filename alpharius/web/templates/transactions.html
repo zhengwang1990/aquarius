@@ -1,6 +1,5 @@
 {% extends "base.html" %}sk
 
-
 {% block content %}
 <div class="card">
     <div class="card-header"><span class="card-title">Transactions</span></div>
@@ -28,7 +27,7 @@
                         <tr>
                             <td>{{ transaction['symbol'] }}</td>
                             <td>
-                                <span class="badge-shape {{ 'badge-blue' if transaction['side'] == 'long' else 'badge-orange'}}">
+                                <span class="badge-shape {{ 'badge-blue' if transaction['side'] == 'long' else 'badge-purple'}}">
                                     {{ transaction['side'] }}
                                 </span>
                             </td>

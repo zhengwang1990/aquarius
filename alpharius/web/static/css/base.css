@@ -295,9 +295,9 @@ nav.close ~ .dashboard .top{
     line-height: 1;
 }
 
-.badge-orange {
-    color: #f79a05;
-    background-color: rgba(255, 162, 43, 0.1);
+.badge-purple {
+    color: #b91df2;
+    background-color: rgba(202, 147, 245, 0.15);
 }
 
 .badge-blue {

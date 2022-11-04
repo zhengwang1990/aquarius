@@ -1,6 +1,8 @@
 import os
 import textwrap
 
+from alpharius.web import web
+
 
 def test_dashboard(client, mock_alpaca):
     assert client.get('/').status_code == 200
@@ -25,7 +27,7 @@ def test_logs_read_file(client, mocker):
     [WARNING] [2022-11-03 10:35:00] [main.py:13] This is warning log.
     [ERROR] [2022-11-03 10:36:00] [main.py:14] This is error log.
     More error messages.
-    """).encode('utf-8')
-    mocker.patch('builtins.open', mocker.mock_open(read_data=fake_data))
-    mocker.patch.object(os.path, 'isfile', return_value=True)
+    """)
+    mocker.patch.object(web, '_read_log_file', return_value=fake_data)
+
     assert client.get('/logs').status_code == 200
