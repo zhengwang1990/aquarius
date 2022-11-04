@@ -27,6 +27,7 @@ def test_logs_read_file(client, mocker):
     [ERROR] [2022-11-03 10:36:00] [main.py:14] This is error log.
     More error messages.
     """)
+    fake_data += 'long message' * 100
     mocker.patch.object(web, '_read_log_file', return_value=fake_data)
 
     assert client.get('/logs').status_code == 200

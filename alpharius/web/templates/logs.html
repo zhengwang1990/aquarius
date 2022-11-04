@@ -22,7 +22,14 @@
                     <span class="xs-show">{{ log_entry['time-short'] }}</span>
                 </td>
                 <td class="xs-hidden fit-content-cells">{{ log_entry['code'] }}</td>
-                <td class="message-cells">{{ log_entry['message'] }}</td>
+                <td class="message-cells">
+                    {%- if 'message-short' in log_entry -%}
+                    <span class="xs-hidden">{{ log_entry['message'] }}</span>
+                    <span class="xs-show">{{ log_entry['message-short'] }}</span>
+                    {%- else -%}
+                    {{ log_entry['message'] }}
+                    {%- endif -%}
+                </td>
             </tr>
             {% endfor %}
             </tbody>

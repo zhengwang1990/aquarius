@@ -68,6 +68,8 @@ def logs():
             while i < len(log_lines) and not (log_lines[i].startswith('[') and ']' in log_lines[i]):
                 log_entry['message'] += '\n' + log_lines[i]
                 i += 1
+            if len(log_entry['message']) > 200:
+                log_entry['message-short'] = log_entry['message'][:197] + '...'
             log_entries.append(log_entry)
         else:
             i += 1

@@ -1,11 +1,13 @@
-.message-cells {
+.table .message-cells {
     white-space: pre-line;
+    padding-left: 0rem;
 }
 
 .table .fit-content-cells {
     width: 1%;
     white-space: nowrap;
     padding-right: 1rem;
+    padding-left: 0rem;
 }
 
 .table .type-cells {
@@ -30,4 +32,10 @@
 .badge-error {
     color: #d93d21;
     background-color: rgba(250, 193, 182, 0.3);
+}
+
+@media (max-width: 800px) {
+    .dash-content .card .card-body {
+        padding: 10px 8px 10px 8px;
+    }
 }
