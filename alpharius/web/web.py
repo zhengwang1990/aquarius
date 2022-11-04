@@ -68,5 +68,7 @@ def logs():
                 log_entry['message'] += '\n' + log_lines[i]
                 i += 1
             log_entries.append(log_entry)
+        else:
+            i += 1
     return flask.render_template('logs.html',
                                  log_entries=log_entries)
