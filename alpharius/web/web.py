@@ -1,4 +1,5 @@
 import json
+import os
 from concurrent import futures
 
 import flask
@@ -28,3 +29,15 @@ def transactions():
     client = AlpacaClient()
     return flask.render_template('transactions.html',
                                  transactions=client.get_transactions())
+
+
+@bp.route('/logs')
+def logs():
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    log_file = os.path.join(base_dir, 'log.txt')
+    log_content = ''
+    if os.path.isfile(log_file):
+        with open(log_file, 'r') as f:
+            log_content = f.read()
+    return flask.render_template('logs.html',
+                                 log_content=log_content)

@@ -99,6 +99,7 @@ class Trading:
         self._interday_data = load_tradable_history(history_start, self._today, DEFAULT_DATA_SOURCE)
         self._init_processors(history_start)
         self._init_stock_universe()
+        self._clean_interday_data()
 
         # Wait for market open
         while time.time() < self._market_open:
@@ -318,3 +319,13 @@ class Trading:
         else:
             open_symbols = ', '.join([order.symbol for order in orders])
             self._logger.warning('[%d] orders not filled: %s', len(orders), open_symbols)
+
+    def _clean_interday_data(self):
+        """Cleans unused interday data to free up memory."""
+        stock_universe_symbols = set()
+        for symbols in self._stock_universe.values():
+            stock_universe_symbols.update(symbols)
+        interday_symbols = list(self._interday_data.keys())
+        for symbol in interday_symbols:
+            if symbol not in stock_universe_symbols:
+                self._interday_data.pop(symbol)

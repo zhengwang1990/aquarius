@@ -42,9 +42,9 @@
                 <i class="uil uil-backward"></i>
                 <span class="link-name">Backtesting</span>
             </a></li>
-            <li><a href="#">
-                <i class="uil uil-file-alt"></i>
-                <span class="link-name">Logs</span>
+            <li><a href="{{ '#' if url_for(request.endpoint) == '/logs' else url_for('web.logs')}}">
+                <i class="uil uil-file-alt {{ 'active' if url_for(request.endpoint) == '/logs' else ''}}"></i>
+                <span class="link-name {{ 'active' if url_for(request.endpoint) == '/logs' else ''}}">Logs</span>
             </a></li>
             <li><a href="#">
                 <i class="uil uil-shield-exclamation"></i>
