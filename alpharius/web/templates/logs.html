@@ -17,7 +17,10 @@
                         {{ log_entry['type'] }}
                     </span>
                 </td>
-                <td class="fit-content-cells">{{ log_entry['time'] }}</td>
+                <td class="fit-content-cells">
+                    <span class="xs-hidden">{{ log_entry['time'] }}</span>
+                    <span class="xs-show">{{ log_entry['time-short'] }}</span>
+                </td>
                 <td class="xs-hidden fit-content-cells">{{ log_entry['code'] }}</td>
                 <td class="message-cells">{{ log_entry['message'] }}</td>
             </tr>

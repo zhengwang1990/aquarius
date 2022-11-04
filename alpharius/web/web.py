@@ -61,6 +61,7 @@ def logs():
             message = line[span_end + 1:]
             log_entry = {'type': spans[0].lower(),
                          'time': pd.to_datetime(spans[1]).strftime('%H:%M:%S'),
+                         'time-short': pd.to_datetime(spans[1]).strftime('%H:%M'),
                          'code': spans[2],
                          'message': message}
             i += 1
