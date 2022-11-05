@@ -6,3 +6,4 @@ const datepicker = new Datepicker(elem, {
   minDate: Date.parse('2022-10-01T00:00:00'),
   maxDate: Date.now(),
 });
+document.getElementById("calendar-icon").addEventListener("click", () => {datepicker.show()});
