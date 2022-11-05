@@ -6,6 +6,7 @@ import flask
 import pandas as pd
 
 from .alpaca_client import AlpacaClient
+from .scheduler import get_job_status
 
 bp = flask.Blueprint('web', __name__)
 
@@ -61,7 +62,7 @@ def logs():
             message = line[span_end + 1:]
             log_entry = {'type': spans[0].lower(),
                          'time': pd.to_datetime(spans[1]).strftime('%H:%M:%S'),
-                         'time-short': pd.to_datetime(spans[1]).strftime('%H:%M'),
+                         'time_short': pd.to_datetime(spans[1]).strftime('%H:%M'),
                          'code': spans[2],
                          'message': message}
             i += 1
@@ -69,9 +70,10 @@ def logs():
                 log_entry['message'] += '\n' + log_lines[i]
                 i += 1
             if len(log_entry['message']) > 200:
-                log_entry['message-short'] = log_entry['message'][:197] + '...'
+                log_entry['message_short'] = log_entry['message'][:197] + '...'
             log_entries.append(log_entry)
         else:
             i += 1
     return flask.render_template('logs.html',
-                                 log_entries=log_entries)
+                                 log_entries=log_entries,
+                                 job_status=get_job_status())

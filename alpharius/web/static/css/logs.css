@@ -34,8 +34,41 @@
     background-color: rgba(250, 193, 182, 0.3);
 }
 
+.card .card-body h6 {
+    margin-bottom: 15px;
+}
+
+.status {
+    height: 38px;
+    padding-top: 6px;
+}
+
+.status .badge-status {
+    font-size: 15px;
+    padding-left: 1.5em;
+    padding-right: 1.5em;
+}
+
+.status .badge-running {
+    color: #377a3f;
+    background-color: rgba(166, 245, 176, 0.3);
+}
+
+.status .badge-idle {
+    color: #4f505c;
+    background-color: rgba(192, 192, 192, 0.3);
+}
+
 @media (max-width: 800px) {
-    .dash-content .card .card-body {
+    .dash-content .log-card .card-body {
         padding: 10px 8px 10px 8px;
+    }
+
+    .form-control {
+        font-size: 0.8rem;
+    }
+
+    .status .badge-status {
+        font-size: 13px;
     }
 }
