@@ -71,4 +71,8 @@
     .status .badge-status {
         font-size: 13px;
     }
+
+    .input-group-text {
+        padding: 0.2rem 0.4rem;
+    }
 }
