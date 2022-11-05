@@ -75,4 +75,9 @@
     .input-group-text {
         padding: 0.15rem 0.3rem;
     }
+
+    .status {
+        height: 32px;
+        padding-top: 3px;
+    }
 }
