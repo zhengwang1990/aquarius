@@ -1,9 +1,6 @@
 import os
-import email.mime.image as image
-import email.mime.multipart as multipart
 import itertools
 import time
-import smtplib
 
 import pytest
 from alpharius import trade
@@ -18,23 +15,8 @@ def mock_time(mocker):
 
 
 @pytest.fixture(autouse=True)
-def mock_email(mocker):
-    mocker.patch.object(image, 'MIMEImage', autospec=True)
-    mocker.patch.object(multipart.MIMEMultipart, 'as_string', return_value='')
-    os.environ['POLYGON_API_KEY'] = 'fake_polygon_api_key'
-    os.environ['EMAIL_USERNAME'] = 'fake_user'
-    os.environ['EMAIL_PASSWORD'] = 'fake_password'
-    os.environ['EMAIL_RECEIVER'] = 'fake_receiver'
-
-
-@pytest.fixture(autouse=True)
 def mock_cash_reserve():
     os.environ['CASH_RESERVE'] = '0'
-
-
-@pytest.fixture(autouse=True)
-def mock_smtp(mocker):
-    return mocker.patch.object(smtplib, 'SMTP', autospec=True)
 
 
 @pytest.mark.parametrize("trading_frequency",
