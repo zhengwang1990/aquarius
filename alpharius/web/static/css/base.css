@@ -69,23 +69,30 @@ nav .logo{
     padding: 15px 16px;
 	width: 250px;
 }
-nav .logo-image{
+nav .logo-image {
     display: flex;
     justify-content: center;
     min-width: 45px;
 }
-nav .logo-image img{
+nav .logo-image img {
     width: 40px;
     object-fit: cover;
     border-radius: 50%;
 }
-
-nav .logo .logo-text{
+.logo-text {
     font-size: 22px;
     font-weight: 600;
     color: var(--text-color);
+}
+nav .logo .logo-text {
     margin-left: 20px;
     transition: var(--tran-05);
+}
+.top .logo-text {
+    font-family: 'Poppins', sans-serif;
+    margin-left: 15px;
+    opacity: 0;
+    pointer-events: none;
 }
 nav.close .logo-text{
     opacity: 0;
@@ -268,6 +275,10 @@ nav.close ~ .dashboard .top{
     nav.close ~ .dashboard .top{
         left: 0;
         width: 100%;
+    }
+    .top .logo-text {
+        opacity: 1;
+        pointer-events: auto;
     }
 }
 

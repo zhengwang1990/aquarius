@@ -12,7 +12,6 @@
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo-32x32.png') }}" sizes="32x32">
     <link rel="apple-touch-icon" type="image/png" href="{{ url_for('static', filename='img/logo-180x180.png') }}" sizes="180x180">
     {% block header %}{% endblock %}
-    <title>Alpharius</title>
 </head>
 <body>
 <nav>
@@ -56,7 +55,10 @@
 
 <section class="dashboard">
     <div class="top">
-        <i class="uil uil-bars sidebar-toggle"></i>
+        <span>
+            <i class="uil uil-bars sidebar-toggle"></i>
+            <span class="logo-text">Alpharius</span>
+        </span>
     </div>
 
     <div class="dash-content">
