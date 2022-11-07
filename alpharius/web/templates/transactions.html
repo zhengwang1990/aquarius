@@ -10,43 +10,90 @@
     <div class="card-header"><span class="card-title">Transactions</span></div>
     <div class="card-body">
         <table class="table">
-                <thead>
+            <thead>
+                <tr>
+                    <th scope="col">
+                        <span class="xs-hidden">SYMBOL</span>
+                        <span class="xs-show">SYMB</span>
+                    </th>
+                    <th scope="col">SIDE</th>
+                    <th scope="col" class="xs-hidden">PROCESSOR</th>
+                    <th scope="col" class="xs-hidden">ENTRY PRICE</th>
+                    <th scope="col" class="xs-hidden">EXIT PRICE</th>
+                    <th scope="col">ENTRY TIME</th>
+                    <th scope="col">EXIT TIME</th>
+                    <th scope="col">
+                        <span class="xs-hidden">GAIN / LOSS</span>
+                        <span class="xs-show">G/L</span>
+                    </th>
+                    <th scope="col">
+                        <span class="xs-hidden">SLIPPAGE</span>
+                        <span class="xs-show">SLIP</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
                     <tr>
-                        <th scope="col">
-                            <span class="xs-hidden">SYMBOL</span>
-                            <span class="xs-show">SYMB</span>
-                        </th>
-                        <th scope="col">SIDE</th>
-                        <th scope="col" class="xs-hidden">ENTRY PRICE</th>
-                        <th scope="col" class="xs-hidden">EXIT PRICE</th>
-                        <th scope="col">ENTRY TIME</th>
-                        <th scope="col">EXIT TIME</th>
-                        <th scope="col">
-                            <span class="xs-hidden">GAIN / LOSS</span>
-                            <span class="xs-show">G/L</span>
-                        </th>
-                        <th scope="col">SLIPPAGE</th>
+                        <td>{{ transaction['symbol'] }}</td>
+                        <td>
+                            <span class="badge-shape {{ 'badge-blue' if transaction['side'] == 'long' else 'badge-purple'}}">
+                                {{ transaction['side'] }}
+                            </span>
+                        </td>
+                        <td class="xs-hidden">{{ transaction['processor'] }}</td>
+                        <td class="xs-hidden">{{ transaction['entry_price'] }}</td>
+                        <td class="xs-hidden">{{ transaction['exit_price'] }}</td>
+                        <td>{{ transaction['entry_time'] | safe }}</td>
+                        <td>{{ transaction['exit_time'] | safe }}</td>
+                        <td>{{ transaction['gl'] | safe }}</td>
+                        <td>{{ transaction['slippage'] | safe }}</td>
                     </tr>
-                </thead>
-                <tbody>
-                    {% for transaction in transactions %}
-                        <tr>
-                            <td>{{ transaction['symbol'] }}</td>
-                            <td>
-                                <span class="badge-shape {{ 'badge-blue' if transaction['side'] == 'long' else 'badge-purple'}}">
-                                    {{ transaction['side'] }}
-                                </span>
-                            </td>
-                            <td class="xs-hidden">{{ transaction['entry_price'] }}</td>
-                            <td class="xs-hidden">{{ transaction['exit_price'] }}</td>
-                            <td>{{ transaction['entry_time'] | safe }}</td>
-                            <td>{{ transaction['exit_time'] | safe }}</td>
-                            <td>{{ transaction['gl'] | safe }}</td>
-                            <td>{{ transaction['slippage'] | safe }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
+                {% endfor %}
+            </tbody>
         </table>
     </div>
 </div>
+
+<ul class="pagination justify-content-center">
+    <li class="page-item {{ 'disabled' if current_page == 1 else ''}}"><a class="page-link" href="?page={{current_page-1}}">&lt; Previous</a></li>
+    {% if total_page <= 7 %}
+        {% for i in range(total_page) %}
+             <li class="page-item {{ 'active' if current_page == i + 1 else ''}}"><a class="page-link" href="{{ '#' if current_page == i + 1 else '?page={}'.format(i + 1) }}">{{ i + 1 }}</a></li>
+        {% endfor %}
+    {% else %}
+        <li class="page-item {{ 'active' if current_page == 1 else ''}}"><a class="page-link" href="{{ '#' if current_page == 1 else '?page=1'}}">1</a></li>
+
+        {% if current_page <= 3 %}
+            <li class="page-item {{ 'active' if current_page == 2 else ''}}"><a class="page-link" href="{{ '#' if current_page == 2 else '?page=2'}}">2</a></li>
+            <li class="page-item {{ 'active' if current_page == 3 else ''}}"><a class="page-link" href="{{ '#' if current_page == 3 else '?page=3'}}">3</a></li>
+        {% endif %}
+
+        {% if current_page == 3 %}
+            <li class="page-item"><a class="page-link" href="?page=4">4</a></li>
+        {% endif %}
+
+        <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+
+        {% if current_page > 3 and current_page < total_page - 2 %}
+            <li class="page-item"><a class="page-link" href="?page={{current_page - 1}}">{{current_page - 1}}</a></li>
+            <li class="page-item active"><a class="page-link" href="#"> {{current_page}} </a></li>
+            <li class="page-item"><a class="page-link" href="?page={{current_page + 1}}">{{current_page + 1}}</a></li>
+            <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+        {% endif %}
+
+        {% if current_page == total_page - 2 %}
+            <li class="page-item"><a class="page-link" href="?page={{total_page - 3}}">{{total_page - 3}}</a></li>
+        {% endif %}
+
+        {% if current_page >= total_page - 2 %}
+            <li class="page-item {{ 'active' if current_page == total_page - 2 else ''}}"><a class="page-link" href="{{ '#' if current_page == total_page - 2 else '?page={}'.format(total_page-2) }}">{{total_page - 2}}</a></li>
+
+            <li class="page-item {{ 'active' if current_page == total_page - 1 else ''}}"><a class="page-link" href="{{ '#' if current_page == total_page - 1 else '?page={}'.format(total_page-1) }}">{{total_page - 1}}</a></li>
+        {% endif %}
+
+        <li class="page-item {{ 'active' if current_page == total_page else ''}}"><a class="page-link" href="{{ '#' if current_page == total_page else '?page={}'.format(total_page) }}"> {{total_page}} </a></li>
+    {% endif %}
+    <li class="page-item {{ 'disabled' if current_page == total_page else ''}}"><a class="page-link" href="?page={{current_page+1}}">Next &gt;</a></li>
+</ul>
 {% endblock %}

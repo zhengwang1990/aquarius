@@ -43,6 +43,10 @@ LIMIT {limit}
 OFFSET {offset};
 """
 
+COUNT_TRANSACTION_QUERY = """
+SELECT COUNT(*) FROM transaction;
+"""
+
 UPSERT_AGGREGATION_TEMPLATE = """
 INSERT INTO aggregation (
   date, processor, gl, avg_gl_pct, slippage, avg_slippage_pct, 
@@ -197,3 +201,8 @@ class Db:
         with self._eng.connect() as conn:
             results = conn.execute(query)
         return [Transaction(*result) for result in results]
+
+    def get_transaction_count(self) -> int:
+        with self._eng.connect() as conn:
+            results = conn.execute(COUNT_TRANSACTION_QUERY)
+        return int(next(results)[0])

@@ -4,6 +4,7 @@ import time
 
 import alpaca_trade_api as tradeapi
 import pytest
+import sqlalchemy
 from alpharius.web import create_app
 from .. import fakes
 
@@ -34,3 +35,11 @@ def app():
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+
+@pytest.fixture(autouse=True)
+def mock_engine(mocker):
+    os.environ['SQL_STRING'] = 'fake_path'
+    engine = fakes.FakeDbEngine()
+    mocker.patch.object(sqlalchemy, 'create_engine', return_value=engine)
+    return engine

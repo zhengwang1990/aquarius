@@ -1,5 +1,27 @@
+.footer {
+    justify-content: space-between;
+}
+
+@media (max-width: 1350px) {
+    .card .card-body table {
+        font-size: 13px;
+    }
+
+    .dash-content .pagination .page-link {
+        font-size: 13px;
+    }
+
+    .card .card-body .med-hidden {
+        display: none;
+    }
+}
+
 @media (max-width: 800px) {
     .card .card-body table {
+        font-size: 11px;
+    }
+
+    .dash-content .pagination .page-link {
         font-size: 11px;
     }
 }

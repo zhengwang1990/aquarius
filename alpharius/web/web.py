@@ -3,6 +3,7 @@ import os
 from concurrent import futures
 
 import flask
+import numpy as np
 import pandas as pd
 
 from .alpaca_client import AlpacaClient, get_signed_percentage
@@ -30,13 +31,24 @@ def dashboard():
 
 @bp.route('/transactions')
 def transactions():
+    items_per_page = 20
+    page = flask.request.args.get('page')
+    if page and page.isdigit():
+        page = int(page)
+    else:
+        page = 1
     client = Db()
+    count = client.get_transaction_count()
+    total_page = int(np.ceil(count / items_per_page))
+    page = min(max(1, page), total_page)
+    offset = (page - 1) * items_per_page
     trans = []
-    time_fmt = f'<span class="xs-hidden">%Y-%m-%d </span>%H:%M'
-    for t in client.list_transactions(20, 0):
+    time_fmt = f'<span class="med-hidden">%Y-%m-%d </span>%H:%M'
+    for t in client.list_transactions(items_per_page, offset):
         trans.append({
             'symbol': t.symbol,
             'side': 'long' if t.is_long else 'short',
+            'processor': t.processor if t.processor is not None else '',
             'entry_price': f'{t.entry_price:.4g}',
             'exit_price': f'{t.exit_price:.4g}',
             'entry_time': t.entry_time.strftime(time_fmt),
@@ -44,7 +56,10 @@ def transactions():
             'gl': get_signed_percentage(t.gl_pct),
             'slippage': get_signed_percentage(t.slippage_pct) if t.slippage_pct is not None else '',
         })
-    return flask.render_template('transactions.html', transactions=trans)
+    return flask.render_template('transactions.html',
+                                 transactions=trans,
+                                 current_page=page,
+                                 total_page=8)
 
 
 def _read_log_file(log_file: str) -> str:

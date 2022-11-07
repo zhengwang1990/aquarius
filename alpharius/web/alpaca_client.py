@@ -329,14 +329,3 @@ class AlpacaClient:
                               'date': info['date']}
         app.logger.info('Time cost for get_market_watch: [%.2fs]', time.time() - start)
         return result
-
-    def get_transactions(self):
-        start = time.time()
-        orders = self.get_orders(-10, True)
-        result = []
-        for order in orders:
-            if 'gl' in order:
-                order['side'] = 'long' if order['side'] == 'sell' else 'short'
-                result.append(order)
-        app.logger.info('Time cost for get_transactions: [%.2fs]', time.time() - start)
-        return result
