@@ -44,7 +44,7 @@ def trade():
 
 
 @scheduler.task('cron', id='backfill', day_of_week='mon-fri',
-                hour='16,17,21', minute=5, timezone='America/New_York')
+                hour='16,17,22', minute=15, timezone='America/New_York')
 def backfill():
     bin_file = os.path.join(BASE_DIR, 'bin', 'backfill.sh')
     app.logger.info('Start running [%s]', bin_file)
