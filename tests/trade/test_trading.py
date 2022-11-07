@@ -121,11 +121,11 @@ def test_trade_transactions_skipped(mock_alpaca):
     assert mock_alpaca.submit_order_call_count == 0
 
 
-def test_write_db(mocker, mock_engine):
+def test_update_db(mocker, mock_engine):
     exit_time = pd.to_datetime('2022-11-04 05:35:00-0400')
     mocker.patch.object(time, 'time', return_value=exit_time.timestamp() + 30)
     trading = trade.Trading(processor_factories=[])
-    trading._update_db_transactions(
+    trading._update_db(
         [trade.Action('QQQ', trade.ActionType.SELL_TO_CLOSE, 1, 100, 'Processor')])
 
     mock_engine.conn.execute.assert_called_once()

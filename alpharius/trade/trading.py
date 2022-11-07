@@ -183,7 +183,7 @@ class Trading:
         self._logger.info('Got [%d] actions to process.', len(actions))
 
         executed_closes = self._trade(actions)
-        db_thread = threading.Thread(target=self._update_db_transactions,
+        db_thread = threading.Thread(target=self._update_db,
                                      args=(executed_closes,))
         db_thread.start()
 
@@ -330,14 +330,12 @@ class Trading:
             open_symbols = ', '.join([order.symbol for order in orders])
             self._logger.warning('[%d] orders not filled: %s', len(orders), open_symbols)
 
-    def _update_db_transactions(self, executed_closes: List[Action]) -> None:
+    def _update_db(self, executed_closes: List[Action]) -> None:
         current_time = time.time()
         time.sleep(15)
         transactions = get_transactions(self._today.strftime('%F'))
         actions = {action.symbol: action for action in executed_closes}
         db = Db()
-        print(transactions)
-        print(actions)
         for transaction in transactions:
             symbol = transaction.symbol
             if transaction.gl_pct is None:
@@ -349,3 +347,7 @@ class Trading:
                 db.insert_transaction(transaction)
             except sqlalchemy.exc.SQLAlchemyError as e:
                 self._logger.warning('[%s] Transaction inserting encountered an error\n%s', symbol, e)
+        try:
+            db.update_log(self._today.strftime('%F'))
+        except sqlalchemy.exc.SQLAlchemyError as e:
+            self._logger.warning('Log updating encountered an error\n%s', e)
