@@ -5,8 +5,9 @@ from concurrent import futures
 import flask
 import pandas as pd
 
-from .alpaca_client import AlpacaClient
+from .alpaca_client import AlpacaClient, get_signed_percentage
 from .scheduler import get_job_status
+from ..db import Db
 
 bp = flask.Blueprint('web', __name__)
 
@@ -29,9 +30,21 @@ def dashboard():
 
 @bp.route('/transactions')
 def transactions():
-    client = AlpacaClient()
-    return flask.render_template('transactions.html',
-                                 transactions=client.get_transactions())
+    client = Db()
+    trans = []
+    time_fmt = f'<span class="xs-hidden">%Y-%m-%d </span>%H:%M'
+    for t in client.list_transactions(20, 0):
+        trans.append({
+            'symbol': t.symbol,
+            'side': 'long' if t.is_long else 'short',
+            'entry_price': f'{t.entry_price:.4g}',
+            'exit_price': f'{t.exit_price:.4g}',
+            'entry_time': t.entry_time.strftime(time_fmt),
+            'exit_time': t.exit_time.strftime(time_fmt),
+            'gl': get_signed_percentage(t.gl_pct),
+            'slippage': get_signed_percentage(t.slippage_pct) if t.slippage_pct is not None else '',
+        })
+    return flask.render_template('transactions.html', transactions=trans)
 
 
 def _read_log_file(log_file: str) -> str:

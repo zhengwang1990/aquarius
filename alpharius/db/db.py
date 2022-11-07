@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 import sys
+from typing import List
 
 import pandas as pd
 import sqlalchemy
@@ -24,12 +25,22 @@ SET slippage = {slippage},
     slippage_pct = {slippage_pct};
 """
 
-SELECT_TRANSACTION_TEMPLATE = """
+SELECT_TRANSACTION_AGG_TEMPLATE = """
 SELECT
-  id, processor, gl, gl_pct, slippage, slippage_pct
+  processor, gl, gl_pct, slippage, slippage_pct
 FROM transaction
 WHERE
   exit_time >= '{start_time}' AND exit_time < '{end_time}';
+"""
+
+SELECT_TRANSACTION_DETAIL_TEMPLATE = """
+SELECT
+  symbol, is_long, processor, entry_price, exit_price,
+  entry_time, exit_time, qty, gl, gl_pct, slippage, slippage_pct
+FROM transaction
+ORDER BY exit_time DESC
+LIMIT {limit}
+OFFSET {offset};
 """
 
 UPSERT_AGGREGATION_TEMPLATE = """
@@ -63,7 +74,7 @@ SET content = '{content}';
 
 class Db:
 
-    def __init__(self, logger=None):
+    def __init__(self, logger=None) -> None:
         sql_string = os.environ.get('SQL_STRING')
         self._eng = None
         logger = logger or logging.getLogger()
@@ -72,10 +83,10 @@ class Db:
         else:
             logger.warning('SQL_STRING not found in env vars. Db not initialized.')
 
-    def upsert_transaction(self, transaction: Transaction):
+    def upsert_transaction(self, transaction: Transaction) -> None:
         self._insert_transaction(transaction, True)
 
-    def insert_transaction(self, transaction: Transaction):
+    def insert_transaction(self, transaction: Transaction) -> None:
         self._insert_transaction(transaction, False)
 
     def _insert_transaction(self, transaction: Transaction, allow_conflict: bool):
@@ -103,18 +114,18 @@ class Db:
         with self._eng.connect() as conn:
             conn.execute(query)
 
-    def update_aggregation(self, date: str):
+    def update_aggregation(self, date: str) -> None:
         if self._eng is None:
             return
         start_time = f'{date} 00:00:00-04:00'
         end_time = f'{date} 23:59:59-04:00'
-        select_query = SELECT_TRANSACTION_TEMPLATE.format(start_time=start_time,
-                                                          end_time=end_time)
+        select_query = SELECT_TRANSACTION_AGG_TEMPLATE.format(start_time=start_time,
+                                                              end_time=end_time)
         with self._eng.connect() as conn:
             results = conn.execute(select_query)
         processor_aggs = dict()
         for result in results:
-            _, processor, gl, gl_pct, slippage, slippage_pct = result
+            processor, gl, gl_pct, slippage, slippage_pct = result
             if not processor:
                 continue
             if processor not in processor_aggs:
@@ -145,7 +156,7 @@ class Db:
             with self._eng.connect() as conn:
                 conn.execute(aggregation_query)
 
-    def update_log(self, date: str):
+    def update_log(self, date: str) -> None:
         if self._eng is None:
             return
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -163,7 +174,7 @@ class Db:
                     with self._eng.connect() as conn:
                         conn.execute(query)
 
-    def backfill(self, start_date: str):
+    def backfill(self, start_date: str) -> None:
         """Backfill databases from start_date."""
         # Backfill transaction table
         transactions = get_transactions(start_date)
@@ -180,3 +191,9 @@ class Db:
                 # Backfill log table
                 self.update_log(t.strftime('%F'))
             t += datetime.timedelta(days=1)
+
+    def list_transactions(self, limit: int, offset: int) -> List[Transaction]:
+        query = SELECT_TRANSACTION_DETAIL_TEMPLATE.format(limit=limit, offset=offset)
+        with self._eng.connect() as conn:
+            results = conn.execute(query)
+        return [Transaction(*result) for result in results]

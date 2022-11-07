@@ -1,6 +1,7 @@
 {% extends "base.html" %}sk
 
 {% block header %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/transactions.css') }}">
 <title>Transactions</title>
 {% endblock %}
 
@@ -24,6 +25,7 @@
                             <span class="xs-hidden">GAIN / LOSS</span>
                             <span class="xs-show">G/L</span>
                         </th>
+                        <th scope="col">SLIPPAGE</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -36,10 +38,11 @@
                                 </span>
                             </td>
                             <td class="xs-hidden">{{ transaction['entry_price'] }}</td>
-                            <td class="xs-hidden">{{ transaction['price'] }}</td>
+                            <td class="xs-hidden">{{ transaction['exit_price'] }}</td>
                             <td>{{ transaction['entry_time'] | safe }}</td>
-                            <td>{{ transaction['time'] | safe }}</td>
+                            <td>{{ transaction['exit_time'] | safe }}</td>
                             <td>{{ transaction['gl'] | safe }}</td>
+                            <td>{{ transaction['slippage'] | safe }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
