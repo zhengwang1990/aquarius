@@ -59,7 +59,7 @@ def transactions():
     return flask.render_template('transactions.html',
                                  transactions=trans,
                                  current_page=page,
-                                 total_page=8)
+                                 total_page=total_page)
 
 
 def _read_log_file(log_file: str) -> str:
