@@ -36,7 +36,7 @@ def get_job_status():
 
 
 @scheduler.task('cron', id='trade', day_of_week='mon-fri',
-                hour='9-15', minute='0,30', timezone='America/New_York')
+                hour='9-15', minute='*', timezone='America/New_York')
 def trade():
     if job_status != 'running':
         _trade_impl()
