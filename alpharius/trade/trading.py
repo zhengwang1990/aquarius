@@ -333,20 +333,21 @@ class Trading:
     def _update_db(self, executed_closes: List[Action]) -> None:
         current_time = time.time()
         time.sleep(15)
-        transactions = get_transactions(self._today.strftime('%F'))
-        actions = {action.symbol: action for action in executed_closes}
         db = Db()
-        for transaction in transactions:
-            symbol = transaction.symbol
-            if transaction.gl_pct is None:
-                continue
-            if symbol not in actions or current_time - transaction.exit_time.timestamp() > 100:
-                continue
-            transaction.processor = actions[symbol].processor
-            try:
-                db.insert_transaction(transaction)
-            except sqlalchemy.exc.SQLAlchemyError as e:
-                self._logger.warning('[%s] Transaction inserting encountered an error\n%s', symbol, e)
+        if executed_closes:
+            transactions = get_transactions(self._today.strftime('%F'))
+            actions = {action.symbol: action for action in executed_closes}
+            for transaction in transactions:
+                symbol = transaction.symbol
+                if transaction.gl_pct is None:
+                    continue
+                if symbol not in actions or current_time - transaction.exit_time.timestamp() > 100:
+                    continue
+                transaction.processor = actions[symbol].processor
+                try:
+                    db.insert_transaction(transaction)
+                except sqlalchemy.exc.SQLAlchemyError as e:
+                    self._logger.warning('[%s] Transaction inserting encountered an error\n%s', symbol, e)
         try:
             db.update_log(self._today.strftime('%F'))
         except sqlalchemy.exc.SQLAlchemyError as e:
