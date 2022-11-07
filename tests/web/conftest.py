@@ -23,7 +23,7 @@ def mock_cash_reserve():
 
 @pytest.fixture(autouse=True)
 def mock_subprocess(mocker):
-    return mocker.patch.object(subprocess, 'run', side_effect=lambda _: time.sleep(0.5))
+    return mocker.patch.object(subprocess, 'run', side_effect=lambda _: time.sleep(0.1))
 
 
 @pytest.fixture
