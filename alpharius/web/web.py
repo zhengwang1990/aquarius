@@ -5,12 +5,14 @@ from concurrent import futures
 import flask
 import numpy as np
 import pandas as pd
-
+import pytz
 from .alpaca_client import AlpacaClient, get_signed_percentage
 from .scheduler import get_job_status
 from ..db import Db
 
 bp = flask.Blueprint('web', __name__)
+
+TIME_ZONE = pytz.timezone('America/New_York')
 
 
 @bp.route('/')
@@ -51,8 +53,8 @@ def transactions():
             'processor': t.processor if t.processor is not None else '',
             'entry_price': f'{t.entry_price:.4g}',
             'exit_price': f'{t.exit_price:.4g}',
-            'entry_time': t.entry_time.strftime(time_fmt),
-            'exit_time': t.exit_time.strftime(time_fmt),
+            'entry_time': pd.to_datetime(t.entry_time).tz_convert(TIME_ZONE).strftime(time_fmt),
+            'exit_time': pd.to_datetime(t.exit_time).tz_convert(TIME_ZONE).strftime(time_fmt),
             'gl': get_signed_percentage(t.gl_pct),
             'slippage': get_signed_percentage(t.slippage_pct) if t.slippage_pct is not None else '',
         })
