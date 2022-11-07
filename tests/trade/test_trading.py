@@ -2,10 +2,12 @@ import os
 import itertools
 import time
 
+import pandas as pd
 import pytest
+import sqlalchemy
 from alpharius import trade
 from alpharius.trade import processors
-from ..fakes import Account, FakeAlpaca, FakeProcessorFactory
+from ..fakes import Account, FakeAlpaca, FakeProcessorFactory, FakeDbEngine
 
 
 @pytest.fixture(autouse=True)
@@ -17,6 +19,14 @@ def mock_time(mocker):
 @pytest.fixture(autouse=True)
 def mock_cash_reserve():
     os.environ['CASH_RESERVE'] = '0'
+
+
+@pytest.fixture(autouse=True)
+def mock_engine(mocker):
+    os.environ['SQL_STRING'] = 'fake_path'
+    engine = FakeDbEngine()
+    mocker.patch.object(sqlalchemy, 'create_engine', return_value=engine)
+    return engine
 
 
 @pytest.mark.parametrize("trading_frequency",
@@ -109,3 +119,13 @@ def test_trade_transactions_skipped(mock_alpaca):
     trading._trade(actions)
 
     assert mock_alpaca.submit_order_call_count == 0
+
+
+def test_write_db(mocker, mock_engine):
+    exit_time = pd.to_datetime('2022-11-04 05:35:00-0400')
+    mocker.patch.object(time, 'time', return_value=exit_time.timestamp() + 30)
+    trading = trade.Trading(processor_factories=[])
+    trading._update_db_transactions(
+        [trade.Action('QQQ', trade.ActionType.SELL_TO_CLOSE, 1, 100, 'Processor')])
+
+    mock_engine.conn.execute.assert_called_once()

@@ -5,7 +5,7 @@ from alpharius.trade import processors
 from ..fakes import FakeProcessorFactory
 
 
-@pytest.mark.parametrize("trading_frequency",
+@pytest.mark.parametrize('trading_frequency',
                          [trade.TradingFrequency.FIVE_MIN,
                           trade.TradingFrequency.CLOSE_TO_CLOSE,
                           trade.TradingFrequency.CLOSE_TO_OPEN])

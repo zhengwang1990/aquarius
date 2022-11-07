@@ -1,5 +1,6 @@
 import collections
 import datetime
+import threading
 import time
 import os
 from concurrent import futures
@@ -8,6 +9,7 @@ from typing import List, Optional
 import alpaca_trade_api as tradeapi
 import pandas as pd
 import retrying
+import sqlalchemy
 from .common import (
     Action, ActionType, ProcessorFactory, TradingFrequency, Context, Mode,
     TimeInterval, Position, MARKET_OPEN, DATETIME_TYPE, DEFAULT_DATA_SOURCE,
@@ -15,6 +17,7 @@ from .common import (
     logging_config, get_unique_actions, get_processor_name)
 from .data_loader import load_tradable_history, DataLoader
 from .email import Email
+from ..db import Db, get_transactions
 
 _MAX_WORKERS = 10
 
@@ -179,7 +182,10 @@ class Trading:
                             for pa in processor_actions])
         self._logger.info('Got [%d] actions to process.', len(actions))
 
-        self._trade(actions)
+        executed_closes = self._trade(actions)
+        db_thread = threading.Thread(target=self._update_db_transactions,
+                                     args=(executed_closes,))
+        db_thread.start()
 
     def _update_intraday_data(self, frequency_to_process: List[TradingFrequency]) -> None:
         update_start = time.time()
@@ -218,23 +224,26 @@ class Trading:
                 return position
         return None
 
-    def _trade(self, actions: List[Action]) -> None:
+    def _trade(self, actions: List[Action]) -> List[Action]:
         if not actions:
-            return
+            return []
 
         unique_actions = get_unique_actions(actions)
 
         close_actions = [action for action in unique_actions
                          if action.type in [ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]]
-        self._close_positions(close_actions)
+        executed_closes = self._close_positions(close_actions)
 
         open_actions = [action for action in unique_actions
                         if action.type in [ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]]
         self._open_positions(open_actions)
 
-    def _close_positions(self, actions: List[Action]) -> None:
+        return executed_closes
+
+    def _close_positions(self, actions: List[Action]) -> List[Action]:
         """Closes positions instructed by input actions."""
         self._update_positions()
+        executed_closes = []
         for action in actions:
             assert action.type in [ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]
             symbol = action.symbol
@@ -251,8 +260,10 @@ class Trading:
             qty = abs(current_position.qty) * action.percent
             side = 'buy' if action.type == ActionType.BUY_TO_CLOSE else 'sell'
             self._place_order(symbol, side, qty=qty)
+            executed_closes.append(action)
 
         self._wait_for_order_to_fill()
+        return executed_closes
 
     def _open_positions(self, actions: List[Action]) -> None:
         """Opens positions instructed by input actions."""
@@ -318,3 +329,23 @@ class Trading:
         else:
             open_symbols = ', '.join([order.symbol for order in orders])
             self._logger.warning('[%d] orders not filled: %s', len(orders), open_symbols)
+
+    def _update_db_transactions(self, executed_closes: List[Action]) -> None:
+        current_time = time.time()
+        time.sleep(15)
+        transactions = get_transactions(self._today.strftime('%F'))
+        actions = {action.symbol: action for action in executed_closes}
+        db = Db()
+        print(transactions)
+        print(actions)
+        for transaction in transactions:
+            symbol = transaction.symbol
+            if transaction.gl_pct is None:
+                continue
+            if symbol not in actions or current_time - transaction.exit_time.timestamp() > 100:
+                continue
+            transaction.processor = actions[symbol].processor
+            try:
+                db.insert_transaction(transaction)
+            except sqlalchemy.exc.SQLAlchemyError as e:
+                self._logger.warning('[%s] Transaction inserting encountered an error\n%s', symbol, e)

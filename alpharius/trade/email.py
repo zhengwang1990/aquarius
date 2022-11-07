@@ -19,6 +19,7 @@ import retrying
 from .common import (TimeInterval, DEFAULT_DATA_SOURCE,
                      DATETIME_TYPE, TIME_ZONE, timestamp_to_index)
 from .data_loader import DataLoader
+from ..db import get_transactions
 
 _SMTP_HOST = 'smtp.163.com'
 _SMTP_PORT = 25
@@ -105,67 +106,29 @@ class Email:
                                f'<td {self._get_color_style(gain)}>{gain * 100:+.2f}%</td>'
                                '</td>\n')
 
-        orders = self._alpaca.list_orders(status='closed', after=market_dates[-2].strftime('%F'),
-                                          direction='desc')
-        orders_used = [False] * len(orders)
-        position_symbols = set([position.symbol for position in positions])
         transactions_html = ''
-        cut_time = market_dates[-1].tz_localize(TIME_ZONE)
-        for i in range(len(orders)):
-            order = orders[i]
-            used = orders_used[i]
-            if order.filled_at is None or used:
-                continue
-            filled_at = order.filled_at.tz_convert(TIME_ZONE)
-            if filled_at < cut_time:
-                break
-            entry_time = self._round_time(filled_at)
-            entry_price = float(order.filled_avg_price)
-            exit_time = ''
-            exit_price = None
-            order_gain_str = ''
-            slippage_cost = ''
-            order_side = 'long' if order.side == 'buy' else 'short'
-            if order.symbol in position_symbols:
-                position_symbols.remove(order.symbol)
-            else:
-                for j, prev_order in enumerate(orders):
-                    if prev_order.filled_at is None or prev_order.symbol != order.symbol:
-                        continue
-                    prev_filled_at = prev_order.filled_at.tz_convert(TIME_ZONE)
-                    if prev_filled_at < filled_at and prev_order.side != order.side:
-                        exit_price = entry_price
-                        entry_price = float(prev_order.filled_avg_price)
-                        order_gain = (exit_price / entry_price - 1) * 100
-                        order_side = 'long' if prev_order.side == 'buy' else 'short'
-                        if order_side == 'short':
-                            order_gain *= -1
-                        order_gain_str = f'<span {self._get_color_style(order_gain)}>{order_gain:+.2f}%</span>'
-                        exit_time = entry_time
-                        entry_time = self._round_time(prev_filled_at)
-                        theory_entry_price = self._get_historical_price(
-                            order.symbol, prev_filled_at)
-                        theory_exit_price = self._get_historical_price(
-                            order.symbol, filled_at)
-                        if theory_entry_price and theory_exit_price:
-                            theory_gain = (theory_exit_price /
-                                           theory_entry_price - 1) * 100
-                            if order_side == 'short':
-                                theory_gain *= -1
-                            diff_gain = order_gain - theory_gain
-                            slippage_cost = f'<span {self._get_color_style(diff_gain)}>{diff_gain:+.2f}%</span>'
-                        orders_used[j] = True
-                        break
-            exit_price_str = f'{exit_price:.5g}' if exit_price else ''
-            transactions_html += (f'<tr><th scope="row">{order.symbol}</th>'
-                                  f'<td>{order_side}</td>'
-                                  f'<td>{entry_price:.5g}</td>'
+        transactions = get_transactions(market_dates[-1].strftime('%F'))
+        for transaction in transactions:
+            gl_str = ''
+            if transaction.gl_pct is not None:
+                style = self._get_color_style(transaction.gl_pct)
+                gl_str = f'<span {style}>{transaction.gl_pct * 100:+.2f}%</span>'
+            slippage_str = ''
+            if transaction.slippage_pct is not None:
+                style = self._get_color_style(transaction.slippage_pct)
+                slippage_str = f'<span {style}>{transaction.slippage_pct * 100:+.2f}%</span>'
+            exit_price_str = f'{transaction.exit_price:.5g}' if transaction.exit_price else ''
+            exit_time_str = transaction.exit_time.strftime("%H:%M") if transaction.exit_time else ''
+            transactions_html += (f'<tr><th scope="row">{transaction.symbol}</th>'
+                                  f'<td>{"long" if transaction.is_long else "short"}</td>'
+                                  f'<td>{transaction.entry_price:.5g}</td>'
                                   f'<td>{exit_price_str}</td>'
-                                  f'<td>{entry_time}</td>'
-                                  f'<td>{exit_time}</td>'
-                                  f'<td>{order_gain_str}</td>'
-                                  f'<td>{slippage_cost}</td>'
+                                  f'<td>{transaction.entry_time.strftime("%H:%M")}</td>'
+                                  f'<td>{exit_time_str}</td>'
+                                  f'<td>{gl_str}</td>'
+                                  f'<td>{slippage_str}</td>'
                                   '</tr>\n')
+
         account = self._alpaca.get_account()
         cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         account_equity = float(account.equity) - cash_reserve
@@ -270,16 +233,14 @@ class Email:
         message.attach(history_image)
         self._send_mail(message)
 
-    def send_alert(self, log_file: str, exit_code: Union[int, str]):
+    def send_alert(self, log_file: str, exit_code: Union[int, str], title: str):
         if not self._client:
             self._logger.warning('Email client not created')
             return
         else:
             self._logger.info('Sending alert')
-        message = self._create_message(
-            'Alert', 'System encountered an unexpected error')
-        html_template_path = os.path.join(_HTML_DIR,
-                                          'alert.html')
+        message = self._create_message('Alert', title)
+        html_template_path = os.path.join(_HTML_DIR, 'alert.html')
         with open(html_template_path, 'r') as f:
             html_template = f.read()
         error_time = pd.Timestamp(

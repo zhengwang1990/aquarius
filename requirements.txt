@@ -8,12 +8,15 @@ mplfinance
 numpy
 pandas
 polygon-api-client
+psycopg2
 pytest
 pytest-mock
 python-dateutil
 pytz
+recordclass
 requests
 retrying
+sqlalchemy
 tabulate
 tqdm
 waitress

@@ -8,6 +8,7 @@ from flask_apscheduler import APScheduler
 app = flask.Flask(__name__)
 bp = flask.Blueprint('scheduler', __name__, url_prefix="/scheduler")
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
@@ -19,8 +20,7 @@ def _trade_impl():
     global job_status, lock
     acquired = lock.acquire(blocking=False)
     if acquired:
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-        bin_file = os.path.join(base_dir, 'bin', 'cron.sh')
+        bin_file = os.path.join(BASE_DIR, 'bin', 'trade.sh')
         app.logger.info('Start running [%s]', bin_file)
         job_status = 'running'
         subprocess.run(['/bin/bash', bin_file])
@@ -36,9 +36,19 @@ def get_job_status():
 
 
 @scheduler.task('cron', id='trade', day_of_week='mon-fri',
-                hour=9, minute=0, timezone='America/New_York')
+                hour='9-15', minute='0,30', timezone='America/New_York')
 def trade():
-    _trade_impl()
+    if job_status != 'running':
+        _trade_impl()
+
+
+@scheduler.task('cron', id='backfill', day_of_week='mon-fri',
+                hour='16,17,21', minute=5, timezone='America/New_York')
+def backfill():
+    bin_file = os.path.join(BASE_DIR, 'bin', 'backfill.sh')
+    app.logger.info('Start running [%s]', bin_file)
+    subprocess.run(['/bin/bash', bin_file])
+    app.logger.info('Finish running [%s]', bin_file)
 
 
 @bp.route('/trigger', methods=['POST'])

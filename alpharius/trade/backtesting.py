@@ -289,8 +289,8 @@ class Backtesting:
 
         actions = self._process_data(
             contexts, processor_stock_universes, self._processors)
-        executed_actions = self._process_actions(market_close, actions)
-        self._log_day(day, executed_actions)
+        executed_closes = self._process_actions(market_close, actions)
+        self._log_day(day, executed_closes)
 
     def _process_actions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> List[List[Any]]:
         unique_actions = get_unique_actions(actions)
@@ -388,11 +388,11 @@ class Backtesting:
 
     def _log_day(self,
                  day: DATETIME_TYPE,
-                 executed_actions: List[List[Any]]) -> None:
+                 executed_closes: List[List[Any]]) -> None:
         outputs = [get_header(day.date())]
 
-        if executed_actions:
-            trade_info = tabulate.tabulate(executed_actions,
+        if executed_closes:
+            trade_info = tabulate.tabulate(executed_closes,
                                            headers=['Symbol', 'Processor', 'Entry Time', 'Exit Time', 'Side',
                                                     'Qty', 'Entry Price', 'Exit Price', 'Gain/Loss'],
                                            tablefmt='grid')
@@ -436,7 +436,7 @@ class Backtesting:
         outputs.append('[ Stats ]')
         outputs.append(tabulate.tabulate(stats, tablefmt='grid'))
 
-        if not executed_actions and not self._positions:
+        if not executed_closes and not self._positions:
             return
         self._details_log.info('\n'.join(outputs))
 

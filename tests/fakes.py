@@ -1,7 +1,9 @@
 import collections
+import contextlib
 import datetime
 import itertools
 import time
+import unittest.mock as mock
 
 import pandas as pd
 from alpharius import trade
@@ -16,7 +18,8 @@ Position = collections.namedtuple('Position', ['symbol', 'qty', 'current_price',
                                                'avg_entry_price', 'change_today',
                                                'unrealized_plpc'])
 Order = collections.namedtuple('Order', ['id', 'symbol', 'side', 'qty', 'notional',
-                                         'filled_qty', 'filled_at', 'filled_avg_price'])
+                                         'filled_qty', 'filled_at', 'filled_avg_price',
+                                         'submitted_at'])
 Bar = collections.namedtuple('Bar', ['t', 'o', 'h', 'l', 'c', 'vw', 'v'])
 History = collections.namedtuple('History', ['equity', 'timestamp'])
 Calendar = collections.namedtuple('Calendar', ['date', 'open', 'close'])
@@ -66,15 +69,24 @@ class FakeAlpaca:
         self.list_orders_call_count += 1
         if self.list_orders_call_count % 3 == 0 and status != 'closed':
             return []
-        orders = [Order('ORDER122', 'DIA', 'sell', '14', None, '0', pd.to_datetime('2021-03-17T10:14:57.0Z'), '12'),
-                  Order('ORDER124', 'SPY', 'buy', '12', None, '1', pd.to_datetime('2021-03-17T10:20:00.0Z'), '13'),
-                  Order('ORDER123', 'DIA', 'buy', '14', None, '0', pd.to_datetime('2021-03-17T10:15:57.0Z'), '9'),
+        orders = [Order('ORDER122', 'DIA', 'sell', '14', None, '0',
+                        pd.to_datetime('2021-03-17T10:14:57.0Z'), '12',
+                        pd.to_datetime('2021-03-17T10:14:57.0Z')),
+                  Order('ORDER124', 'SPY', 'buy', '12', None, '1',
+                        pd.to_datetime('2021-03-17T10:20:00.0Z'), '13',
+                        pd.to_datetime('2021-03-17T10:20:00.0Z')),
+                  Order('ORDER123', 'DIA', 'buy', '14', None, '0',
+                        pd.to_datetime('2021-03-17T10:15:57.0Z'), '9',
+                        pd.to_datetime('2021-03-17T10:15:57.0Z')),
                   Order('ORDER125', 'QQQ', 'buy', None, '100.1', '10',
-                        pd.to_datetime(time.time() - 2, utc=True, unit='s'), '9.1'),
-                  Order('ORDER125', 'QQQ', 'sell', None, '100.1', '10',
-                        pd.to_datetime(time.time() - 1, utc=True, unit='s'), '9.1'),
-                  Order('ORDER125', 'QQQ', 'buy', None, '100.1', '10',
-                        pd.to_datetime(time.time(), utc=True, unit='s'), '9.1')]
+                        pd.to_datetime(time.time() - 3, utc=True, unit='s'), '9.1',
+                        pd.to_datetime(time.time() - 4, utc=True, unit='s')),
+                  Order('ORDER126', 'QQQ', 'sell', None, '100.1', '10',
+                        pd.to_datetime(time.time() - 1, utc=True, unit='s'), '9.2',
+                        pd.to_datetime(time.time() - 2, utc=True, unit='s')),
+                  Order('ORDER127', 'QQQ', 'buy', None, '100.1', '10',
+                        pd.to_datetime(time.time(), utc=True, unit='s'), '9.1',
+                        pd.to_datetime(time.time(), utc=True, unit='s'))]
         if direction == 'desc':
             orders = orders[::-1]
         return orders
@@ -214,3 +226,16 @@ class FakeProcessorFactory(trade.ProcessorFactory):
     def create(self, *args, **kwargs) -> FakeProcessor:
         self.create_call_count += 1
         return self.processor
+
+
+class FakeDbEngine:
+    def __init__(self):
+        self.conn = mock.MagicMock()
+        self.disconnect_cnt = 0
+
+    @contextlib.contextmanager
+    def connect(self):
+        try:
+            yield self.conn
+        finally:
+            self.disconnect_cnt += 1
