@@ -169,11 +169,11 @@ class Db:
             files = os.listdir(log_dir)
             for file in files:
                 if file.endswith('.txt'):
-                    processor = ''.join([c.capitalize() for c in file[:-4].split('_')])
+                    logger = ''.join([c.capitalize() for c in file[:-4].split('_')])
                     with open(os.path.join(log_dir, file), 'r') as f:
                         content = f.read()
                     query = UPSERT_LOG_TEMPLATE.format(date=date,
-                                                       processor=processor,
+                                                       logger=logger,
                                                        content=content)
                     with self._eng.connect() as conn:
                         conn.execute(query)

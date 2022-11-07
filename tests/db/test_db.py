@@ -1,5 +1,6 @@
-import pandas as pd
+import os
 
+import pandas as pd
 from alpharius.db import Transaction
 
 TEST_TRANSACTION = Transaction('SYMB', True, 'Processor', 10, 12,
@@ -31,6 +32,16 @@ def test_update_aggregation(client, mock_engine):
     client.update_aggregation('2022-11-03')
 
     assert mock_engine.conn.execute.call_count == 3
+
+
+def test_update_log(mocker, client, mock_engine):
+    mocker.patch.object(os.path, 'isdir', return_value=True)
+    mocker.patch.object(os, 'listdir', return_value=['trading.txt', 'one_processor.txt', 'other'])
+    mocker.patch('builtins.open', mocker.mock_open(read_data='data'))
+
+    client.update_log('2022-11-03')
+
+    assert mock_engine.conn.execute.call_count == 2
 
 
 def test_backfill(client, mock_engine):
