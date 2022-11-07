@@ -56,7 +56,7 @@
 </div>
 
 <ul class="pagination justify-content-center">
-    <li class="page-item {{ 'disabled' if current_page == 1 else ''}}"><a class="page-link" href="?page={{current_page-1}}">&lt; Previous</a></li>
+    <li class="page-item {{ 'disabled' if current_page == 1 else ''}}"><a class="page-link" href="?page={{current_page-1}}">Previous</a></li>
     {% if total_page <= 7 %}
         {% for i in range(total_page) %}
              <li class="page-item {{ 'active' if current_page == i + 1 else ''}}"><a class="page-link" href="{{ '#' if current_page == i + 1 else '?page={}'.format(i + 1) }}">{{ i + 1 }}</a></li>
@@ -94,6 +94,6 @@
 
         <li class="page-item {{ 'active' if current_page == total_page else ''}}"><a class="page-link" href="{{ '#' if current_page == total_page else '?page={}'.format(total_page) }}"> {{total_page}} </a></li>
     {% endif %}
-    <li class="page-item {{ 'disabled' if current_page == total_page else ''}}"><a class="page-link" href="?page={{current_page+1}}">Next &gt;</a></li>
+    <li class="page-item {{ 'disabled' if current_page == total_page else ''}}"><a class="page-link" href="?page={{current_page+1}}">Next</a></li>
 </ul>
 {% endblock %}
