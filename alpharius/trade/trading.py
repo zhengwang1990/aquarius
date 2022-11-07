@@ -10,6 +10,7 @@ import alpaca_trade_api as tradeapi
 import pandas as pd
 import retrying
 import sqlalchemy
+from alpharius.db import Db, get_transactions
 from .common import (
     Action, ActionType, ProcessorFactory, TradingFrequency, Context, Mode,
     TimeInterval, Position, MARKET_OPEN, DATETIME_TYPE, DEFAULT_DATA_SOURCE,
@@ -17,7 +18,6 @@ from .common import (
     logging_config, get_unique_actions, get_processor_name)
 from .data_loader import load_tradable_history, DataLoader
 from .email import Email
-from ..db import Db, get_transactions
 
 _MAX_WORKERS = 10
 

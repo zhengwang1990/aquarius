@@ -6,9 +6,9 @@ import flask
 import numpy as np
 import pandas as pd
 import pytz
+from alpharius.db import Db
 from .alpaca_client import AlpacaClient, get_signed_percentage
 from .scheduler import get_job_status
-from ..db import Db
 
 bp = flask.Blueprint('web', __name__)
 

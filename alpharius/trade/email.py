@@ -16,10 +16,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import retrying
+from alpharius.db import get_transactions
 from .common import (TimeInterval, DEFAULT_DATA_SOURCE,
                      DATETIME_TYPE, TIME_ZONE, timestamp_to_index)
 from .data_loader import DataLoader
-from ..db import get_transactions
 
 _SMTP_HOST = 'smtp.163.com'
 _SMTP_PORT = 25
