@@ -67,7 +67,7 @@ SET gl = {gl},
 
 UPSERT_LOG_TEMPLATE = """
 INSERT INTO log (
-  date, logger, content
+  date, logger, content)
 VALUES (
   '{date}', '{logger}', '{content}'
 )
@@ -172,6 +172,7 @@ class Db:
                     logger = ''.join([c.capitalize() for c in file[:-4].split('_')])
                     with open(os.path.join(log_dir, file), 'r') as f:
                         content = f.read()
+                    content = content.replace("'", "''")
                     query = UPSERT_LOG_TEMPLATE.format(date=date,
                                                        logger=logger,
                                                        content=content)
