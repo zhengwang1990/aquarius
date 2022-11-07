@@ -36,7 +36,7 @@ def get_transactions(start_date: Optional[str]):
 
     chunk_size = 500
     orders = []
-    start_time_str = (pd.to_datetime(start_date) - datetime.timedelta(days=1)).tz_localize(TIME_ZONE).isoformat()
+    start_time_str = (pd.to_datetime(start_date) - datetime.timedelta(days=7)).tz_localize(TIME_ZONE).isoformat()
     end_time = pd.to_datetime('now', utc=True)
     check_for_more_orders = True
     order_ids = set()
