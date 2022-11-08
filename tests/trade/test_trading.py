@@ -128,4 +128,4 @@ def test_update_db(mocker, mock_engine):
     trading._update_db(
         [trade.Action('QQQ', trade.ActionType.SELL_TO_CLOSE, 1, 100, 'Processor')])
 
-    mock_engine.conn.execute.assert_called_once()
+    assert mock_engine.conn.execute.call_count == 2
