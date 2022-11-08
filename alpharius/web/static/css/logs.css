@@ -58,6 +58,11 @@
   --bs-btn-hover-bg: rgba(111, 111, 111, 0.05);
 }
 
+#datepicker {
+    border-top-right-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+
 @media (max-width: 800px) {
     .dash-content .log-card .card-body {
         padding: 10px 8px 10px 8px;
