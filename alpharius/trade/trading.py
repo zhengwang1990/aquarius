@@ -350,5 +350,7 @@ class Trading:
                     self._logger.warning('[%s] Transaction inserting encountered an error\n%s', symbol, e)
         try:
             db.update_log(self._today.strftime('%F'))
+            if executed_closes:
+                db.update_aggregation(self._today.strftime('%F'))
         except sqlalchemy.exc.SQLAlchemyError as e:
             self._logger.warning('Log updating encountered an error\n%s', e)

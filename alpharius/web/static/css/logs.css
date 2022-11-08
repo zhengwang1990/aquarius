@@ -42,6 +42,18 @@
     font-family: BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif
 }
 
+#btn-back-to-top {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  z-index: 99;
+  display: none;
+  --bs-btn-color: #6f706f;
+  --bs-btn-border-color: #6f706f;
+  --bs-btn-bg: rgba(111, 111, 111, 0.05);
+  --bs-btn-hover-bg: rgba(111, 111, 111, 0.05);
+}
+
 @media (max-width: 800px) {
     .dash-content .log-card .card-body {
         padding: 10px 8px 10px 8px;
