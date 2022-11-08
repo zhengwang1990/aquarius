@@ -28,7 +28,7 @@ class Trading:
         self._output_dir = os.path.join(OUTPUT_DIR, 'trading',
                                         datetime.datetime.now().strftime('%F'))
         os.makedirs(self._output_dir, exist_ok=True)
-        self._logger = logging_config(os.path.join(self._output_dir, 'log.txt'),
+        self._logger = logging_config(os.path.join(self._output_dir, 'trading.txt'),
                                       detail=True, name='trading')
         self._equity, self._cash = 0, 0
         self._cash_reserve = float(os.environ.get('CASH_RESERVE', 0))

@@ -188,6 +188,8 @@ class Db:
                     logger = ''.join([c.capitalize() for c in file[:-4].split('_')])
                     with open(os.path.join(log_dir, file), 'r') as f:
                         content = f.read()
+                    if not content:
+                        continue
                     content = content.replace("'", "''")
                     query = UPSERT_LOG_TEMPLATE.format(date=date,
                                                        logger=logger,

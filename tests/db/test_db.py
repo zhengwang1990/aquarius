@@ -37,11 +37,12 @@ def test_update_aggregation(client, mock_engine):
 def test_update_log(mocker, client, mock_engine):
     mocker.patch.object(os.path, 'isdir', return_value=True)
     mocker.patch.object(os, 'listdir', return_value=['trading.txt', 'one_processor.txt', 'other'])
-    mocker.patch('builtins.open', mocker.mock_open(read_data='data'))
+    mocker.patch('builtins.open', side_effect=[mocker.mock_open(read_data='data').return_value,
+                                               mocker.mock_open(read_data='').return_value])
 
     client.update_log('2022-11-03')
 
-    assert mock_engine.conn.execute.call_count == 2
+    mock_engine.conn.execute.assert_called_once()
 
 
 def test_backfill(client, mock_engine):
