@@ -51,16 +51,7 @@
         font-size: 0.75rem;
     }
 
-    .status .badge-status {
-        font-size: 13px;
-    }
-
-    .input-group-text {
-        padding: 0.15rem 0.3rem;
-    }
-
-    .status {
-        height: 32px;
-        padding-top: 3px;
+    .form-select {
+        font-size: 0.75rem;
     }
 }
