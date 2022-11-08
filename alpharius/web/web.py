@@ -120,7 +120,7 @@ def _read_log_file(log_file: str) -> str:
 @bp.route('/logs')
 def logs():
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-    log_file = os.path.join(base_dir, 'log.txt')
+    log_file = os.path.join(base_dir, 'trading.txt')
     log_content = _read_log_file(log_file)
     log_lines = log_content.split('\n')
     log_entries = []
