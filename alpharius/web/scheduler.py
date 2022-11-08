@@ -23,7 +23,10 @@ def _trade_impl():
         bin_file = os.path.join(BASE_DIR, 'bin', 'trade.sh')
         app.logger.info('Start running [%s]', bin_file)
         job_status = 'running'
-        subprocess.run(['/bin/bash', bin_file])
+        try:
+            subprocess.run(['/bin/bash', bin_file])
+        except Exception as e:
+            app.logger.error('Fail running [%s]: %s', bin_file, e)
         app.logger.info('Finish running [%s]', bin_file)
         job_status = 'idle'
         lock.release()

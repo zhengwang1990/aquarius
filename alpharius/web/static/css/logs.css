@@ -46,16 +46,29 @@
     height: 38px;
 }
 
+#nav-buttons {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    z-index: 99;
+    display: flex;
+}
+
 #btn-back-to-top {
-  position: fixed;
-  bottom: 25px;
-  right: 25px;
-  z-index: 99;
-  display: none;
-  --bs-btn-color: #6f706f;
-  --bs-btn-border-color: #6f706f;
-  --bs-btn-bg: rgba(111, 111, 111, 0.05);
-  --bs-btn-hover-bg: rgba(111, 111, 111, 0.05);
+    display: none;
+}
+
+#btn-go-to-bottom {
+    display: block;
+}
+
+.btn-nav {
+    display: block;
+    margin-left: 10px;
+    --bs-btn-color: #6f706f;
+    --bs-btn-border-color: #6f706f;
+    --bs-btn-bg: rgba(111, 111, 111, 0.05);
+    --bs-btn-hover-bg: rgba(111, 111, 111, 0.05);
 }
 
 #datepicker {
@@ -74,5 +87,12 @@
 
     .form-select {
         font-size: 0.75rem;
+    }
+
+    .btn, .btn-lg {
+        --bs-btn-padding-y: 0.3rem;
+        --bs-btn-padding-x: 0.7rem;
+        --bs-btn-font-size: 1.25rem;
+        --bs-btn-border-radius: 0.5rem;
     }
 }

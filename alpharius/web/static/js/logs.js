@@ -10,23 +10,27 @@ document.getElementById("calendar-icon").addEventListener("click", () => {datepi
 
 // Back-to-top button
 let btt_button = document.getElementById("btn-back-to-top");
+let gtb_button = document.getElementById("btn-go-to-bottom");
 window.onscroll = function () {
   scrollFunction();
 };
 function scrollFunction() {
-console.log(document.body.scrollTop)
-  if (
-    document.body.scrollTop > 20 ||
-    document.documentElement.scrollTop > 20
-  ) {
+  if (document.documentElement.scrollTop > 20) {
     btt_button.style.display = "block";
   } else {
     btt_button.style.display = "none";
   }
+  if (document.documentElement.scrollTop < document.documentElement.scrollHeight - window.innerHeight - 20) {
+    gtb_button.style.display = "block";
+  } else {
+    gtb_button.style.display = "none";
+  }
 }
 btt_button.addEventListener("click", backToTop);
-
+gtb_button.addEventListener("click", goToBottom);
 function backToTop() {
-  document.body.scrollTop = 0;
   document.documentElement.scrollTop = 0;
+}
+function goToBottom() {
+  document.documentElement.scrollTop = document.documentElement.scrollHeight - window.innerHeight;
 }
