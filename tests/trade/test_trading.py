@@ -123,9 +123,12 @@ def test_trade_transactions_skipped(mock_alpaca):
 
 def test_update_db(mocker, mock_engine):
     exit_time = pd.to_datetime('2022-11-04 05:35:00-0400')
+    mocker.patch.object(os.path, 'isdir', return_value=True)
+    mocker.patch.object(os, 'listdir', return_value=['trading.txt'])
+    mocker.patch('builtins.open', mocker.mock_open(read_data='data'))
     mocker.patch.object(time, 'time', return_value=exit_time.timestamp() + 30)
     trading = trade.Trading(processor_factories=[])
     trading._update_db(
         [trade.Action('QQQ', trade.ActionType.SELL_TO_CLOSE, 1, 100, 'Processor')])
 
-    assert mock_engine.conn.execute.call_count == 2
+    assert mock_engine.conn.execute.call_count == 3
