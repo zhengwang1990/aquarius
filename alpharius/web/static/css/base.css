@@ -316,7 +316,7 @@ nav.close ~ .dashboard .top{
     background-color: rgba(83, 145, 237, 0.1);
 }
 
-.dash-content .bottom-card {
+.dash-content .fix-height-card {
     height: calc(100% - 20px);
 }
 
@@ -352,4 +352,22 @@ nav.close ~ .dashboard .top{
     .badge-shape {
         font-size: 12px;
     }
+}
+
+.run-animation {
+  border-width: 0;
+  width: 40px;
+  height: 40px;
+  -webkit-animation: spin 5s linear infinite;
+  animation: spin 5s linear infinite;
+}
+
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

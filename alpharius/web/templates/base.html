@@ -34,13 +34,9 @@
                 <i class="uil uil-transaction {{ 'active' if url_for(request.endpoint) == '/transactions' else ''}}"></i>
                 <span class="link-name {{ 'active' if url_for(request.endpoint) == '/transactions' else ''}}">Transactions</span>
             </a></li>
-            <li><a href="#">
-                <i class="uil uil-chart"></i>
-                <span class="link-name">Analytics</span>
-            </a></li>
-            <li><a href="#">
-                <i class="uil uil-backward"></i>
-                <span class="link-name">Backtesting</span>
+            <li><a href="{{ '#' if url_for(request.endpoint) == '/analytics' else url_for('web.analytics')}}">
+                <i class="uil uil-chart {{ 'active' if url_for(request.endpoint) == '/analytics' else ''}}"></i>
+                <span class="link-name {{ 'active' if url_for(request.endpoint) == '/analytics' else ''}}">Analytics</span>
             </a></li>
             <li><a href="{{ '#' if url_for(request.endpoint) == '/logs' else url_for('web.logs')}}">
                 <i class="uil uil-file-alt {{ 'active' if url_for(request.endpoint) == '/logs' else ''}}"></i>
@@ -59,6 +55,20 @@
         <span>
             <i class="uil uil-bars sidebar-toggle"></i>
             <span class="logo-text">Alpharius</span>
+        </span>
+
+        <span>
+            {% if job_status == 'running' %}
+                <svg class="run-animation" viewBox="0 0 52 52" fill="none">
+                    <g clip-path="url(#clip0)">
+                        <circle cx="26.695" cy="26.695" r="19.695" stroke="#E5E5E5" stroke-width="10"></circle>
+                        <path d="M27.355 48.711C15.561 48.711 6 39.15 6 27.356 6 15.56 15.561 6 27.355 6" stroke="#00DF4D" stroke-width="11" stroke-linecap="round"></path>
+                    </g>
+                    <defs>
+                        <clipPath id="clip0"><path fill="#fff" d="M0 0h54v54H0z"></path></clipPath>
+                    </defs>
+                </svg>
+            {% endif %}
         </span>
     </div>
 

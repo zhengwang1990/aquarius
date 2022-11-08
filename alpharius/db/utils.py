@@ -11,6 +11,10 @@ Transaction = recordclass.recordclass(
     'Transaction',
     ['symbol', 'is_long', 'processor', 'entry_price', 'exit_price', 'entry_time', 'exit_time',
      'qty', 'gl', 'gl_pct', 'slippage', 'slippage_pct'])
+Aggregation = recordclass.recordclass(
+    'Aggregation',
+    ['date', 'processor', 'gl', 'avg_gl_pct', 'slippage', 'avg_slippage_pct', 'count',
+     'win_count', 'lose_count', 'slippage_count'])
 
 
 def get_transactions(start_date: Optional[str]):

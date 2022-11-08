@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS transaction (
     gl real,
     gl_pct real,
     slippage real,
-    slippage_pct real
+    slippage_pct real,
 );
 
 CREATE INDEX IF NOT EXISTS transaction_exit_time ON transaction (exit_time);
@@ -27,14 +27,17 @@ CREATE TABLE IF NOT EXISTS aggregation (
     count int,
     win_count int,
     lose_count int,
+    slippage_count int,
     PRIMARY KEY (date, processor)
 );
 
 CREATE INDEX IF NOT EXISTS aggregation_date ON aggregation (Date);
 
-CREATE TABLE IF NOT EXISTS Log (
+CREATE TABLE IF NOT EXISTS log (
     date date,
     logger varchar(50),
     content text,
     PRIMARY KEY (date, logger)
 );
+
+CREATE INDEX IF NOT EXISTS log_date ON log (Date);

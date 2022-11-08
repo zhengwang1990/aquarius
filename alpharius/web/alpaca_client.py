@@ -14,6 +14,7 @@ import pytz
 import retrying
 from dateutil.relativedelta import relativedelta
 from flask import Flask
+from .utils import get_signed_percentage, get_colored_value
 
 TIME_ZONE = pytz.timezone('America/New_York')
 
@@ -47,21 +48,6 @@ def round_time(t: pd.Timestamp, time_fmt_with_year: bool):
     if t.second < 30:
         return t.strftime(fmt)
     return (t + datetime.timedelta(minutes=1)).strftime(fmt)
-
-
-def get_colored_value(value: str, color: str, with_arrow: bool = False):
-    arrow = ''
-    if with_arrow:
-        if color == 'green':
-            arrow = '<i class="uil uil-arrow-up"></i>'
-        else:
-            arrow = '<i class="uil uil-arrow-down"></i>'
-    return f'<span style="color:{color};">{arrow}{value}</span>'
-
-
-def get_signed_percentage(value: float, with_arrow: bool = False):
-    color = 'green' if value >= 0 else 'red'
-    return get_colored_value(f'{value * 100:+.2f}%', color, with_arrow)
 
 
 def get_last_day():

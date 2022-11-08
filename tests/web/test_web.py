@@ -27,7 +27,18 @@ def test_transactions(client, mock_engine):
     ]
 
     assert client.get('/transactions').status_code == 200
-    assert mock_engine.conn.execute.call_count > 0
+    assert mock_engine.conn.execute.call_count == 2
+
+
+def test_analytics(client, mock_engine):
+    mock_engine.conn.execute.return_value = [
+        (pd.to_datetime('2022-11-02').date, 'Processor1',
+         100, 0.01, 0, 0, 3, 2, 1, 0),
+        (pd.to_datetime('2022-11-03').date, 'Processor2',
+         100, 0.01, -10, -0.01, 3, 2, 1, 1)]
+
+    assert client.get('/analytics').status_code == 200
+    assert mock_engine.conn.execute.call_count == 1
 
 
 def test_logs_no_file(client):

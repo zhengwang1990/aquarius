@@ -1,3 +1,4 @@
+import itertools
 import json
 import os
 from concurrent import futures
@@ -7,8 +8,9 @@ import numpy as np
 import pandas as pd
 import pytz
 from alpharius.db import Db
-from .alpaca_client import AlpacaClient, get_signed_percentage
+from .alpaca_client import AlpacaClient
 from .scheduler import get_job_status
+from .utils import get_signed_percentage, get_colored_value
 
 bp = flask.Blueprint('web', __name__)
 
@@ -28,7 +30,8 @@ def dashboard():
                                  histories=json.dumps(tasks['histories'].result()),
                                  orders=tasks['orders'].result(),
                                  positions=tasks['positions'].result(),
-                                 watch=tasks['watch'].result())
+                                 watch=tasks['watch'].result(),
+                                 job_status=get_job_status())
 
 
 @bp.route('/transactions')
@@ -61,7 +64,49 @@ def transactions():
     return flask.render_template('transactions.html',
                                  transactions=trans,
                                  current_page=page,
-                                 total_page=total_page)
+                                 total_page=total_page,
+                                 job_status=get_job_status())
+
+
+@bp.route('/analytics')
+def analytics():
+    client = Db()
+    aggs = client.list_aggregations()
+    proc_stats = dict()
+    for agg in aggs:
+        processor = agg.processor
+        if processor not in proc_stats:
+            proc_stats[processor] = {'gl': 0, 'gl_pct_acc': 0, 'cnt': 0, 'win_cnt': 0,
+                                     'slip': 0, 'slip_pct_acc': 0, 'slip_cnt': 0}
+        proc_stats[processor]['gl'] += agg.gl
+        proc_stats[processor]['cnt'] += agg.count
+        proc_stats[processor]['win_cnt'] += agg.win_count
+        proc_stats[processor]['slip'] += agg.slippage
+        if agg.slippage_count > 0:
+            proc_stats[processor]['slip_pct_acc'] += agg.avg_slippage_pct * agg.slippage_count
+            proc_stats[processor]['slip_cnt'] += agg.slippage_count
+    total_stats = dict()
+    for stat in proc_stats.values():
+        for k, v in stat.items():
+            if k not in total_stats:
+                total_stats[k] = 0
+            total_stats[k] += v
+
+    for stat in itertools.chain(proc_stats.values(), [total_stats]):
+        stat['avg_slip_pct'] = (get_signed_percentage(stat['slip_pct_acc'] / stat['slip_cnt'])
+                                if stat['slip_cnt'] > 0 else 'N/A')
+        win_rate = stat['win_cnt'] / stat['cnt']
+        stat['win_rate'] = f'{win_rate * 100:.2f}%'
+        for k in ['gl', 'slip']:
+            v = stat[k]
+            color = 'green' if v > 0 else 'red'
+            stat[k] = get_colored_value(f'{v:,.2f}', color)
+
+    return flask.render_template('analytics.html',
+                                 proc_stats=proc_stats,
+                                 total_stats=total_stats,
+                                 processors=sorted(proc_stats.keys()),
+                                 job_status=get_job_status())
 
 
 def _read_log_file(log_file: str) -> str:
