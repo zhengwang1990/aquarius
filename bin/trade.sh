@@ -24,7 +24,7 @@ do
   fi
 done
 
-ln -sf "${base_dir}/outputs/trading/$(date +'%Y-%m-%d')/log.txt" "${base_dir}/log.txt"
+ln -sf "${base_dir}/outputs/trading/$(date +'%Y-%m-%d')/trading.txt" "${base_dir}/log.txt"
 
 if [[ -f "${base_dir}/bin/envs.sh" ]]
 then
