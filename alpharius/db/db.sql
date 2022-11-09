@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS transaction (
     gl real,
     gl_pct real,
     slippage real,
-    slippage_pct real,
+    slippage_pct real
 );
 
 CREATE INDEX IF NOT EXISTS transaction_exit_time ON transaction (exit_time);
