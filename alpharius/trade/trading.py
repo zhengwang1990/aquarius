@@ -1,6 +1,5 @@
 import collections
 import datetime
-import threading
 import time
 import os
 from concurrent import futures
@@ -187,9 +186,7 @@ class Trading:
         self._logger.info('Got [%d] actions to process.', len(actions))
 
         executed_closes = self._trade(actions)
-        db_thread = threading.Thread(target=self._update_db,
-                                     args=(executed_closes,))
-        db_thread.start()
+        self._update_db(executed_closes)
 
     def _update_intraday_data(self, frequency_to_process: List[TradingFrequency]) -> None:
         update_start = time.time()
@@ -337,7 +334,6 @@ class Trading:
     def _update_db(self, executed_closes: List[Action]) -> None:
         current_time = time.time()
         self._upload_log()
-        time.sleep(15)
         if executed_closes:
             transactions = get_transactions(self._today.strftime('%F'))
             actions = {action.symbol: action for action in executed_closes}
