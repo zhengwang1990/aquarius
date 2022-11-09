@@ -1,3 +1,7 @@
+.card .card-body .med-show {
+    display: none;
+}
+
 @media (max-width: 1350px) {
     .card .card-body table {
         font-size: 13px;
@@ -5,6 +9,10 @@
 
     .dash-content .pagination .page-link {
         font-size: 13px;
+    }
+
+    .card .card-body .med-show {
+        display: inline;
     }
 
     .card .card-body .med-hidden {
