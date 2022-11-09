@@ -1,5 +1,6 @@
 import os
 import threading
+import traceback
 
 import flask
 from alpharius.db import Db
@@ -27,8 +28,9 @@ def _trade_impl():
         try:
             trading()
         except Exception as e:
-            app.logger.error('Fail in trading: %s', e)
-            EmailSender().send_alert(str(e))
+            error_message = str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
+            app.logger.error('Fail in trading: %s', error_message)
+            EmailSender().send_alert(error_message)
         app.logger.info('Finish trading')
         job_status = 'idle'
         lock.release()
@@ -55,8 +57,9 @@ def backfill():
     try:
         Db().backfill()
     except Exception as e:
-        app.logger.error('Fail in trading: %s', e)
-        EmailSender().send_alert(str(e))
+        error_message = str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
+        app.logger.error('Fail in trading: %s', error_message)
+        EmailSender().send_alert(error_message)
     app.logger.info('Finish backfilling')
 
 

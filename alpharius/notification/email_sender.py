@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import pytz
 import retrying
-from alpharius.utils import get_transactions
+from alpharius.utils import get_transactions, TIME_ZONE
 
 _TIME_ZONE = pytz.timezone('America/New_York')
 _SMTP_HOST = 'smtp.163.com'
@@ -135,11 +135,12 @@ class EmailSender:
         market_values = {}
         timeframe = tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day)
         for symbol in market_symbols:
-            bars = self._alpaca.get_bars(symbol,
-                                         timeframe,
-                                         historical_date[0].isoformat(),
-                                         historical_date[-1].isoformat(),
-                                         adjustment='split')
+            bars = self._alpaca.get_bars(
+                symbol,
+                timeframe,
+                historical_date[0].tz_localize(TIME_ZONE).isoformat(),
+                historical_date[-1].tz_localize(TIME_ZONE).isoformat(),
+                adjustment='split')
             symbol_close = np.array([bar.c for bar in bars])
             market_values[symbol] = symbol_close
 
