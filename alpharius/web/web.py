@@ -126,7 +126,9 @@ def _parse_log_content(content: str):
                 span_end = line.find(']', span_start)
                 spans.append(line[span_start + 1:span_end])
             message = line[span_end + 1:]
-            log_entry = {'type': spans[0].lower(),
+            log_type = spans[0].lower()
+            log_entry = {'type': log_type,
+                         'type_initial': log_type[0],
                          'time': pd.to_datetime(spans[1]).strftime('%H:%M:%S'),
                          'time_short': pd.to_datetime(spans[1]).strftime('%H:%M'),
                          'code': spans[2],

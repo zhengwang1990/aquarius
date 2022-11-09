@@ -55,7 +55,8 @@
                         <tr>
                             <td class="fit-content-cells type-cells">
                                 <span class="badge-shape badge-{{ log_entry['type'] }} ">
-                                    {{ log_entry['type'] }}
+                                    <span class="xs-hidden">{{ log_entry['type'] }}</span>
+                                    <span class="xs-show">{{ log_entry['type_initial'] }}</span>
                                 </span>
                             </td>
                             <td class="fit-content-cells">
