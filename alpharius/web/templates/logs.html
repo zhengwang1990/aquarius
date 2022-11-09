@@ -33,9 +33,12 @@
         <div class="card">
             <div class="card-body">
                 <h6>Logger</h6>
-                <select class="form-select">
-                  <option value="Trading" selected>Trading</option>
-                  <option value="OvernightProcessor">OvernightProcessor</option>
+                <select class="form-select" id="logger-select">
+                    {% for logger in loggers %}
+                        <option value="{{logger}}" {% if loop.index0 == 0 %} selected {% endif %} >
+                            {{logger}}
+                        </option>
+                    {% endfor %}
                 </select>
             </div>
         </div>
@@ -46,35 +49,42 @@
     <div class="card-header"><span class="card-title">Logs</span></div>
     <div class="card-body">
         <table class="table table-borderless table-responsive">
-            <tbody>
-            {% for log_entry in log_entries %}
-            <tr>
-                <td class="fit-content-cells type-cells">
-                    <span class="badge-shape badge-{{ log_entry['type'] }} ">
-                        {{ log_entry['type'] }}
-                    </span>
-                </td>
-                <td class="fit-content-cells">
-                    <span class="xs-hidden">{{ log_entry['time'] }}</span>
-                    <span class="xs-show">{{ log_entry['time_short'] }}</span>
-                </td>
-                <td class="xs-hidden fit-content-cells">{{ log_entry['code'] }}</td>
-                <td class="message-cells">
-                    {%- if 'message_short' in log_entry -%}
-                    <span class="xs-hidden">{{ log_entry['message'] }}</span><span class="xs-show">{{ log_entry['message_short'] }}</span>
-                    {%- else -%}
-                    {{ log_entry['message'] }}
-                    {%- endif -%}
-                </td>
-            </tr>
+            {% for logger, logger_entries in log_entries.items() %}
+                <tbody id="log-{{logger}}" style="{{ 'display:none' if loggers and logger != loggers[0] }}">
+                    {% for log_entry in logger_entries %}
+                        <tr>
+                            <td class="fit-content-cells type-cells">
+                                <span class="badge-shape badge-{{ log_entry['type'] }} ">
+                                    {{ log_entry['type'] }}
+                                </span>
+                            </td>
+                            <td class="fit-content-cells">
+                                <span class="xs-hidden">{{ log_entry['time'] }}</span>
+                                <span class="xs-show">{{ log_entry['time_short'] }}</span>
+                            </td>
+                            <td class="xs-hidden fit-content-cells">{{ log_entry['code'] }}</td>
+                            <td class="message-cells">
+                                {%- if 'message_short' in log_entry -%}
+                                <span class="xs-hidden">{{ log_entry['message'] }}</span><span class="xs-show">{{ log_entry['message_short'] }}</span>
+                                {%- else -%}
+                                {{ log_entry['message'] }}
+                                {%- endif -%}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
             {% endfor %}
-            </tbody>
         </table>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script>
+    const CURRENT_DATE = "{{ date | safe }}";
+    const DATES= {{ dates | safe }};
+    var current_logger = "{{ loggers[0] if loggers else '' }}";
+</script>
 <script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/js/datepicker.min.js"></script>
 <script src="{{ url_for('static', filename='js/logs.js') }}"></script>
 {% endblock %}

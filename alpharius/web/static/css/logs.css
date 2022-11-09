@@ -1,5 +1,9 @@
+.table {
+    font-family: monospace;
+}
+
 .table .message-cells {
-    white-space: pre-line;
+    white-space: pre-wrap;
     padding-left: 0rem;
 }
 

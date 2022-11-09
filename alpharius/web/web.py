@@ -109,20 +109,8 @@ def analytics():
                                  job_status=get_job_status())
 
 
-def _read_log_file(log_file: str) -> str:
-    log_content = ''
-    if os.path.exists(log_file):
-        with open(log_file, 'r') as f:
-            log_content = f.read()
-    return log_content
-
-
-@bp.route('/logs')
-def logs():
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-    log_file = os.path.join(base_dir, 'log.txt')
-    log_content = _read_log_file(log_file)
-    log_lines = log_content.split('\n')
+def _parse_log_content(content: str):
+    log_lines = content.split('\n')
     log_entries = []
     i = 0
     while i < len(log_lines):
@@ -144,11 +132,38 @@ def logs():
             while i < len(log_lines) and not (log_lines[i].startswith('[') and ']' in log_lines[i]):
                 log_entry['message'] += '\n' + log_lines[i]
                 i += 1
+            log_entry['message'] = log_entry['message'].lstrip()
             if len(log_entry['message']) > 200:
                 log_entry['message_short'] = log_entry['message'][:197] + '...'
             log_entries.append(log_entry)
         else:
             i += 1
+    return log_entries
+
+
+@bp.route('/logs')
+def logs():
+    client = Db()
+    dates = client.list_log_dates()
+    date = flask.request.args.get('date')
+    if (not date or date not in dates) and dates:
+        date = dates[-1]
+    results = client.get_logs(date)
+    loggers = []
+    log_entries = dict()
+    for logger, content in results:
+        loggers.append(logger)
+        log_entries[logger] = _parse_log_content(content)
+    loggers.sort()
+    for i in range(len(loggers)):
+        if loggers[i] == 'Trading':
+            for j in range(i - 1, -1, -1):
+                loggers[j + 1] = loggers[j]
+            loggers[0] = 'Trading'
+
     return flask.render_template('logs.html',
+                                 loggers=loggers,
                                  log_entries=log_entries,
+                                 date=date,
+                                 dates=dates,
                                  job_status=get_job_status())

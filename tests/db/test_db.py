@@ -77,9 +77,27 @@ def test_get_transaction_count(client, mock_engine):
 
 def test_list_aggregations(client, mock_engine):
     mock_engine.conn.execute.return_value = [
-        (pd.to_datetime('2022-11-03').date, 'Processor',
+        (pd.to_datetime('2022-11-03').date(), 'Processor',
          100, 0.01, -10, -0.01, 3, 2, 1, 1)]
+
     aggs = client.list_aggregations()
 
     mock_engine.conn.execute.assert_called_once()
     assert len(aggs) == 1
+
+
+def test_list_log_dates(client, mock_engine):
+    mock_engine.conn.execute.return_value = [[
+        pd.to_datetime('2022-11-03').date()]]
+
+    dates = client.list_log_dates()
+
+    assert dates == ['2022-11-03']
+
+
+def test_get_logs(client, mock_engine):
+    mock_engine.conn.execute.return_value = [['Logger', 'Content']]
+
+    logs = client.get_logs('2022-11-03')
+
+    assert logs == [('Logger', 'Content')]

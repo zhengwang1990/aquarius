@@ -37,6 +37,7 @@ class Trading:
                                  datetime.time(0, 0))).tz_localize(TIME_ZONE)
         self._processor_factories = processor_factories
         self._alpaca = tradeapi.REST()
+        self._db = Db()
         self._update_account()
         self._update_positions()
         self._processors = []
@@ -102,6 +103,7 @@ class Trading:
         self._interday_data = load_tradable_history(history_start, self._today, DEFAULT_DATA_SOURCE)
         self._init_processors(history_start)
         self._init_stock_universe()
+        self._upload_log()
 
         # Wait for market open
         while time.time() < self._market_open:
@@ -127,6 +129,7 @@ class Trading:
 
         # Send email
         Email(self._logger).send_email()
+        self._upload_log()
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
         self._logger.info('Process starts for [%s]', checkpoint_time.time())
@@ -332,8 +335,8 @@ class Trading:
 
     def _update_db(self, executed_closes: List[Action]) -> None:
         current_time = time.time()
+        self._upload_log()
         time.sleep(15)
-        db = Db()
         if executed_closes:
             transactions = get_transactions(self._today.strftime('%F'))
             actions = {action.symbol: action for action in executed_closes}
@@ -345,12 +348,16 @@ class Trading:
                     continue
                 transaction.processor = actions[symbol].processor
                 try:
-                    db.insert_transaction(transaction)
+                    self._db.insert_transaction(transaction)
                 except sqlalchemy.exc.SQLAlchemyError as e:
                     self._logger.warning('[%s] Transaction inserting encountered an error\n%s', symbol, e)
+            try:
+                self._db.update_aggregation(self._today.strftime('%F'))
+            except sqlalchemy.exc.SQLAlchemyError as e:
+                self._logger.warning('Aggregation updating encountered an error\n%s', e)
+
+    def _upload_log(self):
         try:
-            db.update_log(self._today.strftime('%F'))
-            if executed_closes:
-                db.update_aggregation(self._today.strftime('%F'))
+            self._db.update_log(self._today.strftime('%F'))
         except sqlalchemy.exc.SQLAlchemyError as e:
             self._logger.warning('Log updating encountered an error\n%s', e)

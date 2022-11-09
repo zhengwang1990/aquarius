@@ -1,7 +1,6 @@
 import textwrap
 
 import pandas as pd
-from alpharius.web import web
 
 
 def test_dashboard(client, mock_alpaca):
@@ -32,20 +31,16 @@ def test_transactions(client, mock_engine):
 
 def test_analytics(client, mock_engine):
     mock_engine.conn.execute.return_value = [
-        (pd.to_datetime('2022-11-02').date, 'Processor1',
+        (pd.to_datetime('2022-11-02').date(), 'Processor1',
          100, 0.01, 0, 0, 3, 2, 1, 0),
-        (pd.to_datetime('2022-11-03').date, 'Processor2',
+        (pd.to_datetime('2022-11-03').date(), 'Processor2',
          100, 0.01, -10, -0.01, 3, 2, 1, 1)]
 
     assert client.get('/analytics').status_code == 200
     assert mock_engine.conn.execute.call_count == 1
 
 
-def test_logs_no_file(client):
-    assert client.get('/logs').status_code == 200
-
-
-def test_logs_read_file(client, mocker):
+def test_logs(client, mock_engine):
     fake_data = textwrap.dedent("""
     [DEBUG] [2022-11-03 10:33:00] [main.py:11] This is debug log.
     [INFO] [2022-11-03 10:34:00] [main.py:12] This is info log.
@@ -54,6 +49,14 @@ def test_logs_read_file(client, mocker):
     More error messages.
     """)
     fake_data += 'long message' * 100
-    mocker.patch.object(web, '_read_log_file', return_value=fake_data)
+    mock_engine.conn.execute.side_effect = [
+        [[pd.to_datetime('2022-11-03').date()],
+         [pd.to_datetime('2022-11-03').date()],
+         [pd.to_datetime('2022-11-03').date()],
+         [pd.to_datetime('2022-11-03').date()]],
+        [['Trading', fake_data],
+         ['Processor1', fake_data],
+         ['Processor2', fake_data]],
+    ]
 
     assert client.get('/logs').status_code == 200
