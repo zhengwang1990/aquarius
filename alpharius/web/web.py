@@ -5,15 +5,12 @@ from concurrent import futures
 import flask
 import numpy as np
 import pandas as pd
-import pytz
 from alpharius.db import Db
-from alpharius.utils import get_signed_percentage, get_colored_value
+from alpharius.utils import get_signed_percentage, get_colored_value, TIME_ZONE
 from .alpaca_client import AlpacaClient
 from .scheduler import get_job_status
 
 bp = flask.Blueprint('web', __name__)
-
-TIME_ZONE = pytz.timezone('America/New_York')
 
 
 @bp.route('/')

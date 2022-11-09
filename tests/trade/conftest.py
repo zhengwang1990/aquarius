@@ -21,7 +21,7 @@ def mock_alpaca(mocker):
 
 @pytest.fixture(autouse=True)
 def mock_polygon(mocker):
-    os.environ['POLYGON_API_KEY'] = 'fake_polygon_api_key'
+    mocker.patch.dict(os.environ, {'POLYGON_API_KEY': 'fake_polygon_api_key'})
     client = fakes.FakePolygon()
     mocker.patch.object(polygon, 'RESTClient', return_value=client)
     return client
@@ -51,10 +51,9 @@ def mock_os(mocker):
 def mock_email(mocker):
     mocker.patch.object(image, 'MIMEImage', autospec=True)
     mocker.patch.object(multipart.MIMEMultipart, 'as_string', return_value='')
-    os.environ['POLYGON_API_KEY'] = 'fake_polygon_api_key'
-    os.environ['EMAIL_USERNAME'] = 'fake_user'
-    os.environ['EMAIL_PASSWORD'] = 'fake_password'
-    os.environ['EMAIL_RECEIVER'] = 'fake_receiver'
+    mocker.patch.dict(os.environ, {'EMAIL_USERNAME': 'fake_user',
+                                   'EMAIL_PASSWORD': 'fake_password',
+                                   'EMAIL_RECEIVER': 'fake_receiver'})
 
 
 @pytest.fixture(autouse=True)

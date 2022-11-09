@@ -18,7 +18,8 @@ Transaction = recordclass.recordclass(
 def get_transactions(start_date: Optional[str]):
     """Gets transactions from start date until today.
 
-    Start date is inclusive.
+    params:
+      start_date: The transactions after this date are fetched. Inclusive.
     """
 
     def round_time(t: pd.Timestamp):
@@ -116,6 +117,13 @@ def get_transactions(start_date: Optional[str]):
 
 
 def get_colored_value(value: str, color: str, with_arrow: bool = False):
+    """Returns HTML of a value with color annotations.
+
+    params:
+      value: The string value to be colored.
+      color: The color applied to the value. Can be green or red.
+      with_arrow: If an arrow icon is attached to the front of the value.
+    """
     arrow = ''
     if with_arrow:
         if color == 'green':
@@ -126,5 +134,11 @@ def get_colored_value(value: str, color: str, with_arrow: bool = False):
 
 
 def get_signed_percentage(value: float, with_arrow: bool = False):
+    """Returns HTML of a percentage value with sign and color annotations.
+
+    params:
+      value: The float value to be annotated with sign and color.
+      with_arrow: If an arrow icon is attached to the front of the value.
+    """
     color = 'green' if value >= 0 else 'red'
     return get_colored_value(f'{value * 100:+.2f}%', color, with_arrow)

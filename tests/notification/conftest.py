@@ -7,7 +7,7 @@ import alpaca_trade_api as tradeapi
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import pytest
-from .. import  fakes
+from .. import fakes
 
 
 @pytest.fixture(autouse=True)
@@ -29,10 +29,9 @@ def mock_matplotlib(mocker):
 def mock_email(mocker):
     mocker.patch.object(image, 'MIMEImage', autospec=True)
     mocker.patch.object(multipart.MIMEMultipart, 'as_string', return_value='')
-    os.environ['POLYGON_API_KEY'] = 'fake_polygon_api_key'
-    os.environ['EMAIL_USERNAME'] = 'fake_user'
-    os.environ['EMAIL_PASSWORD'] = 'fake_password'
-    os.environ['EMAIL_RECEIVER'] = 'fake_receiver'
+    mocker.patch.dict(os.environ, {'EMAIL_USERNAME': 'fake_user',
+                                   'EMAIL_PASSWORD': 'fake_password',
+                                   'EMAIL_RECEIVER': 'fake_receiver'})
 
 
 @pytest.fixture(autouse=True)

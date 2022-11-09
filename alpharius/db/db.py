@@ -227,7 +227,7 @@ class Db:
         return [(result[0], result[1]) for result in results]
 
     def backfill(self, start_date: Optional[str] = None) -> None:
-        """Backfill databases from start_date."""
+        """Backfills the database from start_date."""
         start_date = start_date or datetime.datetime.today().strftime('%F')
         # Backfill transaction table
         transactions = get_transactions(start_date)
@@ -247,7 +247,7 @@ class Db:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Alpharius backfill database.')
+    parser = argparse.ArgumentParser(description='Alpharius database backfilling.')
     parser.add_argument('--start_date', default=None,
                         help='Start date of the backfilling.')
     args = parser.parse_args()
