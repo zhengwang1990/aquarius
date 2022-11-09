@@ -93,12 +93,12 @@ def analytics():
 
     for stat in itertools.chain(proc_stats.values(), [total_stats]):
         stat['avg_slip_pct'] = (get_signed_percentage(stat['slip_pct_acc'] / stat['slip_cnt'])
-                                if stat['slip_cnt'] > 0 else 'N/A')
-        win_rate = stat['win_cnt'] / stat['cnt']
+                                if stat.get('slip_cnt', 0) > 0 else 'N/A')
+        win_rate = stat['win_cnt'] / stat['cnt'] if stat['cnt'] > 0 else 0
         stat['win_rate'] = f'{win_rate * 100:.2f}%'
         for k in ['gl', 'slip']:
             v = stat[k]
-            color = 'green' if v > 0 else 'red'
+            color = 'green' if v >= 0 else 'red'
             stat[k] = get_colored_value(f'{v:,.2f}', color)
 
     return flask.render_template('analytics.html',
