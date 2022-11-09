@@ -14,11 +14,6 @@ def mock_alpaca(mocker):
     return client
 
 
-@pytest.fixture(autouse=True)
-def mock_cash_reserve():
-    os.environ['CASH_RESERVE'] = '0'
-
-
 @pytest.fixture
 def app():
     app = create_app({'TESTING': True})

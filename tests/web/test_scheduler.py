@@ -3,6 +3,7 @@ import threading
 
 import pytest
 from alpharius.web import scheduler
+from .. import fakes
 
 
 def test_trigger(client, mocker):
@@ -10,6 +11,23 @@ def test_trigger(client, mocker):
 
     assert client.post('/scheduler/trigger').status_code == 200
     thread.assert_called_once()
+
+
+def test_trade(mocker):
+    # Return empty calendar so that the trading does not run
+    mock_get_calendar = mocker.patch.object(fakes.FakeAlpaca,
+                                            'get_calendar',
+                                            return_value=[])
+
+    scheduler.trade()
+
+    mock_get_calendar.assert_called_once()
+
+
+def test_backfill(mock_engine):
+    scheduler.backfill()
+
+    assert mock_engine.conn.execute.call_count > 0
 
 
 @pytest.mark.parametrize('job_name',

@@ -17,8 +17,8 @@ def mock_time(mocker):
 
 
 @pytest.fixture(autouse=True)
-def mock_cash_reserve():
-    os.environ['CASH_RESERVE'] = '0'
+def mock_cash_reserve(mocker):
+    mocker.patch.dict(os.environ, {'CASH_RESERVE': '0'})
 
 
 @pytest.fixture(autouse=True)
