@@ -43,8 +43,8 @@ def transactions():
         page = 1
     client = Db()
     count = client.get_transaction_count()
-    total_page = int(np.ceil(count / items_per_page))
-    page = min(max(1, page), total_page)
+    total_page = max(int(np.ceil(count / items_per_page)), 1)
+    page = max(min(page, total_page), 1)
     offset = (page - 1) * items_per_page
     trans = []
     time_fmt = f'<span class="med-hidden">%Y-%m-%d </span>%H:%M'
