@@ -357,4 +357,8 @@ class Trading:
         try:
             self._db.update_log(self._today.strftime('%F'))
         except sqlalchemy.exc.SQLAlchemyError as e:
-            self._logger.warning('Log updating encountered an error\n%s', e)
+            # The error message could be long since it prints the entire log file
+            error_message = str(e)
+            if len(error_message) > 300:
+                error_message = error_message[:297] + '...'
+            self._logger.warning('Log updating encountered an error\n%s', error_message)
