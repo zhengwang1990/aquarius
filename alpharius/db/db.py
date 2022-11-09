@@ -100,14 +100,9 @@ WHERE date = '{date}';
 
 class Db:
 
-    def __init__(self, logger=None) -> None:
+    def __init__(self) -> None:
         sql_string = os.environ.get('SQL_STRING')
-        self._eng = None
-        logger = logger or logging.getLogger()
-        if sql_string:
-            self._eng = sqlalchemy.create_engine(sql_string, isolation_level='AUTOCOMMIT')
-        else:
-            logger.warning('SQL_STRING not found in env vars. Db not initialized.')
+        self._eng = sqlalchemy.create_engine(sql_string, isolation_level='AUTOCOMMIT')
 
     def upsert_transaction(self, transaction: Transaction) -> None:
         self._insert_transaction(transaction, True)
@@ -116,8 +111,6 @@ class Db:
         self._insert_transaction(transaction, False)
 
     def _insert_transaction(self, transaction: Transaction, allow_conflict: bool):
-        if self._eng is None:
-            return
         transaction_id = transaction.symbol + ' ' + transaction.exit_time.strftime('%F %H:%M')
         template = INSERT_TRANSACTION_TEMPLATE
         if allow_conflict:
@@ -141,8 +134,6 @@ class Db:
             conn.execute(query)
 
     def update_aggregation(self, date: str) -> None:
-        if self._eng is None:
-            return
         start_time = f'{date} 00:00:00-04:00'
         end_time = f'{date} 23:59:59-04:00'
         select_query = SELECT_TRANSACTION_AGG_TEMPLATE.format(start_time=start_time,
@@ -187,8 +178,6 @@ class Db:
                 conn.execute(aggregation_query)
 
     def update_log(self, date: str) -> None:
-        if self._eng is None:
-            return
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
         log_dir = os.path.join(base_dir, 'outputs', 'trading', date)
         if os.path.isdir(log_dir):
