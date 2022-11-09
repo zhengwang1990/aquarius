@@ -1,13 +1,15 @@
 import time
+import threading
 
 import pytest
 from alpharius.web import scheduler
 
 
-def test_trigger(client, mock_subprocess):
-    """Trigger twice but only one should run."""
+def test_trigger(client, mocker):
+    thread = mocker.patch.object(threading, 'Thread')
+
     assert client.post('/scheduler/trigger').status_code == 200
-    assert client.post('/scheduler/trigger').status_code == 200
+    thread.assert_called_once()
 
 
 @pytest.mark.parametrize('job_name',

@@ -11,13 +11,13 @@ import pandas as pd
 import retrying
 import sqlalchemy
 from alpharius.db import Db, get_transactions
+from alpharius.notification.email_sender import EmailSender
 from .common import (
     Action, ActionType, ProcessorFactory, TradingFrequency, Context, Mode,
     TimeInterval, Position, MARKET_OPEN, DATETIME_TYPE, DEFAULT_DATA_SOURCE,
     INTERDAY_LOOKBACK_LOAD, TIME_ZONE, OUTPUT_DIR, SHORT_RESERVE_RATIO,
     logging_config, get_unique_actions, get_processor_name)
 from .data_loader import load_tradable_history, DataLoader
-from .email import Email
 
 _MAX_WORKERS = 10
 
@@ -128,7 +128,7 @@ class Trading:
             time.sleep(1)
 
         # Send email
-        Email(self._logger).send_email()
+        EmailSender(self._logger).send_summary()
         self._upload_log()
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:

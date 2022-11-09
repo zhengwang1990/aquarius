@@ -1,6 +1,4 @@
 import os
-import subprocess
-import time
 
 import alpaca_trade_api as tradeapi
 import pytest
@@ -19,11 +17,6 @@ def mock_alpaca(mocker):
 @pytest.fixture(autouse=True)
 def mock_cash_reserve():
     os.environ['CASH_RESERVE'] = '0'
-
-
-@pytest.fixture(autouse=True)
-def mock_subprocess(mocker):
-    return mocker.patch.object(subprocess, 'run', side_effect=lambda _: time.sleep(0.1))
 
 
 @pytest.fixture

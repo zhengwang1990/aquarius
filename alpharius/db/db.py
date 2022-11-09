@@ -1,8 +1,8 @@
+import argparse
 import datetime
-import logging
 import os
 import sys
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import pandas as pd
 import sqlalchemy
@@ -196,8 +196,9 @@ class Db:
                     with self._eng.connect() as conn:
                         conn.execute(query)
 
-    def backfill(self, start_date: str) -> None:
+    def backfill(self, start_date: Optional[str] = None) -> None:
         """Backfill databases from start_date."""
+        start_date = start_date or datetime.datetime.today().strftime('%F')
         # Backfill transaction table
         transactions = get_transactions(start_date)
         iterator = tqdm(transactions, ncols=80) if sys.stdout.isatty() else transactions
@@ -240,3 +241,15 @@ class Db:
         with self._eng.connect() as conn:
             results = conn.execute(query)
         return [(result[0], result[1]) for result in results]
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Alpharius backfill database.')
+    parser.add_argument('--start_date', default=None,
+                        help='Start date of the backfilling.')
+    args = parser.parse_args()
+    Db().backfill(args.start_date)
+
+
+if __name__ == '__main__':
+    main()

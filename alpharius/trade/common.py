@@ -3,7 +3,6 @@ import datetime
 import inspect
 import logging
 import os
-import sys
 from enum import Enum
 from typing import List, Optional, Union
 
@@ -131,10 +130,7 @@ def logging_config(logging_file=None, detail=True, name=None) -> logging.Logger:
     else:
         formatter = logging.Formatter('%(message)s')
     stream_handler = logging.StreamHandler()
-    if sys.stdout.isatty():
-        stream_handler.setLevel(logging.INFO)
-    else:
-        stream_handler.setLevel(logging.WARNING)
+    stream_handler.setLevel(logging.INFO)
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
     if logging_file:

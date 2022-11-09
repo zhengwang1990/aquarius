@@ -1,8 +1,10 @@
 import os
-import subprocess
 import threading
 
 import flask
+from alpharius.db import Db
+from alpharius.trade import trading
+from alpharius.notification.email_sender import EmailSender
 from flask_apscheduler import APScheduler
 
 app = flask.Flask(__name__)
@@ -20,14 +22,14 @@ def _trade_impl():
     global job_status, lock
     acquired = lock.acquire(blocking=False)
     if acquired:
-        bin_file = os.path.join(BASE_DIR, 'bin', 'trade.sh')
-        app.logger.info('Start running [%s]', bin_file)
+        app.logger.info('Start trading')
         job_status = 'running'
         try:
-            subprocess.run(['/bin/bash', bin_file])
+            trading()
         except Exception as e:
-            app.logger.error('Fail running [%s]: %s', bin_file, e)
-        app.logger.info('Finish running [%s]', bin_file)
+            app.logger.error('Fail in trading: %s', e)
+            EmailSender().send_alert(str(e))
+        app.logger.info('Finish trading')
         job_status = 'idle'
         lock.release()
     else:
@@ -49,10 +51,13 @@ def trade():
 @scheduler.task('cron', id='backfill', day_of_week='mon-fri',
                 hour='16,17,22', minute=15, timezone='America/New_York')
 def backfill():
-    bin_file = os.path.join(BASE_DIR, 'bin', 'backfill.sh')
-    app.logger.info('Start running [%s]', bin_file)
-    subprocess.run(['/bin/bash', bin_file])
-    app.logger.info('Finish running [%s]', bin_file)
+    app.logger.info('Start backfilling')
+    try:
+        Db().backfill()
+    except Exception as e:
+        app.logger.error('Fail in trading: %s', e)
+        EmailSender().send_alert(str(e))
+    app.logger.info('Finish backfilling')
 
 
 @bp.route('/trigger', methods=['POST'])

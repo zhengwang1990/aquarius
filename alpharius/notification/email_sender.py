@@ -1,5 +1,5 @@
+import argparse
 import datetime
-import functools
 import email.mime.image as image
 import email.mime.multipart as multipart
 import email.mime.text as text
@@ -15,18 +15,17 @@ import alpaca_trade_api as tradeapi
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pytz
 import retrying
 from alpharius.db import get_transactions
-from .common import (TimeInterval, DEFAULT_DATA_SOURCE,
-                     DATETIME_TYPE, TIME_ZONE, timestamp_to_index)
-from .data_loader import DataLoader
 
+_TIME_ZONE = pytz.timezone('America/New_York')
 _SMTP_HOST = 'smtp.163.com'
 _SMTP_PORT = 25
 _HTML_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'html')
 
 
-class Email:
+class EmailSender:
     def __init__(self, logger: Optional[logging.Logger] = None) -> None:
         username = os.environ.get('EMAIL_USERNAME')
         password = os.environ.get('EMAIL_PASSWORD')
@@ -39,8 +38,6 @@ class Email:
         self._sender = f'Stock Trading System <{username}@163.com>'
         self._receiver = receiver
         self._alpaca = tradeapi.REST()
-        self._interday_data_loader = DataLoader(TimeInterval.DAY, DEFAULT_DATA_SOURCE)
-        self._intraday_data_loader = DataLoader(TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
         self._create_client(username, password)
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
@@ -63,25 +60,7 @@ class Email:
     def _get_color_style(value: float):
         return 'style="color:{};"'.format('green' if value >= 0 else 'red')
 
-    @staticmethod
-    def _round_time(t: pd.Timestamp):
-        if t.second < 30:
-            return t.strftime('%H:%M')
-        return (t + datetime.timedelta(minutes=1)).strftime('%H:%M')
-
-    @functools.lru_cache()
-    def _load_daily_data(self, symbol: str, day: DATETIME_TYPE) -> pd.DataFrame:
-        return self._intraday_data_loader.load_daily_data(symbol, day)
-
-    def _get_historical_price(self, symbol: str, t: pd.Timestamp) -> Optional[float]:
-        intraday_data = self._load_daily_data(symbol, t)
-        round_t_str = t.strftime('%F ') + self._round_time(t) + ':00'
-        round_t = pd.to_datetime(round_t_str).tz_localize(TIME_ZONE) - datetime.timedelta(minutes=5)
-        ind = timestamp_to_index(intraday_data.index, round_t)
-        if ind is not None:
-            return intraday_data['Close'][ind]
-
-    def send_email(self):
+    def send_summary(self):
         if not self._client:
             self._logger.warning('Email client not created')
             return
@@ -154,11 +133,14 @@ class Email:
         historical_date = [market_day for market_day in market_dates[-history_length:]]
         market_symbols = ['DIA', 'SPY', 'QQQ']
         market_values = {}
+        timeframe = tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day)
         for symbol in market_symbols:
-            symbol_data = self._interday_data_loader.load_data_list(
-                symbol, historical_date[0],
-                historical_date[-1] + datetime.timedelta(days=1))
-            symbol_close = np.array(symbol_data['Close'])
+            bars = self._alpaca.get_bars(symbol,
+                                         timeframe,
+                                         historical_date[0].isoformat(),
+                                         historical_date[-1].isoformat(),
+                                         adjustment='split')
+            symbol_close = np.array([bar.c for bar in bars])
             market_values[symbol] = symbol_close
 
         intraday_gain = account_equity - history.equity[-1]
@@ -223,8 +205,7 @@ class Email:
             'Content-Disposition', 'attachment; filename=history.png')
         history_image.add_header('Content-ID', '<history>')
 
-        html_template_path = os.path.join(_HTML_DIR,
-                                          'email.html')
+        html_template_path = os.path.join(_HTML_DIR, 'summary.html')
         with open(html_template_path, 'r') as f:
             html_template = f.read()
         message.attach(text.MIMEText(html_template.format(
@@ -233,23 +214,22 @@ class Email:
         message.attach(history_image)
         self._send_mail(message)
 
-    def send_alert(self, log_file: str, exit_code: Union[int, str], title: str):
+    def send_alert(self, error_message: Optional[str]):
         if not self._client:
             self._logger.warning('Email client not created')
             return
         else:
             self._logger.info('Sending alert')
-        message = self._create_message('Alert', title)
+        message = self._create_message('Alert', 'An unexpected error was encountered')
         html_template_path = os.path.join(_HTML_DIR, 'alert.html')
         with open(html_template_path, 'r') as f:
             html_template = f.read()
         error_time = pd.Timestamp(
-            int(time.time()), unit='s', tz=TIME_ZONE).strftime('%F %H:%M')
-        with open(log_file, 'r') as f:
-            log_content = f.read()
-        error_log = html.escape(log_content)
+            int(time.time()), unit='s', tz=_TIME_ZONE).strftime('%F %H:%M')
+        error_message = error_message or ''
+        error_message = html.escape(error_message)
         message.attach(text.MIMEText(html_template.format(
-            error_time=error_time, error_code=exit_code, error_log=error_log), 'html'))
+            error_time=error_time, error_message=error_message), 'html'))
         self._send_mail(message)
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
@@ -257,3 +237,21 @@ class Email:
         self._client.sendmail(
             self._sender, [self._receiver], message.as_string())
         self._client.close()
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Alpharius email client.')
+    parser.add_argument('-m', '--mode', help='Running mode. Can be summary or alert.',
+                        required=True, choices=['summary', 'alert'])
+    parser.add_argument('--error_message',
+                        help='Error message. Only used in alert mode.')
+    args = parser.parse_args()
+
+    if args.mode == 'summary':
+        EmailSender().send_summary()
+    else:
+        EmailSender().send_alert(args.error_message)
+
+
+if __name__ == '__main__':
+    main()
