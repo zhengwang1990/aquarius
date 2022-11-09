@@ -1,6 +1,5 @@
 import itertools
 import json
-import os
 from concurrent import futures
 
 import flask
@@ -133,8 +132,6 @@ def _parse_log_content(content: str):
                 log_entry['message'] += '\n' + log_lines[i]
                 i += 1
             log_entry['message'] = log_entry['message'].lstrip()
-            if len(log_entry['message']) > 200:
-                log_entry['message_short'] = log_entry['message'][:197] + '...'
             log_entries.append(log_entry)
         else:
             i += 1

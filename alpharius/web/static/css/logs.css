@@ -86,11 +86,11 @@
     }
 
     .form-control {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
     }
 
     .form-select {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
     }
 
     .btn, .btn-lg {
@@ -98,5 +98,9 @@
         --bs-btn-padding-x: 0.7rem;
         --bs-btn-font-size: 1.25rem;
         --bs-btn-border-radius: 0.5rem;
+    }
+
+    .card .card-body .table {
+        font-size: 11px;
     }
 }

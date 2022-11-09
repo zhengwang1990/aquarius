@@ -48,7 +48,6 @@ def test_logs(client, mock_engine):
     [ERROR] [2022-11-03 10:36:00] [main.py:14] This is error log.
     More error messages.
     """)
-    fake_data += 'long message' * 100
     mock_engine.conn.execute.side_effect = [
         [[pd.to_datetime('2022-11-03').date()],
          [pd.to_datetime('2022-11-03').date()],

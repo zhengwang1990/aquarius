@@ -47,7 +47,7 @@
 
 <div class="card log-card">
     <div class="card-header"><span class="card-title">Logs</span></div>
-    <div class="card-body">
+    <div class="card-body overflow-auto">
         <table class="table table-borderless table-responsive">
             {% for logger, logger_entries in log_entries.items() %}
                 <tbody id="log-{{logger}}" style="{{ 'display:none' if loggers and logger != loggers[0] }}">
@@ -63,13 +63,7 @@
                                 <span class="xs-show">{{ log_entry['time_short'] }}</span>
                             </td>
                             <td class="xs-hidden fit-content-cells">{{ log_entry['code'] }}</td>
-                            <td class="message-cells">
-                                {%- if 'message_short' in log_entry -%}
-                                <span class="xs-hidden">{{ log_entry['message'] }}</span><span class="xs-show">{{ log_entry['message_short'] }}</span>
-                                {%- else -%}
-                                {{ log_entry['message'] }}
-                                {%- endif -%}
-                            </td>
+                            <td class="message-cells">{{ log_entry['message'] }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
