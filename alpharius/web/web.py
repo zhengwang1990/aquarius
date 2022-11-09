@@ -113,12 +113,17 @@ def analytics():
 
 
 def _parse_log_content(content: str):
+    def is_entry_start(lin: str):
+        ll = lin.lower()
+        return (ll.startswith('[info] [') or ll.startswith('[warning] [')
+                or ll.startswith('[debug] [') or ll.startswith('[error] ['))
+
     log_lines = content.split('\n')
     log_entries = []
     i = 0
     while i < len(log_lines):
         line = log_lines[i]
-        if line.startswith('[') and ']' in line:
+        if is_entry_start(line):
             span_start, span_end = 0, 0
             spans = []
             for _ in range(3):
@@ -134,7 +139,7 @@ def _parse_log_content(content: str):
                          'code': spans[2],
                          'message': message}
             i += 1
-            while i < len(log_lines) and not (log_lines[i].startswith('[') and ']' in log_lines[i]):
+            while i < len(log_lines) and not is_entry_start(log_lines[i]):
                 log_entry['message'] += '\n' + log_lines[i]
                 i += 1
             log_entry['message'] = log_entry['message'].lstrip()
