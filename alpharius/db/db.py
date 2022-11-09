@@ -242,7 +242,7 @@ class Db:
     def list_log_dates(self) -> List[str]:
         with self._eng.connect() as conn:
             results = conn.execute(SELECT_LOG_DATES_QUERY)
-        return [result[0].strftime('%Y-%m-%d') for result in results]
+        return sorted([result[0].strftime('%Y-%m-%d') for result in results])
 
     def get_logs(self, date: str) -> List[Tuple[str, str]]:
         with self._eng.connect() as conn:
