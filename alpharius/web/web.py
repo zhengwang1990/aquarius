@@ -145,7 +145,7 @@ def logs():
     date = flask.request.args.get('date')
     if (not date or date not in dates) and dates:
         date = dates[-1]
-    results = client.get_logs(date)
+    results = client.get_logs(date) if date else []
     loggers = []
     log_entries = dict()
     for logger, content in results:
