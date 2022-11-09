@@ -9,7 +9,7 @@ import logging
 import os
 import smtplib
 import time
-from typing import Optional, Union
+from typing import Optional
 
 import alpaca_trade_api as tradeapi
 import matplotlib.pyplot as plt
@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import pytz
 import retrying
-from alpharius.db import get_transactions
+from alpharius.utils import get_transactions
 
 _TIME_ZONE = pytz.timezone('America/New_York')
 _SMTP_HOST = 'smtp.163.com'

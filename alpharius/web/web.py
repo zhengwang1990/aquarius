@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 import pytz
 from alpharius.db import Db
+from alpharius.utils import get_signed_percentage, get_colored_value
 from .alpaca_client import AlpacaClient
 from .scheduler import get_job_status
-from .utils import get_signed_percentage, get_colored_value
 
 bp = flask.Blueprint('web', __name__)
 

@@ -14,10 +14,11 @@ import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
 import tabulate
+from alpharius.utils import TIME_ZONE
 from .common import (
     Action, ActionType, Context, Position, Processor, ProcessorFactory, TimeInterval,
     TradingFrequency, Mode, BASE_DIR, DATETIME_TYPE, MARKET_OPEN, MARKET_CLOSE, OUTPUT_DIR,
-    DEFAULT_DATA_SOURCE, INTERDAY_LOOKBACK_LOAD, TIME_ZONE, EPSILON, BID_ASK_SPREAD,
+    DEFAULT_DATA_SOURCE, INTERDAY_LOOKBACK_LOAD, EPSILON, BID_ASK_SPREAD,
     SHORT_RESERVE_RATIO, logging_config, timestamp_to_index, get_unique_actions, get_header,
     get_processor_name)
 from .data_loader import load_cached_daily_data, load_tradable_history

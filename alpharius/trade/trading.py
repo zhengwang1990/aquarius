@@ -10,12 +10,13 @@ import alpaca_trade_api as tradeapi
 import pandas as pd
 import retrying
 import sqlalchemy
-from alpharius.db import Db, get_transactions
+from alpharius.db import Db
+from alpharius.utils import get_transactions, TIME_ZONE
 from alpharius.notification.email_sender import EmailSender
 from .common import (
     Action, ActionType, ProcessorFactory, TradingFrequency, Context, Mode,
     TimeInterval, Position, MARKET_OPEN, DATETIME_TYPE, DEFAULT_DATA_SOURCE,
-    INTERDAY_LOOKBACK_LOAD, TIME_ZONE, OUTPUT_DIR, SHORT_RESERVE_RATIO,
+    INTERDAY_LOOKBACK_LOAD, OUTPUT_DIR, SHORT_RESERVE_RATIO,
     logging_config, get_unique_actions, get_processor_name)
 from .data_loader import load_tradable_history, DataLoader
 

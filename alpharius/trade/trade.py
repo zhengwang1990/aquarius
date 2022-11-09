@@ -2,7 +2,7 @@ import argparse
 import datetime
 
 from dateutil.relativedelta import relativedelta
-from . import Backtesting, Trading, processors
+from alpharius.trade import Backtesting, Trading, processors
 
 PROCESSOR_FACTORIES = [
     processors.OvernightProcessorFactory(),

@@ -11,9 +11,10 @@ import numpy as np
 import pandas as pd
 import polygon
 import retrying
+from alpharius.utils import TIME_ZONE
 from tqdm import tqdm
 from .common import (
-    DataSource, TimeInterval, DATETIME_TYPE, TIME_ZONE, CACHE_DIR)
+    DataSource, TimeInterval, DATETIME_TYPE, CACHE_DIR)
 from .exlcusions import EXCLUSIONS
 
 _DATA_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume', 'VWAP']

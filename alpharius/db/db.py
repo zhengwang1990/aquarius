@@ -1,4 +1,5 @@
 import argparse
+import collections
 import datetime
 import os
 import sys
@@ -7,95 +8,109 @@ from typing import List, Optional, Tuple
 import pandas as pd
 import sqlalchemy
 from tqdm import tqdm
-from .utils import Aggregation, Transaction, get_transactions
+from alpharius.utils import Transaction, get_transactions, TIME_ZONE
 
-INSERT_TRANSACTION_TEMPLATE = """
+INSERT_TRANSACTION_QUERY = sqlalchemy.text("""
 INSERT INTO transaction (
   id, symbol, is_long, processor, entry_price, exit_price,
   entry_time, exit_time, qty, gl, gl_pct, slippage, slippage_pct
 )
 VALUES (
-  '{id}', '{symbol}', {is_long}, {processor}, {entry_price}, {exit_price},
-  '{entry_time}', '{exit_time}', {qty}, {gl}, {gl_pct}, {slippage}, {slippage_pct}
+  :id, :symbol, :is_long, :processor, :entry_price, :exit_price,
+  :entry_time, :exit_time, :qty, :gl, :gl_pct, :slippage, :slippage_pct
 )
-"""
+""")
 
-CONFLICT_TRANSACTION_TEMPLATE = """
+UPSERT_TRANSACTION_QUERY = sqlalchemy.text("""
+INSERT INTO transaction (
+  id, symbol, is_long, processor, entry_price, exit_price,
+  entry_time, exit_time, qty, gl, gl_pct, slippage, slippage_pct
+)
+VALUES (
+  :id, :symbol, :is_long, :processor, :entry_price, :exit_price,
+  :entry_time, :exit_time, :qty, :gl, :gl_pct, :slippage, :slippage_pct
+)
 ON CONFLICT (id) DO UPDATE
-SET slippage = {slippage},
-    slippage_pct = {slippage_pct};
-"""
+SET slippage = :slippage,
+    slippage_pct = :slippage_pct;
+""")
 
-SELECT_TRANSACTION_AGG_TEMPLATE = """
+SELECT_TRANSACTION_AGG_QUERY = sqlalchemy.text("""
 SELECT
   processor, gl, gl_pct, slippage, slippage_pct
 FROM transaction
 WHERE
-  exit_time >= '{start_time}' AND exit_time < '{end_time}';
-"""
+  exit_time >= :start_time AND exit_time < :end_time;
+""")
 
-SELECT_TRANSACTION_DETAIL_TEMPLATE = """
+SELECT_TRANSACTION_DETAIL_QUERY = sqlalchemy.text("""
 SELECT
   symbol, is_long, processor, entry_price, exit_price,
   entry_time, exit_time, qty, gl, gl_pct, slippage, slippage_pct
 FROM transaction
 ORDER BY exit_time DESC
-LIMIT {limit}
-OFFSET {offset};
-"""
+LIMIT :limit
+OFFSET :offset;
+""")
 
-COUNT_TRANSACTION_QUERY = """
+COUNT_TRANSACTION_QUERY = sqlalchemy.text("""
 SELECT COUNT(*) FROM transaction;
-"""
+""")
 
-UPSERT_AGGREGATION_TEMPLATE = """
+UPSERT_AGGREGATION_QUERY = sqlalchemy.text("""
 INSERT INTO aggregation (
   date, processor, gl, avg_gl_pct, slippage, avg_slippage_pct, 
   count, win_count, lose_count, slippage_count
 )
 VALUES (
-  '{date}', '{processor}', {gl}, {avg_gl_pct}, {slippage},
-  {avg_slippage_pct}, {count}, {win_count}, {lose_count},
-  {slippage_count}
+  :date, :processor, :gl, :avg_gl_pct, :slippage,
+  :avg_slippage_pct, :count, :win_count, :lose_count,
+  :slippage_count
 )
 ON CONFLICT (date, processor) DO UPDATE
-SET gl = {gl},
-    avg_gl_pct = {avg_gl_pct},
-    slippage = {slippage},
-    avg_slippage_pct = {avg_slippage_pct},
-    count = {count},
-    win_count = {win_count},
-    lose_count = {lose_count},
-    slippage_count = {slippage_count};
-"""
+SET gl = :gl,
+    avg_gl_pct = :avg_gl_pct,
+    slippage = :slippage,
+    avg_slippage_pct = :avg_slippage_pct,
+    count = :count,
+    win_count = :win_count,
+    lose_count = :lose_count,
+    slippage_count = :slippage_count;
+""")
 
-SELECT_AGGREGATION_QUERY = """
+SELECT_AGGREGATION_QUERY = sqlalchemy.text("""
 SELECT   
   date, processor, gl, avg_gl_pct, slippage, avg_slippage_pct, 
   count, win_count, lose_count, slippage_count
 FROM aggregation;
-"""
+""")
 
-UPSERT_LOG_TEMPLATE = """
+UPSERT_LOG_QUERY = sqlalchemy.text("""
 INSERT INTO log (
   date, logger, content
 )
 VALUES (
-  '{date}', '{logger}', '{content}'
+  :date, :logger, :content
 )
 ON CONFLICT (date, logger) DO UPDATE
-SET content = '{content}';
-"""
+SET content = :content;
+""")
 
-SELECT_LOG_DATES_QUERY = """
+SELECT_LOG_DATES_QUERY = sqlalchemy.text("""
 SELECT DISTINCT date FROM log;
-"""
+""")
 
-SELECT_LOG_QUERY = """
+SELECT_LOG_QUERY = sqlalchemy.text("""
 SELECT logger, content
 FROM log
-WHERE date = '{date}';
-"""
+WHERE date = :date;
+""")
+
+
+Aggregation = collections.namedtuple(
+    'Aggregation',
+    ['date', 'processor', 'gl', 'avg_gl_pct', 'slippage', 'avg_slippage_pct', 'count',
+     'win_count', 'lose_count', 'slippage_count'])
 
 
 class Db:
@@ -112,34 +127,31 @@ class Db:
 
     def _insert_transaction(self, transaction: Transaction, allow_conflict: bool):
         transaction_id = transaction.symbol + ' ' + transaction.exit_time.strftime('%F %H:%M')
-        template = INSERT_TRANSACTION_TEMPLATE
-        if allow_conflict:
-            template += CONFLICT_TRANSACTION_TEMPLATE
-        query = template.format(
-            id=transaction_id,
-            symbol=transaction.symbol,
-            is_long=transaction.is_long,
-            processor=f"'{transaction.processor}'" if transaction.processor else 'NULL',
-            entry_price=transaction.entry_price,
-            exit_price=transaction.exit_price,
-            entry_time=transaction.entry_time.isoformat(),
-            exit_time=transaction.exit_time.isoformat(),
-            qty=transaction.qty,
-            gl=transaction.gl,
-            gl_pct=transaction.gl_pct,
-            slippage=transaction.slippage if transaction.slippage else 'NULL',
-            slippage_pct=transaction.slippage_pct if transaction.slippage_pct else 'NULL',
-        )
+        query = UPSERT_TRANSACTION_QUERY if allow_conflict else INSERT_TRANSACTION_QUERY
         with self._eng.connect() as conn:
-            conn.execute(query)
+            conn.execute(
+                query,
+                id=transaction_id,
+                symbol=transaction.symbol,
+                is_long=transaction.is_long,
+                processor=transaction.processor if transaction.processor else None,
+                entry_price=transaction.entry_price,
+                exit_price=transaction.exit_price,
+                entry_time=transaction.entry_time.isoformat(),
+                exit_time=transaction.exit_time.isoformat(),
+                qty=transaction.qty,
+                gl=transaction.gl,
+                gl_pct=transaction.gl_pct,
+                slippage=transaction.slippage if transaction.slippage else None,
+                slippage_pct=transaction.slippage_pct if transaction.slippage_pct else None)
 
     def update_aggregation(self, date: str) -> None:
-        start_time = f'{date} 00:00:00-04:00'
-        end_time = f'{date} 23:59:59-04:00'
-        select_query = SELECT_TRANSACTION_AGG_TEMPLATE.format(start_time=start_time,
-                                                              end_time=end_time)
+        start_time = f'{date} 00:00:00'
+        end_time = f'{date} 23:59:59'
         with self._eng.connect() as conn:
-            results = conn.execute(select_query)
+            results = conn.execute(SELECT_TRANSACTION_AGG_QUERY,
+                                   start_time=pd.to_datetime(start_time).tz_localize(TIME_ZONE),
+                                   end_time=pd.to_datetime(end_time).tz_localize(TIME_ZONE))
         processor_aggs = dict()
         for result in results:
             processor, gl, gl_pct, slippage, slippage_pct = result
@@ -160,22 +172,22 @@ class Db:
             agg['count'] += 1
             agg['win_count'] += int(gl >= 0)
             agg['lose_count'] += int(gl < 0)
+
         for processor, agg in processor_aggs.items():
-            aggregation_query = UPSERT_AGGREGATION_TEMPLATE.format(
-                date=date,
-                processor=processor,
-                gl=agg['gl'],
-                avg_gl_pct=agg['gl_pct_acc'] / agg['count'],
-                slippage=agg['slippage'],
-                avg_slippage_pct=(agg['slippage_pct_acc'] / agg['slippage_count']
-                                  if agg['slippage_count'] > 0 else 0),
-                count=agg['count'],
-                win_count=agg['win_count'],
-                lose_count=agg['lose_count'],
-                slippage_count=agg['slippage_count'],
-            )
             with self._eng.connect() as conn:
-                conn.execute(aggregation_query)
+                conn.execute(
+                    UPSERT_AGGREGATION_QUERY,
+                    date=pd.to_datetime(date).date(),
+                    processor=processor,
+                    gl=agg['gl'],
+                    avg_gl_pct=agg['gl_pct_acc'] / agg['count'],
+                    slippage=agg['slippage'],
+                    avg_slippage_pct=(agg['slippage_pct_acc'] / agg['slippage_count']
+                                      if agg['slippage_count'] > 0 else 0),
+                    count=agg['count'],
+                    win_count=agg['win_count'],
+                    lose_count=agg['lose_count'],
+                    slippage_count=agg['slippage_count'])
 
     def update_log(self, date: str) -> None:
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -189,12 +201,8 @@ class Db:
                         content = f.read()
                     if not content:
                         continue
-                    content = content.replace("'", "''")
-                    query = UPSERT_LOG_TEMPLATE.format(date=date,
-                                                       logger=logger,
-                                                       content=content)
                     with self._eng.connect() as conn:
-                        conn.execute(query)
+                        conn.execute(UPSERT_LOG_QUERY, date=date, logger=logger, content=content)
 
     def backfill(self, start_date: Optional[str] = None) -> None:
         """Backfill databases from start_date."""
@@ -216,9 +224,9 @@ class Db:
             t += datetime.timedelta(days=1)
 
     def list_transactions(self, limit: int, offset: int) -> List[Transaction]:
-        query = SELECT_TRANSACTION_DETAIL_TEMPLATE.format(limit=limit, offset=offset)
         with self._eng.connect() as conn:
-            results = conn.execute(query)
+            results = conn.execute(SELECT_TRANSACTION_DETAIL_QUERY,
+                                   limit=limit, offset=offset)
         return [Transaction(*result) for result in results]
 
     def get_transaction_count(self) -> int:
@@ -237,9 +245,8 @@ class Db:
         return [result[0].strftime('%Y-%m-%d') for result in results]
 
     def get_logs(self, date: str) -> List[Tuple[str, str]]:
-        query = SELECT_LOG_QUERY.format(date=date)
         with self._eng.connect() as conn:
-            results = conn.execute(query)
+            results = conn.execute(SELECT_LOG_QUERY, date=date)
         return [(result[0], result[1]) for result in results]
 
 

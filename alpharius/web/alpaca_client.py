@@ -10,13 +10,11 @@ from typing import List, Tuple
 
 import alpaca_trade_api as tradeapi
 import pandas as pd
-import pytz
 import retrying
+from alpharius.utils import get_signed_percentage, get_colored_value, TIME_ZONE
 from dateutil.relativedelta import relativedelta
 from flask import Flask
-from .utils import get_signed_percentage, get_colored_value
 
-TIME_ZONE = pytz.timezone('America/New_York')
 
 app = Flask(__name__)
 

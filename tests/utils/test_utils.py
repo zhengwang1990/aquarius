@@ -1,8 +1,8 @@
 import datetime
 
 import pandas as pd
-from alpharius.db import get_transactions
-from ..fakes import Order
+from alpharius.utils import get_transactions
+from tests.fakes import Order
 
 
 def test_get_transactions(mocker, mock_alpaca):

@@ -1,7 +1,7 @@
 import os
 
 import pandas as pd
-from alpharius.db import Transaction
+from alpharius.utils import Transaction
 
 TEST_TRANSACTION = Transaction('SYMB', True, 'Processor', 10, 12,
                                pd.to_datetime('2022-11-03T16:00:00'),

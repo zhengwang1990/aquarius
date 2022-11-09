@@ -7,9 +7,7 @@ from enum import Enum
 from typing import List, Optional, Union
 
 import pandas as pd
-import pytz
 
-TIME_ZONE = pytz.timezone('America/New_York')
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 CACHE_DIR = os.path.join(BASE_DIR, 'cache')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'outputs')
