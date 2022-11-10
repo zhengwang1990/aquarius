@@ -255,6 +255,13 @@ def load_tradable_history(start_time: DATETIME_TYPE,
     return _load_cached_history(tradable, start_time, end_time, data_source)
 
 
+def cache_clear():
+    """Clears cache in the data_loader module."""
+    load_tradable_history.cache_clear()
+    get_tradable_symbols.cache_clear()
+    get_shortable_symbols.cache_clear()
+
+
 def load_cached_daily_data(symbol: str,
                            day: DATETIME_TYPE,
                            time_interval: TimeInterval,

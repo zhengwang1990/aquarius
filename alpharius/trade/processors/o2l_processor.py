@@ -68,7 +68,7 @@ class O2lProcessor(Processor):
         upper_threshold = o2l_avg - 4 * o2l_std
         lower_threshold = o2l_avg - 6 * o2l_std
         is_trade = lower_threshold < curent_loss < upper_threshold
-        if is_trade or (context.mode == Mode.TRADE and curent_loss < o2l_avg):
+        if is_trade or (context.mode == Mode.TRADE and curent_loss < upper_threshold * 0.8):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Current loss: {curent_loss * 100:.2f}%. '
                                f'Threshold: {lower_threshold * 100:.2f}% ~ {upper_threshold * 100:.2f}%. '

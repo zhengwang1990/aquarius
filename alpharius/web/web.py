@@ -26,8 +26,7 @@ def dashboard():
                                  histories=json.dumps(tasks['histories'].result()),
                                  orders=tasks['orders'].result(),
                                  positions=tasks['positions'].result(),
-                                 watch=tasks['watch'].result(),
-                                 job_status=get_job_status())
+                                 watch=tasks['watch'].result())
 
 
 @bp.route('/transactions')
@@ -64,8 +63,7 @@ def transactions():
     return flask.render_template('transactions.html',
                                  transactions=trans,
                                  current_page=page,
-                                 total_page=total_page,
-                                 job_status=get_job_status())
+                                 total_page=total_page)
 
 
 @bp.route('/analytics')
@@ -105,8 +103,7 @@ def analytics():
     return flask.render_template('analytics.html',
                                  proc_stats=proc_stats,
                                  total_stats=total_stats,
-                                 processors=sorted(proc_stats.keys()),
-                                 job_status=get_job_status())
+                                 processors=sorted(proc_stats.keys()))
 
 
 def _parse_log_content(content: str):
@@ -170,5 +167,9 @@ def logs():
                                  loggers=loggers,
                                  log_entries=log_entries,
                                  date=date,
-                                 dates=dates,
-                                 job_status=get_job_status())
+                                 dates=dates)
+
+
+@bp.route('/job_status')
+def job_status():
+    return get_job_status()

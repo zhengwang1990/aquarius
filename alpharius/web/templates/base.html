@@ -57,18 +57,16 @@
             <span class="logo-text">Alpharius</span>
         </span>
 
-        <span>
-            {% if job_status == 'running' %}
-                <svg class="run-animation" viewBox="0 0 60 60" fill="none">
-                    <g clip-path="url(#clip0)">
-                        <circle cx="26.695" cy="26.695" r="19.695" stroke="#E5E5E5" stroke-width="10"></circle>
-                        <path d="M27.355 48.711C15.561 48.711 6 39.15 6 27.356 6 15.56 15.561 6 27.355 6" stroke="#00DF4D" stroke-width="11" stroke-linecap="round"></path>
-                    </g>
-                    <defs>
-                        <clipPath id="clip0"><path fill="#fff" d="M0 0h54v54H0z"></path></clipPath>
-                    </defs>
-                </svg>
-            {% endif %}
+        <span id="job_status" style="display:none;">
+            <svg class="run-animation" viewBox="0 0 60 60" fill="none">
+                <g clip-path="url(#clip0)">
+                    <circle cx="26.695" cy="26.695" r="19.695" stroke="#E5E5E5" stroke-width="10"></circle>
+                    <path d="M27.355 48.711C15.561 48.711 6 39.15 6 27.356 6 15.56 15.561 6 27.355 6" stroke="#00DF4D" stroke-width="11" stroke-linecap="round"></path>
+                </g>
+                <defs>
+                    <clipPath id="clip0"><path fill="#fff" d="M0 0h54v54H0z"></path></clipPath>
+                </defs>
+            </svg>
         </span>
     </div>
 

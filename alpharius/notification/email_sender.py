@@ -35,19 +35,19 @@ class EmailSender:
         if not username or not password or not receiver:
             self._logger.warning('Email config not provided')
             return
+        self._client = self._create_client(username, password)
         self._sender = f'Stock Trading System <{username}@163.com>'
         self._receiver = receiver
         self._alpaca = tradeapi.REST()
-        self._create_client(username, password)
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
-    def _create_client(self, username: str, password: str):
+    def _create_client(self, username: str, password: str) -> smtplib.SMTP:
         self._logger.info('Logging into email server')
         client = smtplib.SMTP(_SMTP_HOST, _SMTP_PORT)
         client.starttls()
         client.ehlo()
         client.login(username, password)
-        self._client = client
+        return client
 
     def _create_message(self, category: str, title: str):
         message = multipart.MIMEMultipart('alternative')

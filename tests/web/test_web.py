@@ -59,3 +59,7 @@ def test_logs(client, mock_engine):
     ]
 
     assert client.get('/logs').status_code == 200
+
+
+def test_job_status(client):
+    assert client.get('/job_status').status_code == 200
