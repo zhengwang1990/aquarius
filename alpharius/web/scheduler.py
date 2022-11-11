@@ -43,11 +43,11 @@ def get_job_status():
 
 
 @scheduler.task('cron', id='trade', day_of_week='mon-fri',
-                hour='9-15', minute='*/10', timezone='America/New_York',
-                max_instances=2)
+                hour='9-15', minute='*/10', timezone='America/New_York')
 def trade():
     if job_status != 'running':
-        _trade_impl()
+        t = threading.Thread(target=_trade_impl)
+        t.start()
 
 
 @scheduler.task('cron', id='backfill', day_of_week='mon-fri',

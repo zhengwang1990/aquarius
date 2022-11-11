@@ -13,13 +13,13 @@ def test_trigger(client, mocker):
     thread.assert_called_once()
 
 
-def test_trade(mocker):
+def test_trade_impl(mocker):
     # Return empty calendar so that the trading does not run
     mock_get_calendar = mocker.patch.object(fakes.FakeAlpaca,
                                             'get_calendar',
                                             return_value=[])
 
-    scheduler.trade()
+    scheduler._trade_impl()
 
     mock_get_calendar.assert_called_once()
 
