@@ -28,10 +28,11 @@ const symbol_colors = {
 function change_timeframe(timeframe) {
     document.getElementById("btn-" + active_timeframe).classList.remove("active");
     document.getElementById("btn-" + timeframe).classList.add("active");
+    document.getElementById("current-change").innerHTML = HISTORIES["change_" + timeframe];
     active_timeframe = timeframe;
     sessionStorage.setItem("timeframe", active_timeframe);
 }
-document.getElementById("btn-" + active_timeframe).classList.add("active");
+change_timeframe(active_timeframe);
 
 function change_compare(symbol) {
     document.getElementById("btn-" + symbol).classList.toggle("active");
