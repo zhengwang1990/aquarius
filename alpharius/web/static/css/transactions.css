@@ -29,6 +29,10 @@
         font-size: 11px;
     }
 
+    .badge-shape {
+        font-size: 9px;
+    }
+
     .dash-content .pagination .page-link {
         font-size: 9px;
     }
