@@ -47,7 +47,7 @@
 }
 
 .dash-content #select-container{
-    padding: 25px 15px 10px 15px;
+    padding: 25px 16px 10px 16px;
 }
 
 #select-container .inline-span {
@@ -91,7 +91,11 @@
 
 @media (max-width: 800px) {
     .dash-content .log-card .card-body {
-        padding: 10px 8px 10px 8px;
+        padding: 10px 10px 10px 10px;
+    }
+
+    .dash-content #select-container{
+        padding: 25px 10px 10px 10px;
     }
 
     #select-container .inline-span {
