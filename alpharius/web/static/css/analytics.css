@@ -2,7 +2,22 @@
     display: block;
     position: relative;
     margin: auto;
-    padding: 20px 15px 15px 15px;
+    padding: 0 15px 15px 15px;
     height: 370px;
     width: 100%;
+}
+
+.dash-content #processor-select-container{
+    padding: 25px 15px 10px 15px;
+    width: 300px;
+}
+
+@media (max-width: 800px) {
+    .form-control {
+        font-size: 0.8rem;
+    }
+
+    .form-select {
+        font-size: 0.8rem;
+    }
 }

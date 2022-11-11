@@ -10,6 +10,18 @@
     <div class="col-lg-12 col-md-12 col-sm-12 col-xl-12">
         <div class="card">
             <div class="card-header"><span class="card-title">Gain / Loss</span></div>
+             <div id="processor-select-container">
+                 <div class="input-group mb-3">
+                <label class="input-group-text"><i class="uil uil-processor"></i></label>
+                <select class="form-select" id="processor-select">
+                    {% for processor in processors %}
+                        <option value="{{ processor }}" {% if loop.index0 == 0 %} selected {% endif %}>
+                            {{ processor }}
+                        </option>
+                    {% endfor %}
+                </select>
+                </div>
+            </div>
             <div id="chart-gl-container">
                 <canvas id="graph-gl-all"></canvas>
             </div>

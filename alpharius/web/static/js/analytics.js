@@ -1,18 +1,16 @@
-const values = GL_BARS["values"]["ALL"];
-var colors = [];
-for (value of values) {
-    colors.push(value >= 0 ? "rgb(5,170,40)": "rgb(237,73,55)");
+function get_dataset(processor) {
+    const values = GL_BARS["values"][processor];
+    var colors = [];
+    for (value of values) {
+        colors.push(value >= 0 ? "rgb(5,170,40)": "rgb(237,73,55)");
+    }
+    return {label: 'G/L', data: values, backgroundColor: colors};
 }
-console.log(values);
+
 const gl_data = {
     labels: GL_BARS["dates"],
-    datasets: [{
-        label: 'G/L',
-        data: values,
-        backgroundColor: colors
-    }]
+    datasets: [get_dataset("ALL PROCESSORS")]
 };
-console.log(gl_data);
 const config = {
     type: 'bar',
     data: gl_data,
@@ -37,4 +35,10 @@ const config = {
         }
     },
 };
-new Chart(document.getElementById("graph-gl-all"), config);
+const chart = new Chart(document.getElementById("graph-gl-all"), config);
+
+const processor_select = document.getElementById("processor-select");
+processor_select.addEventListener("change", function(event){
+    chart.data.datasets = [get_dataset(event.target.value)];
+    chart.update()
+});

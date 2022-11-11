@@ -117,10 +117,11 @@ def _get_gl_bars(aggs: List[Aggregation]):
         dated_values[agg.date.strftime('%F')] += agg.gl
         processors.add(agg.processor)
         processors_aggs[agg.processor].append(agg)
-
-    dates = sorted(dated_values.keys())[-60:]
+    num_days = 60
+    dates = sorted(dated_values.keys())[-num_days:]
     all_gl = [dated_values[date] for date in dates]
-    values = {'ALL': all_gl}
+    all_processors = 'ALL PROCESSORS'
+    values = {all_processors: all_gl}
     for processor in processors:
         processor_values = dict()
         for agg in processors_aggs[processor]:
@@ -128,9 +129,10 @@ def _get_gl_bars(aggs: List[Aggregation]):
         processor_gl = [processor_values.get(date, 0) for date in dates]
         values[processor] = processor_gl
 
+    processors = [all_processors] + sorted(processors)
     gl_bars = {'dates': dates,
                'values': values}
-    return gl_bars
+    return gl_bars, processors
 
 
 @bp.route('/analytics')
@@ -138,10 +140,11 @@ def analytics():
     client = Db()
     aggs = client.list_aggregations()
     stats = _get_stats(aggs)
-    gl_bars = _get_gl_bars(aggs)
+    gl_bars, processors = _get_gl_bars(aggs)
     return flask.render_template('analytics.html',
                                  stats=stats,
-                                 gl_bars=gl_bars)
+                                 gl_bars=gl_bars,
+                                 processors=processors)
 
 
 def _parse_log_content(content: str):
