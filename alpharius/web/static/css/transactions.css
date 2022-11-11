@@ -2,9 +2,13 @@
     display: none;
 }
 
-@media (max-width: 1350px) {
+@media (max-width: 1500px) {
     .card .card-body table {
         font-size: 13px;
+    }
+
+    .badge-shape {
+        font-size: 12px;
     }
 
     .dash-content .pagination .page-link {
