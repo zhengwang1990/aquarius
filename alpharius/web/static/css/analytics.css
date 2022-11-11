@@ -7,17 +7,29 @@
     width: 100%;
 }
 
-.dash-content #processor-select-container{
+.dash-content #gl-select-container{
     padding: 25px 15px 10px 15px;
-    width: 300px;
+}
+
+#gl-select-container .inline-span {
+    display: inline-block;
+}
+
+.dash-content .input-group .form-select {
+    width: 250px;
 }
 
 @media (max-width: 800px) {
     .form-control {
-        font-size: 0.8rem;
+        font-size: 0.7rem;
     }
 
-    .form-select {
-        font-size: 0.8rem;
+    #gl-select-container .inline-span {
+        width: calc(50% - 10px);
+    }
+
+    .dash-content .input-group .form-select {
+        font-size: 0.7rem;
+        width: calc(100% - 200px);
     }
 }

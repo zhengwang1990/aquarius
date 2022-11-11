@@ -19,7 +19,6 @@ const datepicker = new Datepicker(elem, {
     maxDate: max_date,
     datesDisabled: dates_disabled,
 });
-document.getElementById("calendar-icon").addEventListener("click", () => {datepicker.show()});
 datepicker.setDate(Date.parse(CURRENT_DATE) + tz_offset);
 elem.addEventListener("changeDate", function(event){
     location.href = "logs?date=" + datepicker.getDate("yyyy-mm-dd");

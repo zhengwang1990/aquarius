@@ -1,5 +1,5 @@
-function get_dataset(processor) {
-    const values = GL_BARS["values"][processor];
+function get_dataset(timeframe, processor) {
+    const values = GL_BARS["values"][timeframe][processor];
     var colors = [];
     for (value of values) {
         colors.push(value >= 0 ? "rgb(5,170,40)": "rgb(237,73,55)");
@@ -7,13 +7,9 @@ function get_dataset(processor) {
     return {label: 'G/L', data: values, backgroundColor: colors};
 }
 
-const gl_data = {
-    labels: GL_BARS["dates"],
-    datasets: [get_dataset("ALL PROCESSORS")]
-};
 const config = {
     type: 'bar',
-    data: gl_data,
+    data: {},
     options: {
         maintainAspectRatio: false,
         plugins: {
@@ -36,9 +32,19 @@ const config = {
     },
 };
 const chart = new Chart(document.getElementById("graph-gl-all"), config);
-
 const processor_select = document.getElementById("processor-select");
-processor_select.addEventListener("change", function(event){
-    chart.data.datasets = [get_dataset(event.target.value)];
-    chart.update()
-});
+const timeframe_select = document.getElementById("timeframe-select");
+
+function update_chart() {
+    chart.data = {
+        labels: GL_BARS["labels"][timeframe_select.value],
+        datasets: [get_dataset(timeframe_select.value, processor_select.value)]
+    }
+    chart.update();
+}
+update_chart();
+for (select of [processor_select, timeframe_select]) {
+    select.addEventListener("change", function(event){
+        update_chart();
+    });
+}

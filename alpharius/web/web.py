@@ -110,28 +110,32 @@ def _get_stats(aggs: List[Aggregation]):
 
 
 def _get_gl_bars(aggs: List[Aggregation]):
-    dated_values = collections.defaultdict(int)
+    dated_values = {'Daily': collections.defaultdict(int),
+                    'Monthly': collections.defaultdict(int)}
     processors = set()
     processors_aggs = collections.defaultdict(list)
     for agg in aggs:
-        dated_values[agg.date.strftime('%F')] += agg.gl
+        dated_values['Daily'][agg.date.strftime('%F')] += agg.gl
+        dated_values['Monthly'][agg.date.strftime('%Y-%m')] += agg.gl
         processors.add(agg.processor)
         processors_aggs[agg.processor].append(agg)
-    num_days = 60
-    dates = sorted(dated_values.keys())[-num_days:]
-    all_gl = [dated_values[date] for date in dates]
+    num_cuts = {'Daily': 60, 'Monthly': 48}
+    labels = dict()
+    values = dict()
     all_processors = 'ALL PROCESSORS'
-    values = {all_processors: all_gl}
-    for processor in processors:
-        processor_values = dict()
-        for agg in processors_aggs[processor]:
-            processor_values[agg.date.strftime('%F')] = agg.gl
-        processor_gl = [processor_values.get(date, 0) for date in dates]
-        values[processor] = processor_gl
-
+    for timeframe in ['Daily', 'Monthly']:
+        labels[timeframe] = sorted(dated_values[timeframe].keys())[-num_cuts[timeframe]:]
+        all_gl = [dated_values[timeframe][label] for label in labels[timeframe]]
+        values[timeframe] = {all_processors: all_gl}
+        for processor in processors:
+            processor_values = collections.defaultdict(int)
+            for agg in processors_aggs[processor]:
+                processor_values[agg.date.strftime('%F')] = agg.gl
+                processor_values[agg.date.strftime('%Y-%m')] += agg.gl
+            processor_gl = [processor_values.get(label, 0) for label in labels[timeframe]]
+            values[timeframe][processor] = processor_gl
     processors = [all_processors] + sorted(processors)
-    gl_bars = {'dates': dates,
-               'values': values}
+    gl_bars = {'labels': labels, 'values': values}
     return gl_bars, processors
 
 
