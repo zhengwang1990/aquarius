@@ -1,9 +1,22 @@
 {% extends "base.html" %}
 
 {% block header %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/analytics.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {% endblock %}
 
 {% block content %}
+<div class="row">
+    <div class="col-lg-12 col-md-12 col-sm-12 col-xl-12">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Gain / Loss</span></div>
+            <div id="chart-gl-container">
+                <canvas id="graph-gl-all"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-lg-12 col-md-12 col-sm-12 col-xl-6">
         <div class="card fix-height-card">
@@ -24,20 +37,18 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for processor in processors %}
+                        {% for stat in stats %}
                         <tr>
-                            <td>{{ processor }}</td>
-                            <td>{{ proc_stats[processor]['gl'] | safe }}</td>
-                            <td>{{ proc_stats[processor]['win_rate'] }}</td>
-                            <td>{{ proc_stats[processor]['cnt'] }}</td>
+                            <td>
+                                {%- if stat['processor'] == 'ALL' -%} <b> {%- endif -%}
+                                {{ stat['processor'] }}
+                                {%- if stat['processor'] == 'ALL' -%} </b> {%- endif -%}
+                            </td>
+                            <td>{{ stat['gl'] | safe }}</td>
+                            <td>{{ stat['win_rate'] }}</td>
+                            <td>{{ stat['cnt'] }}</td>
                         </tr>
                         {% endfor %}
-                        <tr>
-                            <td><b>ALL</b></td>
-                            <td>{{ total_stats['gl'] | safe }}</td>
-                            <td>{{ total_stats['win_rate'] }}</td>
-                            <td>{{ total_stats['cnt'] }}</td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -66,20 +77,18 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for processor in processors %}
+                        {% for stat in stats %}
                         <tr>
-                            <td>{{ processor }}</td>
-                            <td>{{ proc_stats[processor]['slip'] | safe }}</td>
-                            <td>{{ proc_stats[processor]['avg_slip_pct'] | safe }}</td>
-                            <td>{{ proc_stats[processor]['slip_cnt'] }}</td>
+                            <td>
+                                {%- if stat['processor'] == 'ALL' -%} <b> {%- endif -%}
+                                {{ stat['processor'] }}
+                                {%- if stat['processor'] == 'ALL' -%} </b> {%- endif -%}
+                            </td>
+                            <td>{{ stat['slip'] | safe }}</td>
+                            <td>{{ stat['avg_slip_pct'] | safe }}</td>
+                            <td>{{ stat['slip_cnt'] }}</td>
                         </tr>
                         {% endfor %}
-                        <tr>
-                            <td><b>ALL</b></td>
-                            <td>{{ total_stats['slip'] | safe }}</td>
-                            <td>{{ total_stats['avg_slip_pct'] | safe }}</td>
-                            <td>{{ total_stats['slip_cnt'] }}</td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -89,4 +98,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+    const GL_BARS = {{ gl_bars | safe }};
+</script>
+<script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
 {% endblock %}

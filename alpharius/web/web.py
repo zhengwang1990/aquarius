@@ -1,11 +1,12 @@
-import itertools
+import collections
 import json
 from concurrent import futures
+from typing import List
 
 import flask
 import numpy as np
 import pandas as pd
-from alpharius.db import Db
+from alpharius.db import Aggregation, Db
 from alpharius.utils import get_signed_percentage, get_colored_value, TIME_ZONE
 from .alpaca_client import AlpacaClient
 from .scheduler import get_job_status
@@ -66,31 +67,30 @@ def transactions():
                                  total_page=total_page)
 
 
-@bp.route('/analytics')
-def analytics():
-    client = Db()
-    aggs = client.list_aggregations()
-    proc_stats = dict()
+def _get_stats(aggs: List[Aggregation]):
+    stats = dict()
     for agg in aggs:
         processor = agg.processor
-        if processor not in proc_stats:
-            proc_stats[processor] = {'gl': 0, 'gl_pct_acc': 0, 'cnt': 0, 'win_cnt': 0,
-                                     'slip': 0, 'slip_pct_acc': 0, 'slip_cnt': 0}
-        proc_stats[processor]['gl'] += agg.gl
-        proc_stats[processor]['cnt'] += agg.count
-        proc_stats[processor]['win_cnt'] += agg.win_count
-        proc_stats[processor]['slip'] += agg.slippage
+        if processor not in stats:
+            stats[processor] = {'gl': 0, 'gl_pct_acc': 0, 'cnt': 0, 'win_cnt': 0,
+                                'slip': 0, 'slip_pct_acc': 0, 'slip_cnt': 0}
+        stats[processor]['gl'] += agg.gl
+        stats[processor]['cnt'] += agg.count
+        stats[processor]['win_cnt'] += agg.win_count
+        stats[processor]['slip'] += agg.slippage
         if agg.slippage_count > 0:
-            proc_stats[processor]['slip_pct_acc'] += agg.avg_slippage_pct * agg.slippage_count
-            proc_stats[processor]['slip_cnt'] += agg.slippage_count
+            stats[processor]['slip_pct_acc'] += agg.avg_slippage_pct * agg.slippage_count
+            stats[processor]['slip_cnt'] += agg.slippage_count
     total_stats = dict()
-    for stat in proc_stats.values():
+    for stat in stats.values():
         for k, v in stat.items():
             if k not in total_stats:
                 total_stats[k] = 0
             total_stats[k] += v
+    stats['ALL'] = total_stats
 
-    for stat in itertools.chain(proc_stats.values(), [total_stats]):
+    for processor, stat in stats.items():
+        stat['processor'] = processor
         stat['avg_slip_pct'] = (get_signed_percentage(stat['slip_pct_acc'] / stat['slip_cnt'])
                                 if stat.get('slip_cnt', 0) > 0 else 'N/A')
         win_rate = stat['win_cnt'] / stat['cnt'] if stat.get('cnt', 0) > 0 else 0
@@ -100,10 +100,48 @@ def analytics():
             color = 'green' if v >= 0 else 'red'
             stat[k] = get_colored_value(f'{v:,.2f}', color)
 
+    # Order stats alphabetically with 'ALL' appearing at last
+    processors = sorted(stats.keys())
+    for i in range(len(processors)):
+        if processors[i] == 'ALL':
+            for j in range(i + 1, len(processors)):
+                processors[j], processors[j - 1] = processors[j - 1], processors[j]
+    return [stats[processor] for processor in processors]
+
+
+def _get_gl_bars(aggs: List[Aggregation]):
+    dated_values = collections.defaultdict(int)
+    processors = set()
+    processors_aggs = collections.defaultdict(list)
+    for agg in aggs:
+        dated_values[agg.date.strftime('%F')] += agg.gl
+        processors.add(agg.processor)
+        processors_aggs[agg.processor].append(agg)
+
+    dates = sorted(dated_values.keys())[-60:]
+    all_gl = [dated_values[date] for date in dates]
+    values = {'ALL': all_gl}
+    for processor in processors:
+        processor_values = dict()
+        for agg in processors_aggs[processor]:
+            processor_values[agg.date.strftime('%F')] = agg.gl
+        processor_gl = [processor_values.get(date, 0) for date in dates]
+        values[processor] = processor_gl
+
+    gl_bars = {'dates': dates,
+               'values': values}
+    return gl_bars
+
+
+@bp.route('/analytics')
+def analytics():
+    client = Db()
+    aggs = client.list_aggregations()
+    stats = _get_stats(aggs)
+    gl_bars = _get_gl_bars(aggs)
     return flask.render_template('analytics.html',
-                                 proc_stats=proc_stats,
-                                 total_stats=total_stats,
-                                 processors=sorted(proc_stats.keys()))
+                                 stats=stats,
+                                 gl_bars=gl_bars)
 
 
 def _parse_log_content(content: str):
