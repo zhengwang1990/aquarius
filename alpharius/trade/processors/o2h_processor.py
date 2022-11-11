@@ -66,7 +66,7 @@ class O2hProcessor(Processor):
         current_gain = context.current_price / market_open_price - 1
         z_score = (current_gain - o2h_avg) / (o2h_std + 1E-7)
         is_trade = 3 > z_score > 2
-        if is_trade or (context.mode == Mode.TRADE and current_gain > o2h_avg):
+        if is_trade or (context.mode == Mode.TRADE and z_score > 1):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Current gain: {current_gain * 100:.2f}%. Z-score: {z_score}. '
                                f'Current price {context.current_price}.')
