@@ -1,8 +1,12 @@
 import argparse
 import datetime
 
+import matplotlib
 from dateutil.relativedelta import relativedelta
 from alpharius.trade import Backtesting, Trading, processors
+
+# Interactive plot is not disabled when trading or backtesting is invoked.
+matplotlib.use('agg')
 
 PROCESSOR_FACTORIES = [
     processors.OvernightProcessorFactory(),

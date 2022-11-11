@@ -7,7 +7,7 @@ else
   base_dir=$(dirname "$bin_dir")
 fi
 
-directories=("${base_dir}/cache/DAY" "${base_dir}/cache/stock_universe"/* "${base_dir}/outputs/trading")
+directories=("${base_dir}/cache/DAY" "${base_dir}/cache/stock_universe"/* "${base_dir}/outputs/trading" "${base_dir}/outputs/backtesting")
 for directory in "${directories[@]}"
 do
   if [[ -d "${directory}" ]]
