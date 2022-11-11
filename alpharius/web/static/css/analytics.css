@@ -7,24 +7,21 @@
     width: 100%;
 }
 
-.dash-content #gl-select-container{
+.dash-content #select-container{
     padding: 25px 15px 10px 15px;
 }
 
-#gl-select-container .inline-span {
+#select-container .inline-span {
     display: inline-block;
 }
 
 .dash-content .input-group .form-select {
     width: 250px;
+    font-size: 15px;
 }
 
 @media (max-width: 800px) {
-    .form-control {
-        font-size: 0.7rem;
-    }
-
-    #gl-select-container .inline-span {
+    #select-container .inline-span {
         width: calc(50% - 10px);
     }
 

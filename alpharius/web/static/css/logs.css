@@ -42,12 +42,21 @@
     margin-bottom: 15px;
 }
 
-.dash-content .card .card-body .input-group {
+.dash-content .card .datepicker-picker {
     font-family: BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif
 }
 
-.form-select {
-    height: 38px;
+.dash-content #select-container{
+    padding: 25px 15px 10px 15px;
+}
+
+#select-container .inline-span {
+    display: inline-block;
+}
+
+.dash-content .input-group .form-select, .form-control {
+    font-size: 15px;
+    width: 250px;
 }
 
 #nav-buttons {
@@ -85,12 +94,13 @@
         padding: 10px 8px 10px 8px;
     }
 
-    .form-control {
-        font-size: 0.7rem;
+    #select-container .inline-span {
+        width: calc(50% - 10px);
     }
 
-    .form-select {
+    .dash-content .input-group .form-select, .form-control {
         font-size: 0.7rem;
+        width: calc(100% - 200px);
     }
 
     .btn, .btn-lg {
