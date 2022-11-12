@@ -102,33 +102,33 @@ class Trading:
         self._interday_data = load_tradable_history(history_start, self._today, DEFAULT_DATA_SOURCE)
         self._init_processors(history_start)
         self._init_stock_universe()
-        self._upload_log()
-
-        # Wait for market open
-        while time.time() < self._market_open:
-            time.sleep(10)
-
-        # Process
-        processed = []
-        while time.time() < self._market_close:
-            current_time = pd.to_datetime(pd.Timestamp(int(time.time()), unit='s', tz=TIME_ZONE))
-            next_minute = current_time + datetime.timedelta(minutes=1)
-            if int(current_time.minute) % 5 == 4:
-                checkpoint_time = pd.to_datetime(
-                    pd.Timestamp.combine(self._today.date(),
-                                         datetime.time(int(next_minute.hour),
-                                                       int(next_minute.minute)))).tz_localize(TIME_ZONE)
-                trigger_seconds = 50
-                if checkpoint_time.timestamp() == self._market_close:
-                    trigger_seconds -= 10
-                if current_time.second > trigger_seconds and checkpoint_time not in processed:
-                    self._process(checkpoint_time)
-                    processed.append(checkpoint_time)
-            time.sleep(1)
-
-        # Send email
-        EmailSender(self._logger).send_summary()
-        self._upload_log()
+        # self._upload_log()
+        #
+        # # Wait for market open
+        # while time.time() < self._market_open:
+        #     time.sleep(10)
+        #
+        # # Process
+        # processed = []
+        # while time.time() < self._market_close:
+        #     current_time = pd.to_datetime(pd.Timestamp(int(time.time()), unit='s', tz=TIME_ZONE))
+        #     next_minute = current_time + datetime.timedelta(minutes=1)
+        #     if int(current_time.minute) % 5 == 4:
+        #         checkpoint_time = pd.to_datetime(
+        #             pd.Timestamp.combine(self._today.date(),
+        #                                  datetime.time(int(next_minute.hour),
+        #                                                int(next_minute.minute)))).tz_localize(TIME_ZONE)
+        #         trigger_seconds = 50
+        #         if checkpoint_time.timestamp() == self._market_close:
+        #             trigger_seconds -= 10
+        #         if current_time.second > trigger_seconds and checkpoint_time not in processed:
+        #             self._process(checkpoint_time)
+        #             processed.append(checkpoint_time)
+        #     time.sleep(1)
+        #
+        # # Send email
+        # EmailSender(self._logger).send_summary()
+        # self._upload_log()
 
         cache_clear()
 
