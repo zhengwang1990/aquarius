@@ -21,7 +21,7 @@ from .common import (
     DEFAULT_DATA_SOURCE, INTERDAY_LOOKBACK_LOAD, EPSILON, BID_ASK_SPREAD,
     SHORT_RESERVE_RATIO, logging_config, timestamp_to_index, get_unique_actions, get_header,
     get_processor_name)
-from .data_loader import load_cached_daily_data, load_tradable_history, cache_clear
+from .data_loader import load_cached_daily_data, load_tradable_history
 
 _MAX_WORKERS = 20
 
@@ -86,8 +86,6 @@ class Backtesting:
         self._plot_summary()
         for processor in self._processors:
             processor.teardown()
-        self._prepare_interday_lookback.cache_clear()
-        cache_clear()
 
     def _init_processors(self, history_start) -> None:
         self._processors = []

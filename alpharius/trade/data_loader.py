@@ -185,7 +185,6 @@ class DataLoader:
         return trades
 
 
-@functools.lru_cache()
 def get_tradable_symbols() -> List[str]:
     alpaca = tradeapi.REST()
     assets = alpaca.list_assets()
@@ -197,7 +196,6 @@ def get_tradable_symbols() -> List[str]:
     return tradable
 
 
-@functools.lru_cache()
 def get_shortable_symbols() -> List[str]:
     alpaca = tradeapi.REST()
     assets = alpaca.list_assets()
@@ -208,27 +206,6 @@ def get_shortable_symbols() -> List[str]:
                  and asset.fractionable]
     shortable = sorted(list(set(shortable).difference(EXCLUSIONS)))
     return shortable
-
-
-def _load_cached_history(symbols: List[str],
-                         start_time: DATETIME_TYPE,
-                         end_time: DATETIME_TYPE,
-                         data_source: DataSource) -> Dict[str, pd.DataFrame]:
-    cache_dir = os.path.join(CACHE_DIR, str(TimeInterval.DAY),
-                             start_time.strftime('%F'), end_time.strftime('%F'))
-    os.makedirs(cache_dir, exist_ok=True)
-    data_loader = DataLoader(TimeInterval.DAY, data_source)
-    res = {}
-    tasks = {}
-    with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
-        for symbol in symbols:
-            t = pool.submit(_load_cached_symbol_history, symbol,
-                            start_time, end_time, data_loader)
-            tasks[symbol] = t
-        iterator = tqdm(tasks.items(), ncols=80) if sys.stdout.isatty() else tasks.items()
-        for symbol, t in iterator:
-            res[symbol] = t.result()
-    return res
 
 
 def _load_cached_symbol_history(symbol: str,
@@ -247,19 +224,26 @@ def _load_cached_symbol_history(symbol: str,
     return hist
 
 
-@functools.lru_cache()
+@functools.lru_cache(maxsize=1)
 def load_tradable_history(start_time: DATETIME_TYPE,
                           end_time: DATETIME_TYPE,
                           data_source: DataSource) -> Dict[str, pd.DataFrame]:
-    tradable = get_tradable_symbols()
-    return _load_cached_history(tradable, start_time, end_time, data_source)
-
-
-def cache_clear():
-    """Clears cache in the data_loader module."""
-    load_tradable_history.cache_clear()
-    get_tradable_symbols.cache_clear()
-    get_shortable_symbols.cache_clear()
+    symbols = get_tradable_symbols()
+    cache_dir = os.path.join(CACHE_DIR, str(TimeInterval.DAY),
+                             start_time.strftime('%F'), end_time.strftime('%F'))
+    os.makedirs(cache_dir, exist_ok=True)
+    data_loader = DataLoader(TimeInterval.DAY, data_source)
+    res = {}
+    tasks = {}
+    with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
+        for symbol in symbols:
+            t = pool.submit(_load_cached_symbol_history, symbol,
+                            start_time, end_time, data_loader)
+            tasks[symbol] = t
+        iterator = tqdm(tasks.items(), ncols=80) if sys.stdout.isatty() else tasks.items()
+        for symbol, t in iterator:
+            res[symbol] = t.result()
+    return res
 
 
 def load_cached_daily_data(symbol: str,

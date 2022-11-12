@@ -18,7 +18,7 @@ from .common import (
     TimeInterval, Position, MARKET_OPEN, DATETIME_TYPE, DEFAULT_DATA_SOURCE,
     INTERDAY_LOOKBACK_LOAD, OUTPUT_DIR, SHORT_RESERVE_RATIO,
     logging_config, get_unique_actions, get_processor_name)
-from .data_loader import load_tradable_history, cache_clear, DataLoader
+from .data_loader import load_tradable_history, DataLoader
 
 _MAX_WORKERS = 10
 
@@ -129,8 +129,6 @@ class Trading:
         # Send email
         EmailSender(self._logger).send_summary()
         self._upload_log()
-
-        cache_clear()
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
         self._logger.info('Process starts for [%s]', checkpoint_time.time())
