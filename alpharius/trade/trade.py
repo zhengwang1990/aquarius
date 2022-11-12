@@ -19,18 +19,6 @@ PROCESSOR_FACTORIES = [
 ]
 
 
-def backtesting(start_date: str = None,
-                end_date: str = None) -> None:
-    today = get_today()
-    default_start_date = (today - relativedelta(years=1)).strftime('%F')
-    default_end_date = (today + datetime.timedelta(days=1)).strftime('%F')
-    start_date = start_date or default_start_date
-    end_date = end_date or default_end_date
-    runner = Backtesting(start_date=start_date, end_date=end_date,
-                         processor_factories=PROCESSOR_FACTORIES)
-    runner.run()
-
-
 def main():
     parser = argparse.ArgumentParser(description='Alpharius stock trading.')
 
@@ -43,7 +31,14 @@ def main():
     args = parser.parse_args()
 
     if args.mode == 'backtest':
-        backtesting(args.start_date, args.end_date)
+        today = get_today()
+        default_start_date = (today - relativedelta(years=1)).strftime('%F')
+        default_end_date = (today + datetime.timedelta(days=1)).strftime('%F')
+        start_date = args.start_date or default_start_date
+        end_date = args.end_date or default_end_date
+        runner = Backtesting(start_date=start_date, end_date=end_date,
+                             processor_factories=PROCESSOR_FACTORIES)
+        runner.run()
     else:
         runner = Trading(processor_factories=PROCESSOR_FACTORIES)
         runner.run()

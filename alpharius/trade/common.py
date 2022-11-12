@@ -1,5 +1,6 @@
 import collections
 import datetime
+import functools
 import inspect
 import logging
 import os
@@ -117,6 +118,7 @@ def get_unique_actions(actions: List[Action]) -> List[Action]:
     return unique_actions
 
 
+@functools.lru_cache(maxsize=None)
 def logging_config(logging_file=None, detail=True, name=None) -> logging.Logger:
     """Configuration for logging."""
     logger = logging.getLogger(name=name)
