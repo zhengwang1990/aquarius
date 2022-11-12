@@ -31,11 +31,6 @@ def backtesting(start_date: str = None,
     runner.run()
 
 
-def trading():
-    runner = Trading(processor_factories=PROCESSOR_FACTORIES)
-    runner.run()
-
-
 def main():
     parser = argparse.ArgumentParser(description='Alpharius stock trading.')
 
@@ -50,7 +45,8 @@ def main():
     if args.mode == 'backtest':
         backtesting(args.start_date, args.end_date)
     else:
-        trading()
+        runner = Trading(processor_factories=PROCESSOR_FACTORIES)
+        runner.run()
 
 
 if __name__ == '__main__':

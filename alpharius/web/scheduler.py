@@ -4,7 +4,7 @@ import traceback
 
 import flask
 from alpharius.db import Db
-from alpharius.trade import trading
+from alpharius.trade import PROCESSOR_FACTORIES, Trading
 from alpharius.notification.email_sender import EmailSender
 from flask_apscheduler import APScheduler
 
@@ -26,7 +26,7 @@ def _trade_impl():
         job_status = 'running'
         app.logger.info('Start trading')
         try:
-            trading()
+            Trading(processor_factories=PROCESSOR_FACTORIES).run()
         except Exception as e:
             error_message = str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
             app.logger.error('Fail in trading: %s', error_message)
