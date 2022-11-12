@@ -34,8 +34,9 @@ class Trading:
         self._equity, self._cash = 0, 0
         self._cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         self._today = pd.to_datetime(
-            pd.Timestamp.combine(datetime.datetime.today().date(),
-                                 datetime.time(0, 0))).tz_localize(TIME_ZONE)
+            pd.Timestamp.combine(
+                pd.to_datetime(time.time(), utc=True, unit='s').tz_convert(TIME_ZONE).date(),
+                datetime.time(0, 0))).tz_localize(TIME_ZONE)
         self._processor_factories = processor_factories
         self._alpaca = tradeapi.REST()
         self._db = Db()
