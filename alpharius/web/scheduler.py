@@ -41,6 +41,7 @@ def _trade_impl():
 
 
 def get_job_status():
+    global job_status
     return job_status
 
 
