@@ -25,6 +25,7 @@ def _trade_impl():
     if acquired:
         app.logger.info('Start trading')
         job_status = 'running'
+        app.logger.info('Job status set to %s', job_status)
         try:
             trading()
         except Exception as e:
@@ -33,6 +34,7 @@ def _trade_impl():
             EmailSender().send_alert(error_message)
         app.logger.info('Finish trading')
         job_status = 'idle'
+        app.logger.info('Job status set to %s', job_status)
         lock.release()
     else:
         app.logger.warning('Cannot acquire trade lock')
