@@ -1,6 +1,7 @@
 """Utility functions shared by multiple modules."""
 
 import datetime
+import time
 from typing import Optional
 
 import alpaca_trade_api as tradeapi
@@ -146,7 +147,8 @@ def get_signed_percentage(value: float, with_arrow: bool = False):
 
 def get_today():
     """Gets a datetime object of today at 00:00ET."""
+    # Use time.time() instead of 'now' so that it can be mocked in test.
     return pd.to_datetime(
         pd.Timestamp.combine(
-            pd.to_datetime('now', utc=True).tz_convert(TIME_ZONE).date(),
+            pd.to_datetime(time.time(), utc=True, unit='s').tz_convert(TIME_ZONE).date(),
             datetime.time(0, 0))).tz_localize(TIME_ZONE)
