@@ -23,18 +23,16 @@ def _trade_impl():
     global job_status, lock
     acquired = lock.acquire(blocking=False)
     if acquired:
-        app.logger.info('Start trading')
         job_status = 'running'
-        app.logger.info('Job status set to %s', job_status)
+        app.logger.info('Start trading')
         try:
             trading()
         except Exception as e:
             error_message = str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
             app.logger.error('Fail in trading: %s', error_message)
             EmailSender().send_alert(error_message)
-        app.logger.info('Finish trading')
         job_status = 'idle'
-        app.logger.info('Job status set to %s', job_status)
+        app.logger.info('Finish trading')
         lock.release()
     else:
         app.logger.warning('Cannot acquire trade lock')

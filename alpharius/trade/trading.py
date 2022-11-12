@@ -99,10 +99,9 @@ class Trading:
 
         # Initialize
         history_start = self._today - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
-        self._logger.info('Loading interday data....')
         self._interday_data = load_tradable_history(history_start, self._today, DEFAULT_DATA_SOURCE)
-        self._init_processors(history_start)
-        self._init_stock_universe()
+        # self._init_processors(history_start)
+        # self._init_stock_universe()
         # self._upload_log()
         #
         # # Wait for market open
