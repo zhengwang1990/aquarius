@@ -4,6 +4,7 @@ import datetime
 import matplotlib
 from dateutil.relativedelta import relativedelta
 from alpharius.trade import Backtesting, Trading, processors
+from alpharius.utils import get_today
 
 # Interactive plot is not disabled when trading or backtesting is invoked.
 matplotlib.use('agg')
@@ -20,7 +21,7 @@ PROCESSOR_FACTORIES = [
 
 def backtesting(start_date: str = None,
                 end_date: str = None) -> None:
-    today = datetime.datetime.today()
+    today = get_today()
     default_start_date = (today - relativedelta(years=1)).strftime('%F')
     default_end_date = (today + datetime.timedelta(days=1)).strftime('%F')
     start_date = start_date or default_start_date

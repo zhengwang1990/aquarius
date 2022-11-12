@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import pytz
 import retrying
-from alpharius.utils import get_transactions, TIME_ZONE
+from alpharius.utils import get_transactions, get_today, TIME_ZONE
 
 _TIME_ZONE = pytz.timezone('America/New_York')
 _SMTP_HOST = 'smtp.163.com'
@@ -53,7 +53,7 @@ class EmailSender:
         message = multipart.MIMEMultipart('alternative')
         message['From'] = self._sender
         message['To'] = self._receiver
-        message['Subject'] = f'[{category}] [{datetime.datetime.today().strftime("%F")}] {title}'
+        message['Subject'] = f'[{category}] [{get_today().strftime("%F")}] {title}'
         return message
 
     @staticmethod
@@ -67,7 +67,7 @@ class EmailSender:
         else:
             self._logger.info('Sending email')
         message = self._create_message('Summary', 'Trade summary of the day')
-        today = datetime.datetime.today()
+        today = get_today()
         alpaca = tradeapi.REST()
         calendar = alpaca.get_calendar(start=(today - datetime.timedelta(days=40)).strftime('%F'),
                                        end=today.strftime('%F'))

@@ -142,3 +142,11 @@ def get_signed_percentage(value: float, with_arrow: bool = False):
     """
     color = 'green' if value >= 0 else 'red'
     return get_colored_value(f'{value * 100:+.2f}%', color, with_arrow)
+
+
+def get_today():
+    """Gets a datetime object of today at 00:00ET."""
+    return pd.to_datetime(
+        pd.Timestamp.combine(
+            pd.to_datetime('now', utc=True).tz_convert(TIME_ZONE).date(),
+            datetime.time(0, 0))).tz_localize(TIME_ZONE)

@@ -49,7 +49,7 @@ def round_time(t: pd.Timestamp, time_fmt_with_year: bool):
 
 
 def get_last_day():
-    last_day = pd.to_datetime(time.time(), utc=True, unit='s').tz_convert(TIME_ZONE)
+    last_day = pd.to_datetime('now', utc=True).tz_convert(TIME_ZONE)
     if last_day.time() < datetime.time(4, 0):
         last_day -= datetime.timedelta(days=1)
     return last_day.date()

@@ -9,7 +9,7 @@ import pandas as pd
 import retrying
 import sqlalchemy
 from tqdm import tqdm
-from alpharius.utils import Transaction, get_transactions, TIME_ZONE
+from alpharius.utils import Transaction, TIME_ZONE, get_transactions, get_today
 
 INSERT_TRANSACTION_QUERY = sqlalchemy.text("""
 INSERT INTO transaction (
@@ -228,7 +228,8 @@ class Db:
 
     def backfill(self, start_date: Optional[str] = None) -> None:
         """Backfills the database from start_date."""
-        start_date = start_date or datetime.datetime.today().strftime('%F')
+        today = get_today()
+        start_date = start_date or today.strftime('%F')
         # Backfill transaction table
         transactions = get_transactions(start_date)
         iterator = tqdm(transactions, ncols=80) if sys.stdout.isatty() else transactions
@@ -237,7 +238,7 @@ class Db:
                 self.upsert_transaction(transaction)
 
         t = pd.to_datetime(start_date)
-        while t.date() <= datetime.datetime.now().date():
+        while t.date() <= today.date():
             if t.isoweekday() < 6:
                 # Backfill aggregation table
                 self.update_aggregation(t.strftime('%F'))
