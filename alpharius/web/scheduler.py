@@ -1,4 +1,5 @@
 import os
+import multiprocessing
 import threading
 import traceback
 
@@ -21,12 +22,16 @@ job_status = 'idle'
 
 def _trade_impl():
     global job_status, lock
+
+    def run():
+        Trading(processor_factories=PROCESSOR_FACTORIES).run()
+
     acquired = lock.acquire(blocking=False)
     if acquired:
         job_status = 'running'
         app.logger.info('Start trading')
         try:
-            Trading(processor_factories=PROCESSOR_FACTORIES).run()
+            multiprocessing.Process(target=run).run()
         except Exception as e:
             error_message = str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
             app.logger.error('Fail in trading: %s', error_message)
