@@ -67,14 +67,6 @@
     display: flex;
 }
 
-#btn-back-to-top {
-    display: none;
-}
-
-#btn-go-to-bottom {
-    display: block;
-}
-
 .btn-nav {
     display: block;
     margin-left: 10px;
