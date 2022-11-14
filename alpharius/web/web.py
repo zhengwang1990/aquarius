@@ -200,7 +200,7 @@ def _get_risks(daily_prices):
         current_start = i
     overall_factors = get_factors(values, market_values)
     overall_factors['year'] = 'ALL'
-    annualized_return = ((values[-1] / values[0]) ** (1 / len(values))) ** 252 - 1
+    annualized_return = (values[-1] / values[0]) ** (252 / len(values)) - 1
     overall_factors['return'] = get_signed_percentage(annualized_return)
     res.append(overall_factors)
     return res[-6:]  # only show risk factors for last 5 years
