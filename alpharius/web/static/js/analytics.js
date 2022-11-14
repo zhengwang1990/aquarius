@@ -63,7 +63,8 @@ const trans_cnt_config = {
             {
               label: '',
               data: trans_value,
-              backgroundColor: ["#4890e8", "#4fdba8", "#915bde", "#fabe57", "#1bd1cf", "#eb624d", "#8f8f7f"]
+              backgroundColor: ["#4890e8", "#4fdba8", "#915bde", "#fabe57", "#1bd1cf", "#eb624d",
+                                "#8f8f7f", "#eb57cd"]
             }
         ]
     },

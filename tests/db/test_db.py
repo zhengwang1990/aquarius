@@ -31,7 +31,7 @@ def test_update_aggregation(client, mock_engine):
 
     client.update_aggregation('2022-11-03')
 
-    assert mock_engine.conn.execute.call_count == 3
+    assert mock_engine.conn.execute.call_count == 4
 
 
 def test_update_log(mocker, client, mock_engine):

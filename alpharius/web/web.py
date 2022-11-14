@@ -71,6 +71,14 @@ def transactions():
                                  total_page=total_page)
 
 
+def _shift_to_last(arr, target_value):
+    for i in range(len(arr)):
+        if arr[i] == target_value:
+            for j in range(i + 1, len(arr)):
+                arr[j], arr[j - 1] = arr[j - 1], arr[j]
+            break
+
+
 def _get_stats(aggs: List[Aggregation]):
     stats = dict()
     transaction_cnt = []
@@ -90,6 +98,8 @@ def _get_stats(aggs: List[Aggregation]):
     for processor, stat in stats.items():
         transaction_cnt.append({'processor': processor, 'cnt': stat['cnt']})
         for k, v in stat.items():
+            if processor == 'UNKNOWN' and k in ['slip', 'slip_pct_acc', 'slip_cnt']:
+                continue
             if k not in total_stats:
                 total_stats[k] = 0
             total_stats[k] += v
@@ -99,20 +109,21 @@ def _get_stats(aggs: List[Aggregation]):
     for processor, stat in stats.items():
         stat['processor'] = processor
         stat['avg_slip_pct'] = (get_signed_percentage(stat['slip_pct_acc'] / stat['slip_cnt'])
-                                if stat.get('slip_cnt', 0) > 0 else 'N/A')
+                                if stat.get('slip_cnt', 0) > 0 and processor != 'UNKNOWN' else 'N/A')
         win_rate = stat['win_cnt'] / stat['cnt'] if stat.get('cnt', 0) > 0 else 0
         stat['win_rate'] = f'{win_rate * 100:.2f}%'
         for k in ['gl', 'slip']:
             v = stat.get(k, 0)
             color = 'green' if v >= 0 else 'red'
-            stat[k] = get_colored_value(f'{v:,.2f}', color)
+            if k == 'slip' and processor == 'UNKNOWN':
+                stat[k] = 'N/A'
+            else:
+                stat[k] = get_colored_value(f'{v:,.2f}', color)
 
-    # Order stats alphabetically with 'ALL' appearing at last
+    # Order stats alphabetically with 'UNKNOWN' and 'ALL' appearing at last
     processors = sorted(stats.keys())
-    for i in range(len(processors)):
-        if processors[i] == 'ALL':
-            for j in range(i + 1, len(processors)):
-                processors[j], processors[j - 1] = processors[j - 1], processors[j]
+    _shift_to_last(processors, 'UNKNOWN')
+    _shift_to_last(processors, 'ALL')
     return [stats[processor] for processor in processors], transaction_cnt
 
 
@@ -142,6 +153,7 @@ def _get_gl_bars(aggs: List[Aggregation]):
             processor_gl = [processor_values.get(label, 0) for label in labels[timeframe]]
             values[timeframe][processor] = processor_gl
     processors = [all_processors] + sorted(processors)
+    _shift_to_last(processors, 'UNKNOWN')
     gl_bars = {'labels': labels, 'values': values}
     return gl_bars, processors
 

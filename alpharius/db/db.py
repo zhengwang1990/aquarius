@@ -159,7 +159,7 @@ class Db:
         for result in results:
             processor, gl, gl_pct, slippage, slippage_pct = result
             if not processor:
-                continue
+                processor = 'UNKNOWN'
             if processor not in processor_aggs:
                 processor_aggs[processor] = {'gl': 0, 'gl_pct_acc': 0,
                                              'slippage': 0, 'slippage_pct_acc': 0,
