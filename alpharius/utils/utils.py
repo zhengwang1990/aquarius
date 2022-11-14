@@ -1,10 +1,12 @@
 """Utility functions shared by multiple modules."""
 
 import datetime
+import math
 import time
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import alpaca_trade_api as tradeapi
+import numpy as np
 import pandas as pd
 import pytz
 import recordclass
@@ -152,3 +154,40 @@ def get_today():
         pd.Timestamp.combine(
             pd.to_datetime(time.time(), utc=True, unit='s').tz_convert(TIME_ZONE).date(),
             datetime.time(0, 0))).tz_localize(TIME_ZONE)
+
+
+def compute_risks(values: List[float],
+                  market_values: List[float]) -> Tuple[Optional[float], Optional[float], float]:
+    """Computes alpha, beta and sharpe ratio risk factors.
+
+    params:
+      values: The values of the target.
+      market_values: The market value. Typically this is S&P 500 values.
+
+    returns:
+      A tuple consists of alpha, beta and sharpe ratio, in order.
+    """
+    profits = [values[k + 1] / values[k] -
+               1 for k in range(len(values) - 1)]
+    r = np.average(profits)
+    std = np.std(profits)
+    s = r / std * np.sqrt(252) if std > 0 else math.nan
+    a, b = math.nan, math.nan
+    if len(values) == len(market_values) and len(values) > 2:
+        market_profits = [market_values[k + 1] / market_values[k] - 1
+                          for k in range(len(market_values) - 1)]
+        mr = np.average(market_profits)
+        mvar = np.var(market_profits)
+        b = np.cov(market_profits, profits, bias=True)[0, 1] / mvar
+        a = (r - b * mr) * np.sqrt(252)
+    return a, b, s
+
+
+def compute_drawdown(values: List[float]) -> float:
+    """Computes drawdown of the target."""
+    h = values[0]
+    d = 0
+    for v in values:
+        d = min(v / h - 1, d)
+        h = max(h, v)
+    return d

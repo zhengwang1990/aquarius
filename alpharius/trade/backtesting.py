@@ -1,7 +1,6 @@
 import collections
 import datetime
 import functools
-import math
 import os
 import signal
 import time
@@ -14,7 +13,7 @@ import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
 import tabulate
-from alpharius.utils import TIME_ZONE
+from alpharius.utils import TIME_ZONE, compute_risks, compute_drawdown
 from .common import (
     Action, ActionType, Context, Position, Processor, ProcessorFactory, TimeInterval,
     TradingFrequency, Mode, BASE_DIR, DATETIME_TYPE, MARKET_OPEN, MARKET_CLOSE, OUTPUT_DIR,
@@ -442,31 +441,6 @@ class Backtesting:
         self._details_log.info('\n'.join(outputs))
 
     def _print_summary(self) -> None:
-        def _compute_risks(values: List[float],
-                           m_values: List[float]) -> Tuple[Optional[float], Optional[float], float]:
-            profits = [values[k + 1] / values[k] -
-                       1 for k in range(len(values) - 1)]
-            r = np.average(profits)
-            std = np.std(profits)
-            s = r / std * np.sqrt(252) if std > 0 else math.nan
-            a, b = math.nan, math.nan
-            if len(values) == len(m_values) and len(values) > 2:
-                market_profits = [m_values[k + 1] / m_values[k] - 1
-                                  for k in range(len(m_values) - 1)]
-                mr = np.average(market_profits)
-                mvar = np.var(market_profits)
-                b = np.cov(market_profits, profits, bias=True)[0, 1] / mvar
-                a = (r - b * mr) * np.sqrt(252)
-            return a, b, s
-
-        def _compute_drawdown(values: List[float]) -> float:
-            h = values[0]
-            d = 0
-            for v in values:
-                d = min(v / h - 1, d)
-                h = max(h, v)
-            return d
-
         outputs = [get_header('Summary')]
         n_trades = self._num_win + self._num_lose
         success_rate = self._num_win / n_trades if n_trades > 0 else 0
@@ -494,7 +468,7 @@ class Backtesting:
             profit_pct = (self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
             year_profit = [f'{current_year} Gain/Loss',
                            f'{profit_pct:+.2f}%']
-            _, _, year_sharpe_ratio = _compute_risks(
+            _, _, year_sharpe_ratio = compute_risks(
                 self._daily_equity[current_start: i + 2], year_market_values)
             year_sharpe = [f'{current_year} Sharpe Ratio',
                            f'{year_sharpe_ratio:.2f}']
@@ -506,7 +480,7 @@ class Backtesting:
                 symbol_values = list(self._interday_data[symbol]['Close'][
                                      last_day_index - (i - current_start) - 1:last_day_index + 1])
                 symbol_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
-                _, _, symbol_sharpe = _compute_risks(
+                _, _, symbol_sharpe = compute_risks(
                     symbol_values, year_market_values)
                 year_profit.append(f'{symbol_profit_pct:+.2f}%')
                 year_sharpe.append(f'{symbol_sharpe:.2f}')
@@ -522,8 +496,8 @@ class Backtesting:
             self._interday_data[market_symbol].index, market_dates[-1])
         market_values = self._interday_data[market_symbol]['Close'][
                         market_first_day_index - 1:market_last_day_index + 1]
-        my_alpha, my_beta, my_sharpe_ratio = _compute_risks(self._daily_equity, market_values)
-        my_drawdown = _compute_drawdown(self._daily_equity)
+        my_alpha, my_beta, my_sharpe_ratio = compute_risks(self._daily_equity, market_values)
+        my_drawdown = compute_drawdown(self._daily_equity)
         alpha_row = ['Alpha', f'{my_alpha * 100:.2f}%']
         beta_row = ['Beta', f'{my_beta:.2f}']
         sharpe_ratio_row = ['Sharpe Ratio', f'{my_sharpe_ratio:.2f}']
@@ -537,14 +511,14 @@ class Backtesting:
                                                                  1:last_day_index + 1]
             symbol_total_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
             total_profit.append(f'{symbol_total_profit_pct:+.2f}%')
-            symbol_alpha, symbol_beta, symbol_sharpe_ratio = _compute_risks(
+            symbol_alpha, symbol_beta, symbol_sharpe_ratio = compute_risks(
                 symbol_values, market_values)
             alpha_row.append(
                 f'{symbol_alpha * 100:.2f}%' if symbol_alpha is not None else None)
             beta_row.append(
                 f'{symbol_beta:.2f}' if symbol_beta is not None else None)
             sharpe_ratio_row.append(f'{symbol_sharpe_ratio:.2f}')
-            symbol_drawdown = _compute_drawdown(symbol_values)
+            symbol_drawdown = compute_drawdown(symbol_values)
             drawdown_row.append(f'{symbol_drawdown * 100:+.2f}%')
         stats.append(total_profit)
         stats.append(alpha_row)

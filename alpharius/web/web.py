@@ -1,4 +1,5 @@
 import collections
+import math
 import json
 from concurrent import futures
 from typing import List
@@ -7,7 +8,10 @@ import flask
 import numpy as np
 import pandas as pd
 from alpharius.db import Aggregation, Db
-from alpharius.utils import get_signed_percentage, get_colored_value, TIME_ZONE
+from alpharius.utils import (
+    compute_drawdown, compute_risks, get_signed_percentage,
+    get_colored_value, TIME_ZONE,
+)
 from .alpaca_client import AlpacaClient
 from .scheduler import get_job_status
 
@@ -69,6 +73,7 @@ def transactions():
 
 def _get_stats(aggs: List[Aggregation]):
     stats = dict()
+    transaction_cnt = []
     for agg in aggs:
         processor = agg.processor
         if processor not in stats:
@@ -82,12 +87,14 @@ def _get_stats(aggs: List[Aggregation]):
             stats[processor]['slip_pct_acc'] += agg.avg_slippage_pct * agg.slippage_count
             stats[processor]['slip_cnt'] += agg.slippage_count
     total_stats = dict()
-    for stat in stats.values():
+    for processor, stat in stats.items():
+        transaction_cnt.append({'processor': processor, 'cnt': stat['cnt']})
         for k, v in stat.items():
             if k not in total_stats:
                 total_stats[k] = 0
             total_stats[k] += v
     stats['ALL'] = total_stats
+    transaction_cnt.sort(key=lambda entry: entry['cnt'], reverse=True)
 
     for processor, stat in stats.items():
         stat['processor'] = processor
@@ -106,7 +113,7 @@ def _get_stats(aggs: List[Aggregation]):
         if processors[i] == 'ALL':
             for j in range(i + 1, len(processors)):
                 processors[j], processors[j - 1] = processors[j - 1], processors[j]
-    return [stats[processor] for processor in processors]
+    return [stats[processor] for processor in processors], transaction_cnt
 
 
 def _get_gl_bars(aggs: List[Aggregation]):
@@ -139,15 +146,84 @@ def _get_gl_bars(aggs: List[Aggregation]):
     return gl_bars, processors
 
 
+def _get_annual_return(daily_price):
+    dates = daily_price['dates']
+    res = {
+        'symbols': daily_price['symbols'],
+        'years': [],
+        'returns': [[] for _ in daily_price['symbols']],
+    }
+    if len(dates) < 2:
+        return res
+    years = []
+    values = daily_price['values']
+    spots = [[value[0]] for value in values]
+    for i in range(len(dates) - 1):
+        if dates[i][:4] != dates[i + 1][:4]:
+            years.append(dates[i][:4])
+            for j in range(len(values)):
+                spots[j].append(values[j][i])
+    years.append(dates[-1][:4])
+    for j in range(len(values)):
+        spots[j].append(values[j][-1])
+    res['years'] = years
+    for j in range(len(spots)):
+        res['returns'][j] = [(spots[j][k + 1] / spots[j][k] - 1) * 100
+                             for k in range(len(spots[j]) - 1)]
+    return res
+
+
+def _get_risks(daily_prices):
+    def get_factors(v, mv):
+        a, b, s = compute_risks(v, mv)
+        d = compute_drawdown(v)
+        r = v[-1] / v[0] - 1
+        return {'alpha': get_signed_percentage(a) if a != math.nan else 'N/A',
+                'beta': f'{b:.2f}' if b != math.nan else 'N/A',
+                'sharpe': f'{s:.2f}' if s != math.nan else 'N/A',
+                'drawdown': get_signed_percentage(d),
+                'return': get_signed_percentage(r)}
+
+    dates = daily_prices['dates']
+    values = daily_prices['values'][daily_prices['symbols'].index('My Portfolio')]
+    market_values = daily_prices['values'][daily_prices['symbols'].index('SPY')]
+    current_start = 0
+    res = []
+    for i in range(len(dates)):
+        if i != len(dates) - 1 and dates[i][:4] == dates[i + 1][:4]:
+            continue
+        current_values = values[current_start:i + 1]
+        current_market_values = market_values[current_start:i + 1]
+        factors = get_factors(current_values, current_market_values)
+        factors['year'] = dates[i][:4]
+        res.append(factors)
+        current_start = i
+    overall_factors = get_factors(values, market_values)
+    overall_factors['year'] = 'ALL'
+    annualized_return = ((values[-1] / values[0]) ** (1 / len(values))) ** 252 - 1
+    overall_factors['return'] = get_signed_percentage(annualized_return)
+    res.append(overall_factors)
+    return res[-6:]  # only show risk factors for last 5 years
+
+
 @bp.route('/analytics')
 def analytics():
-    client = Db()
-    aggs = client.list_aggregations()
-    stats = _get_stats(aggs)
+    alpaca_client = AlpacaClient()
+    with futures.ThreadPoolExecutor(max_workers=1) as pool:
+        get_daily_price_task = pool.submit(alpaca_client.get_daily_prices)
+    db_client = Db()
+    aggs = db_client.list_aggregations()
+    stats, transaction_cnt = _get_stats(aggs)
     gl_bars, processors = _get_gl_bars(aggs)
+    daily_price = get_daily_price_task.result()
+    annual_return = _get_annual_return(daily_price)
+    risks = _get_risks(daily_price)
     return flask.render_template('analytics.html',
                                  stats=stats,
+                                 transaction_cnt=transaction_cnt,
                                  gl_bars=gl_bars,
+                                 annual_return=annual_return,
+                                 risks=risks,
                                  processors=processors)
 
 

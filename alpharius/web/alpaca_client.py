@@ -15,8 +15,9 @@ from alpharius.utils import get_signed_percentage, get_colored_value, TIME_ZONE
 from dateutil.relativedelta import relativedelta
 from flask import Flask
 
-
 app = Flask(__name__)
+
+START_DATE = '2022-08-05'
 
 
 def get_time_vs_equity(history_equity: List[float],
@@ -65,7 +66,8 @@ class AlpacaClient:
     @functools.lru_cache(maxsize=5)
     def get_calendar(self, last_day: str):
         calendar = self._alpaca.get_calendar(
-            start=(pd.to_datetime(last_day) - relativedelta(years=5)).strftime('%F'),
+            start=max((pd.to_datetime(last_day) - relativedelta(years=5)).strftime('%F'),
+                      START_DATE),
             end=last_day)
         return calendar
 
@@ -289,10 +291,10 @@ class AlpacaClient:
         tasks = dict()
         for symbol in symbols:
             tasks[symbol] = self._pool.submit(self._alpaca.get_bars,
-                                              symbol,
-                                              tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
-                                              prev_day,
-                                              prev_day)
+                                              symbol=symbol,
+                                              timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
+                                              start=prev_day,
+                                              end=prev_day)
         today_str = datetime.datetime.today().astimezone(TIME_ZONE).strftime('%b %d')
         trading_day = calendar[-1].date.strftime('%b %d')
         for symbol in symbols:
@@ -312,4 +314,43 @@ class AlpacaClient:
                               'change': get_signed_percentage(info['change'], with_arrow=True),
                               'date': info['date']}
         app.logger.info('Time cost for get_market_watch: [%.2fs]', time.time() - start)
+        return result
+
+    @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
+    def get_daily_prices(self):
+        start = time.time()
+        last_day = get_last_day()
+        calendar = self.get_calendar(last_day.strftime('%F'))
+        end_date = calendar[-1].date.strftime('%F')
+        portfolio_task = self._pool.submit(self._alpaca.get_portfolio_history,
+                                           date_start=START_DATE,
+                                           date_end=end_date,
+                                           timeframe='1D',
+                                           extended_hours=False)
+        compare_symbols = ['QQQ', 'SPY']
+        tasks = dict()
+        for symbol in compare_symbols:
+            tasks[symbol] = self._pool.submit(self._alpaca.get_bars,
+                                              symbol=symbol,
+                                              timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
+                                              start=START_DATE,
+                                              end=end_date,
+                                              adjustment='split')
+        portfolio_result = portfolio_task.result()
+        portfolio_dates = [pd.to_datetime(t, utc=True, unit='s').tz_convert(TIME_ZONE).strftime('%F')
+                           for t in portfolio_result.timestamp]
+        cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
+        portfolio_values = [e - cash_reserve for e in portfolio_result.equity]
+        start_index = 0
+        while start_index < len(portfolio_values) and portfolio_values[start_index] == 0:
+            start_index += 1
+        result = {'dates': portfolio_dates[start_index:],
+                  'symbols': ['My Portfolio'] + compare_symbols,
+                  'values': [portfolio_values[start_index:]]}
+        for symbol in compare_symbols:
+            bars = tasks[symbol].result()
+            symbol_values = [bar.c for bar in bars]
+            assert len(symbol_values) == len(portfolio_values)
+            result['values'].append(symbol_values[start_index:])
+        app.logger.info('Time cost for get_daily_prices: [%.2fs]', time.time() - start)
         return result

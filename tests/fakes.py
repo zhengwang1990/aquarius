@@ -7,6 +7,7 @@ import unittest.mock as mock
 
 import pandas as pd
 from alpharius import trade
+from alpharius.utils import TIME_ZONE
 
 Clock = collections.namedtuple('Clock', ['next_open', 'next_close'])
 ClockTimestamp = collections.namedtuple('ClockTimestamp', ['timestamp'])
@@ -27,6 +28,13 @@ Trade = collections.namedtuple('Trade', ['p'])
 Agg = collections.namedtuple(
     'Agg', ['timestamp', 'open', 'high', 'low', 'close', 'vwap', 'volume'])
 LastTrade = collections.namedtuple('LastTrade', ['price'])
+
+
+def _to_timestamp(t) -> int:
+    time_obj = pd.to_datetime(t)
+    if not time_obj.tzinfo:
+        time_obj.tz_localize(TIME_ZONE)
+    return int(time_obj.timestamp())
 
 
 class FakeAlpaca:
@@ -107,13 +115,16 @@ class FakeAlpaca:
             time_interval = 300
         else:
             raise ValueError('Time frame must be 5Min, 1H or 1D.')
-        start_time = int(pd.to_datetime(date_start).timestamp())
+        start_time = _to_timestamp(date_start)
         start_time -= start_time % time_interval
-        end_time = int(pd.to_datetime(date_end).timestamp()) + 86401
+        end_time = _to_timestamp(date_end) + time_interval
         timestamps = [t for t in range(start_time, end_time, time_interval)
                       if pd.to_datetime(t, unit='s', utc=True).isoweekday() < 6]
-        return History([0] * 10 + [i * (-1) ** i + len(timestamps) + 1 for i in range(len(timestamps))],
-                       timestamps)
+        if len(timestamps) > 10:
+            equity = [0] * 10 + [i * (-1) ** i + len(timestamps) + 1 for i in range(len(timestamps) - 10)]
+        else:
+            equity = [i * (-1) ** i + len(timestamps) + 1 for i in range(len(timestamps))]
+        return History(equity, timestamps)
 
     def get_bars(self, symbol, timeframe, start, end, *args, **kwargs):
         self.get_bars_call_count += 1
@@ -125,13 +136,12 @@ class FakeAlpaca:
             time_interval = 300
         else:
             raise ValueError('Time frame must be 5 min, 1 hour or 1 day.')
-        start_timestamp = int(pd.to_datetime(start).timestamp())
+        start_timestamp = _to_timestamp(start)
         start_timestamp -= start_timestamp % time_interval
+        end_timestamp = _to_timestamp(end) + time_interval
         return [Bar(pd.to_datetime(t, unit='s', utc=True),
                     40, 41, 39, next(self._value_cycle), 40.123, 10)
-                for t in range(start_timestamp,
-                               int(pd.to_datetime(end).timestamp() + time_interval),
-                               time_interval)
+                for t in range(start_timestamp, end_timestamp, time_interval)
                 if pd.to_datetime(t, unit='s', utc=True).isoweekday() < 6]
 
     def get_calendar(self, start, end, *args, **kwargs):

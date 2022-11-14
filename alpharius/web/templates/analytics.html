@@ -32,8 +32,28 @@
                      </div>
                  </span>
             </div>
-            <div id="chart-gl-container">
+            <div class="chart-container">
                 <canvas id="graph-gl-all"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row second-row">
+    <div class="col-lg-12 col-md-12 col-sm-12 col-xl-6">
+        <div class="card fix-height-card">
+            <div class="card-header"><span class="card-title">Transaction Count</span></div>
+            <div class="chart-container">
+                <canvas id="graph-trans-cnt"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-12 col-md-12 col-sm-12 col-xl-6">
+        <div class="card fix-height-card">
+            <div class="card-header"><span class="card-title">Annual Return (%)</span></div>
+            <div class="chart-container">
+                <canvas id="graph-annual-return"></canvas>
             </div>
         </div>
     </div>
@@ -42,7 +62,7 @@
 <div class="row">
     <div class="col-lg-12 col-md-12 col-sm-12 col-xl-6">
         <div class="card fix-height-card">
-            <div class="card-header"><span class="card-title">Performance</span></div>
+            <div class="card-header"><span class="card-title">Processor Statistics</span></div>
             <div class="card-body overflow-auto">
                 <table class="table">
                     <thead>
@@ -53,8 +73,10 @@
                                 <span class="xs-show">G/L</span>
                             </th>
                             <th scope="col">WIN RATE</th>
+                            <th scope="col" class="xs-hidden">SLIPPAGE</th>
                             <th scope="col">
-                                <span class="xs-hidden">TRANSACTION </span>COUNT
+                                <span class="xs-hidden">SLIPPAGE PERCENT</span>
+                                <span class="xs-show">SLIP PCT</span>
                             </th>
                         </tr>
                     </thead>
@@ -68,7 +90,8 @@
                             </td>
                             <td>{{ stat['gl'] | safe }}</td>
                             <td>{{ stat['win_rate'] }}</td>
-                            <td>{{ stat['cnt'] }}</td>
+                            <td class="xs-hidden">{{ stat['slip'] | safe }}</td>
+                            <td>{{ stat['avg_slip_pct'] | safe }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -79,38 +102,48 @@
 
     <div class="col-lg-12 col-md-12 col-sm-12 col-xl-6">
         <div class="card fix-height-card">
-            <div class="card-header"><span class="card-title">Slippage</span></div>
+            <div class="card-header"><span class="card-title">Risk Statistics</span></div>
             <div class="card-body overflow-auto">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th scope="col">PROCESSOR</th>
-                            <th scope="col">
-                                <span class="xs-hidden">SLIPPAGE</span>
-                                <span class="xs-show">SLIP</span>
-                            </th>
-                            <th scope="col">
-                                <span class="xs-hidden">AVERAGE PERCENT</span>
-                                <span class="xs-show">AVG PCT</span>
-                            </th>
-                            <th scope="col">
-                                <span class="xs-hidden">TRANSACTION </span>COUNT
-                            </th>
+                            <th scope="col"></th>
+                            {% for risk in risks %}
+                                 <th scope="col" class="{{ 'xs-hidden' if loop.index0 < loop.length - 4 else ''}}">{{ risk['year'] }}</th>
+                            {% endfor %}
                         </tr>
                     </thead>
                     <tbody>
-                        {% for stat in stats %}
                         <tr>
-                            <td>
-                                {%- if stat['processor'] == 'ALL' -%} <b> {%- endif -%}
-                                {{ stat['processor'] }}
-                                {%- if stat['processor'] == 'ALL' -%} </b> {%- endif -%}
-                            </td>
-                            <td>{{ stat['slip'] | safe }}</td>
-                            <td>{{ stat['avg_slip_pct'] | safe }}</td>
-                            <td>{{ stat['slip_cnt'] }}</td>
+                            <td>Alpha</td>
+                            {% for risk in risks %}
+                                 <td class="{{ 'xs-hidden' if loop.index0 < loop.length - 4 else ''}}">{{ risk['alpha'] | safe }}</td>
+                            {% endfor %}
                         </tr>
-                        {% endfor %}
+                        <tr>
+                            <td>Beta</td>
+                            {% for risk in risks %}
+                                 <td class="{{ 'xs-hidden' if loop.index0 < loop.length - 4 else ''}}">{{ risk['beta'] }}</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td>Sharpe Ratio</td>
+                            {% for risk in risks %}
+                                 <td class="{{ 'xs-hidden' if loop.index0 < loop.length - 4 else ''}}">{{ risk['sharpe'] }}</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td>Annual Return</td>
+                            {% for risk in risks %}
+                                 <td class="{{ 'xs-hidden' if loop.index0 < loop.length - 4 else ''}}">{{ risk['return'] | safe }}</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td>Drawdown</td>
+                            {% for risk in risks %}
+                                 <td class="{{ 'xs-hidden' if loop.index0 < loop.length - 4 else ''}}">{{ risk['drawdown'] | safe }}</td>
+                            {% endfor %}
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -122,6 +155,8 @@
 {% block scripts %}
 <script>
     const GL_BARS = {{ gl_bars | safe }};
+    const TRANSACTION_CNT = {{ transaction_cnt | safe }};
+    const ANNUAL_RETURN = {{ annual_return | safe }};
 </script>
 <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
 {% endblock %}

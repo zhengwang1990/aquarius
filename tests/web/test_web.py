@@ -1,6 +1,7 @@
 import textwrap
 
 import pandas as pd
+from alpharius.web import web
 
 
 def test_dashboard(client, mock_alpaca):
@@ -29,7 +30,7 @@ def test_transactions(client, mock_engine):
     assert mock_engine.conn.execute.call_count == 2
 
 
-def test_analytics(client, mock_engine):
+def test_analytics(client, mock_alpaca, mock_engine):
     mock_engine.conn.execute.return_value = [
         (pd.to_datetime('2022-11-02').date(), 'Processor1',
          100, 0.01, 0, 0, 3, 2, 1, 0),
@@ -40,6 +41,8 @@ def test_analytics(client, mock_engine):
 
     assert client.get('/analytics').status_code == 200
     assert mock_engine.conn.execute.call_count == 1
+    assert mock_alpaca.get_portfolio_history_call_count == 1
+    assert mock_alpaca.get_bars_call_count > 0
 
 
 def test_logs(client, mock_engine):
@@ -65,3 +68,32 @@ def test_logs(client, mock_engine):
 
 def test_job_status(client):
     assert client.get('/job_status').status_code == 200
+
+
+def test_get_annual_return():
+    dates = [pd.to_datetime(t, utc=True, unit='s').strftime('%F')
+             for t in range(int(pd.to_datetime('2017-01-01', utc=True).timestamp()),
+                            int(pd.to_datetime('2022-10-01', utc=True).timestamp()),
+                            86400)]
+    daily_prices = {'dates': dates,
+                    'symbols': ['My Portfolio', 'SPY', 'QQQ'],
+                    'values': [[100] * len(dates)] * 3}
+
+    annual_return = web._get_annual_return(daily_prices)
+
+    assert len(annual_return['returns'][0]) == 6
+
+
+def test_get_risks():
+    dates = [pd.to_datetime(t, utc=True, unit='s').strftime('%F')
+             for t in range(int(pd.to_datetime('2017-01-01', utc=True).timestamp()),
+                            int(pd.to_datetime('2022-01-01', utc=True).timestamp()) + 1,
+                            86400)]
+    daily_prices = {'dates': dates,
+                    'symbols': ['My Portfolio', 'SPY', 'QQQ'],
+                    'values': [[100 + i * 0.01 for i in range(len(dates))]] * 3}
+    risks = web._get_risks(daily_prices)
+
+    print(risks)
+
+    assert len(risks) == 6  # only show last 5 years + ALL
