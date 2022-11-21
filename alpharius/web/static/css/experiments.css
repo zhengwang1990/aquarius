@@ -27,6 +27,9 @@
 
 .dash-content .btn {
     width: 50px;
+    height: 36px;
+    margin-left: 20px;
+    margin-bottom: 1px;
     font-size: 15px;
 }
 
@@ -34,13 +37,21 @@
     display: inline-block;
 }
 
-@media (max-width: 800px) {
+.dash-content .card .padding-span {
+    padding-left: 20px;
+}
+
+@media (max-width: 1000px) {
     .dash-content .card .chart-container {
         height: 370px;
     }
 
+    .dash-content .card .padding-span {
+        padding-left: 10px;
+    }
+
     .dash-content .card .inline-span {
-        width: calc(50% - 35px);
+        width: calc(50% - 30px);
     }
 
     .dash-content .input-group .form-control {
@@ -49,6 +60,7 @@
     }
 
     .dash-content .btn {
+        margin-left: 10px;
         width: 40px;
         font-size: 0.7rem;
     }
