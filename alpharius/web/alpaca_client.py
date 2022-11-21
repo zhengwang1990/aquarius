@@ -354,3 +354,30 @@ class AlpacaClient:
             result['values'].append(symbol_values[start_index:])
         app.logger.info('Time cost for get_daily_prices: [%.2fs]', time.time() - start)
         return result
+
+    @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
+    def get_charts(self, symbol: str, date: str):
+        pd_date = pd.to_datetime(date)
+        start_time = pd.to_datetime(
+            pd.Timestamp.combine(pd_date.date(), datetime.time(0, 0))).tz_localize(TIME_ZONE)
+        end_time = pd.to_datetime(
+            pd.Timestamp.combine(pd_date.date(), datetime.time(23, 59))).tz_localize(TIME_ZONE)
+        bars = self._alpaca.get_bars(symbol=symbol,
+                                     timeframe=tradeapi.TimeFrame(5, tradeapi.TimeFrameUnit.Minute),
+                                     start=start_time.isoformat(),
+                                     end=end_time.isoformat(),
+                                     adjustment='split')
+        prev_day_bar = self._alpaca.get_bars(symbol=symbol,
+                                             timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
+                                             start=(pd_date - datetime.timedelta(days=7)).strftime('%F'),
+                                             end=(pd_date - datetime.timedelta(days=1)).strftime('%F'),
+                                             adjustment='split')[-1]
+        labels = []
+        values = []
+        for bar in bars:
+            label = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime('%H:%M')
+            labels.append(label)
+            value = {'h': bar.h, 'l': bar.l, 'o': bar.o, 'c': bar.c, 'v': bar.v,
+                     'x': label, 's': [bar.o, bar.c]}
+            values.append(value)
+        return {'labels': labels, 'values': values, 'prev_close': prev_day_bar.c}

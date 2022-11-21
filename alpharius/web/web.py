@@ -303,6 +303,20 @@ def logs():
                                  dates=dates)
 
 
+@bp.route('/experiments')
+def experiments():
+    return flask.render_template('experiments.html')
+
+
+@bp.route('/charts')
+def charts():
+    client = AlpacaClient()
+    date = flask.request.args.get('date')
+    symbol = flask.request.args.get('symbol')
+    res = client.get_charts(date=date, symbol=symbol)
+    return json.dumps(res)
+
+
 @bp.route('/job_status')
 def job_status():
     return get_job_status()

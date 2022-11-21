@@ -97,3 +97,12 @@ def test_get_risks():
     print(risks)
 
     assert len(risks) == 6  # only show last 5 years + ALL
+
+
+def test_experiments(client):
+    assert client.get('/experiments').status_code == 200
+
+
+def test_charts(client, mock_alpaca):
+    assert client.get('/charts?date=2022-11-03&symbol=QQQ').status_code == 200
+    assert mock_alpaca.get_bars_call_count > 0

@@ -1,0 +1,37 @@
+{% extends "base.html" %}sk
+
+{% block header %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/experiments.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/css/datepicker.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.1.0/chartjs-plugin-annotation.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><span class="card-title">Charts</span></div>
+    <div id="select-container">
+         <span class="inline-span">
+            <div class="input-group">
+              <span class="input-group-text"><i class="uil uil-calendar-alt"></i></span>
+              <input type="text" class="form-control" id="datepicker" readonly>
+            </div>
+         </span><span style="padding-left:20px"></span><span class="inline-span">
+            <div class="input-group">
+                <span class="input-group-text"><i class="uil uil-search"></i></span>
+                <input type="text" class="form-control" id="symbol-input">
+            </div>
+         </span>
+        <button type="button" class="btn btn-secondary" id="chart-btn">GO</button>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="graph-charts"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/js/datepicker.min.js"></script>
+<script src="{{ url_for('static', filename='js/experiments.js') }}"></script>
+{% endblock %}
