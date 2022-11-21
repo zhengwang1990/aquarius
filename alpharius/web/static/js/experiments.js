@@ -9,6 +9,7 @@ const datepicker = new Datepicker(elem, {
 // Global variables
 var chart_mode = null;
 var chart_data = null;
+var trimmed_chart_data = null;
 var chart = null;
 
 if (window.innerWidth <= 800) {
@@ -52,25 +53,18 @@ function get_chart_data() {
     var res = xmlHttp.responseText;
     var obj = JSON.parse(res);
     chart_data = obj;
-}
-
-function trim_chart_data() {
-    if (chart_mode === "compact" && chart_data !== null) {
-        var new_chart_data = {
-            labels: [],
-            values: [],
-            prev_close: chart_data["prev_close"]
-        }
-        for (var i = 0; i < chart_data["labels"].length; i++) {
-            var label = chart_data["labels"][i];
-            if (label >= "09:30" && label < "16:00") {
-                new_chart_data.labels.push(label);
-                new_chart_data.values.push(chart_data["values"][i]);
-            }
-        }
-        return new_chart_data;
+    trimmed_chart_data = {
+        labels: [],
+        values: [],
+        prev_close: chart_data["prev_close"]
     }
-    return chart_data;
+    for (var i = 0; i < chart_data["labels"].length; i++) {
+        var label = chart_data["labels"][i];
+        if (label >= "09:30" && label < "16:00") {
+            trimmed_chart_data.labels.push(label);
+            trimmed_chart_data.values.push(chart_data["values"][i]);
+        }
+    }
 }
 
 function get_chart() {
@@ -79,11 +73,11 @@ function get_chart() {
 }
 
 function update_chart() {
-    var chart_data = trim_chart_data();
+    var current_data = chart_mode === "compact" ? trimmed_chart_data : chart_data;
     const data = {
-        labels: chart_data["labels"],
+        labels: current_data["labels"],
         datasets: [{
-            data: chart_data["values"],
+            data: current_data["values"],
             backgroundColor: (ctx) => {
                 const { raw: {x, o, c} } = ctx;
                 let color, alpha;
@@ -106,14 +100,15 @@ function update_chart() {
     };
     const prev_close_annotation = {
         type: "line",
+        borderWidth: chart_mode === "compact" ? 0.5 : 1,
         borderColor: "rgba(141, 141, 141, 0.3)",
         borderDash: [6, 6],
         scaleID: "y",
-        value: chart_data["prev_close"],
+        value: current_data["prev_close"],
         label: {
             display: chart_mode === "full",
             backgroundColor: "rgba(100, 100, 100, 0.5)",
-            content: `previous close ${chart_data["prev_close"].toFixed(2)}`,
+            content: `previous close ${current_data["prev_close"].toFixed(2)}`,
             position: "end"
         }
     };
@@ -128,6 +123,21 @@ function update_chart() {
             plugins: {
                 legend: {
                     display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        beforeBody: (ctx) => {
+                            return [
+                                `O: ${ctx[0].raw.o.toFixed(2)}`,
+                                `H: ${ctx[0].raw.h.toFixed(2)}`,
+                                `L: ${ctx[0].raw.l.toFixed(2)}`,
+                                `C: ${ctx[0].raw.c.toFixed(2)}`
+                            ];
+                        },
+                        label: (ctx) => {
+                            return '';
+                        }
+                    }
                 },
                 annotation: {
                     annotations: [prev_close_annotation]
