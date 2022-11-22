@@ -91,7 +91,7 @@ function get_intraday_chart() {
         displayAlert("danger", `${date} is not a valid date`);
         return;
     }
-    var symbol = document.getElementById("intraday-symbol-input").value;
+    var symbol = document.getElementById("intraday-symbol-input").value.toUpperCase();
     if (symbol.length === 0) {
         displayAlert("danger", "Symbol must be entered");
         return;
