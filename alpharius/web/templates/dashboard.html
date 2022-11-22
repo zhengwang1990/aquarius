@@ -90,7 +90,7 @@
                     <tbody>
                         {% for order in orders %}
                         <tr>
-                            <td>{{ order['symbol'] }}</td>
+                            <td><a href="{{ order['link'] }}">{{ order['symbol'] }}</a></td>
                             <td>
                                 <span class="badge-shape {{ 'badge-blue' if order['side'] == 'buy' else 'badge-purple'}}">
                                     {{ order['side'] }}
@@ -132,7 +132,7 @@
                     <tbody>
                         {% for position in positions %}
                         <tr>
-                            <td>{{ position['symbol'] }}</td>
+                            <td><a href="{{ position['link'] }}"> {{ position['symbol'] }}</a></td>
                             <td>
                                 <span class="badge-shape {{ 'badge-blue' if position['side'] == 'long' else 'badge-orange'}}">
                                     {{ position['side'] }}

@@ -106,10 +106,11 @@ function get_intraday_chart() {
 
 function update_intraday_chart() {
     var current_data = chart_mode === "compact" ? trimmed_chart_data : chart_data;
+    var prices = current_data["prices"];
     const data = {
         labels: current_data["labels"],
         datasets: [{
-            data: current_data["prices"],
+            data: prices,
             backgroundColor: (ctx) => {
                 const { raw: {x, o, c} } = ctx;
                 let color, alpha;
@@ -155,6 +156,19 @@ function update_intraday_chart() {
             categoryPercentage: 0.8,
         }]
     };
+    var position = "end";
+    var prev_close = current_data["prev_close"];
+    if (prices.length > 5) {
+        var startDistance = 0;
+        var endDistance = 0;
+        for (var i = 0; i < 5; i++) {
+            startDistance += Math.abs(prices[i].c - prev_close);
+            endDistance += Math.abs(prices[prices.length - 1 - i].c - prev_close);
+        }
+        if (startDistance > endDistance) {
+            position = "start";
+        }
+    }
     const prev_close_annotation = {
         type: "line",
         borderWidth: chart_mode === "compact" ? 0.5 : 1,
@@ -164,9 +178,9 @@ function update_intraday_chart() {
         value: current_data["prev_close"],
         label: {
             display: chart_mode === "full",
-            backgroundColor: "rgb(100, 100, 100)",
-            content: `previous close ${current_data["prev_close"].toFixed(2)}`,
-            position: "end"
+            backgroundColor: "rgba(100, 100, 100, 0.7)",
+            content: `previous close ${prev_close.toFixed(2)}`,
+            position: position
         }
     };
     const chart_config = {
@@ -275,6 +289,8 @@ function validateSymbol(symbol) {
 }
 
 if (typeof(DEFAULT_SYMBOL) !== "undefined" && typeof(DEFAULT_DATE) !== "undefined" && validateDate(DEFAULT_DATE) && validateSymbol(DEFAULT_SYMBOL)) {
+    datepicker.setDate(Date.parse(DEFAULT_DATE) + (new Date().getTimezoneOffset() * 60000));
+    document.getElementById("intraday-symbol-input").value = DEFAULT_SYMBOL;
     get_chart_data(DEFAULT_DATE, DEFAULT_SYMBOL);
     update_intraday_chart();
 } else {

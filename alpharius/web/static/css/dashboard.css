@@ -107,6 +107,15 @@
     width: 70px;
 }
 
+a {
+    color: black;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
 @media (max-width: 800px) {
     #current-equity {
         font-size: 26px;

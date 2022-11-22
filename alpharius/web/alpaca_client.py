@@ -226,6 +226,7 @@ class AlpacaClient:
                          'side': order.side,
                          'price': f'{price:.4g}',
                          'value': f'{price * qty:.2f}',
+                         'link': f'experiments?date={filled_at.strftime("%F")}&symbol={order.symbol}',
                          'time': round_time(filled_at, time_fmt_with_year)}
             if order.symbol in position_symbols:
                 position_symbols.remove(order.symbol)
@@ -253,6 +254,8 @@ class AlpacaClient:
     def get_current_positions(self):
         start = time.time()
         result = []
+        calendar = self.get_calendar(get_last_day().strftime('%F'))
+        last_trading_day = calendar[-1].date.strftime('%F')
         positions = self._alpaca.list_positions()
         infos = self.get_info_today([p.symbol for p in positions])
         for position in positions:
@@ -273,6 +276,7 @@ class AlpacaClient:
                 'side': side,
                 'day_change': get_signed_percentage(info['change']),
                 'gl': get_signed_percentage(gl),
+                'link': f'experiments?date={last_trading_day}&symbol={symbol}'
             })
         result.sort(key=lambda p: p['symbol'])
         app.logger.info('Time cost for get_current_positions: [%.2fs]', time.time() - start)
