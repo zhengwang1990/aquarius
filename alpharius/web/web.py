@@ -305,7 +305,14 @@ def logs():
 
 @bp.route('/experiments')
 def experiments():
-    return flask.render_template('experiments.html')
+    client = AlpacaClient()
+    date = flask.request.args.get('date')
+    symbol = flask.request.args.get('symbol')
+    all_symbols = client.get_all_symbols()
+    return flask.render_template('experiments.html',
+                                 all_symbols=all_symbols,
+                                 default_date=date,
+                                 default_symbol=symbol)
 
 
 @bp.route('/charts')

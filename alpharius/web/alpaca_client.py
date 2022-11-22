@@ -373,11 +373,22 @@ class AlpacaClient:
                                              end=(pd_date - datetime.timedelta(days=1)).strftime('%F'),
                                              adjustment='split')[-1]
         labels = []
-        values = []
+        prices = []
+        volumes = []
         for bar in bars:
             label = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime('%H:%M')
+            if not "04:00" <= label <= "19:55":
+                continue
             labels.append(label)
-            value = {'h': bar.h, 'l': bar.l, 'o': bar.o, 'c': bar.c, 'v': bar.v,
+            price = {'h': bar.h, 'l': bar.l, 'o': bar.o, 'c': bar.c,
                      'x': label, 's': [bar.o, bar.c]}
-            values.append(value)
-        return {'labels': labels, 'values': values, 'prev_close': prev_day_bar.c}
+            prices.append(price)
+            volume = {'x': label, 's': bar.v, 'g': int(bar.c >= bar.o)}
+            volumes.append(volume)
+        return {'labels': labels, 'prices': prices, 'volumes': volumes,
+                'prev_close': prev_day_bar.c}
+
+    @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
+    def get_all_symbols(self):
+        assets = self._alpaca.list_assets()
+        return [asset.symbol for asset in assets]

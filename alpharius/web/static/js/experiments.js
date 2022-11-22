@@ -1,5 +1,5 @@
-const elem = document.getElementById("datepicker");
-const datepicker = new Datepicker(elem, {
+const datepicker_elem = document.getElementById("intraday-datepicker");
+const datepicker = new Datepicker(datepicker_elem, {
     autohide: true,
     format: "M dd yyyy",
     maxDate: new Date(),
@@ -11,6 +11,8 @@ var chart_mode = null;
 var chart_data = null;
 var trimmed_chart_data = null;
 var chart = null;
+const intraday_alert = document.getElementById("intraday-alert");
+const intraday_chart_container = document.getElementById("intraday-chart-container");
 
 if (window.innerWidth <= 800) {
     chart_mode = "compact";
@@ -44,9 +46,19 @@ const candlestick = {
     }
 };
 
-function get_chart_data() {
-    var date = "2022-11-18";
-    var symbol = "QQQ";
+function displayAlert(type, message) {
+    intraday_chart_container.style.display = "none";
+    for (c of intraday_alert.classList.values()) {
+        if (c != "alert") {
+            intraday_alert.classList.remove(c);
+        }
+    }
+    intraday_alert.classList.add("alert-" + type);
+    intraday_alert.innerHTML = message;
+    intraday_alert.style.removeProperty("display");
+}
+
+function get_chart_data(date, symbol) {
     var xmlHttp = new XMLHttpRequest();
     xmlHttp.open("GET", `/charts?date=${date}&symbol=${symbol}`, false);
     xmlHttp.send(null);
@@ -55,29 +67,49 @@ function get_chart_data() {
     chart_data = obj;
     trimmed_chart_data = {
         labels: [],
-        values: [],
+        prices: [],
+        volumes: [],
         prev_close: chart_data["prev_close"]
     }
     for (var i = 0; i < chart_data["labels"].length; i++) {
         var label = chart_data["labels"][i];
         if (label >= "09:30" && label < "16:00") {
             trimmed_chart_data.labels.push(label);
-            trimmed_chart_data.values.push(chart_data["values"][i]);
+            trimmed_chart_data.prices.push(chart_data["prices"][i]);
+            trimmed_chart_data.volumes.push(chart_data["volumes"][i]);
         }
     }
 }
 
-function get_chart() {
-    get_chart_data();
-    update_chart();
+function get_intraday_chart() {
+    var date = datepicker.getDate("yyyy-mm-dd");
+    if (date === undefined) {
+        displayAlert("danger", "Date must be selected");
+        return;
+    }
+    if (!validateDate(date)) {
+        displayAlert("danger", `${date} is not a valid date`);
+        return;
+    }
+    var symbol = document.getElementById("intraday-symbol-input").value;
+    if (symbol.length === 0) {
+        displayAlert("danger", "Symbol must be entered");
+        return;
+    }
+    if (!validateSymbol(symbol)) {
+        displayAlert("danger", `${symbol} is not a valid symbol`);
+        return;
+    }
+    get_chart_data(date, symbol);
+    update_intraday_chart();
 }
 
-function update_chart() {
+function update_intraday_chart() {
     var current_data = chart_mode === "compact" ? trimmed_chart_data : chart_data;
     const data = {
         labels: current_data["labels"],
         datasets: [{
-            data: current_data["values"],
+            data: current_data["prices"],
             backgroundColor: (ctx) => {
                 const { raw: {x, o, c} } = ctx;
                 let color, alpha;
@@ -95,7 +127,32 @@ function update_chart() {
             },
             borderColor: "black",
             borderWidth: chart_mode === "compact" ? 0.5 : 1,
-            borderSkipped: false
+            borderSkipped: false,
+            barPercentage: 1.8,
+            categoryPercentage: 0.8,
+            yAxisID: "y"
+        }, {
+           data: current_data["volumes"],
+                backgroundColor: (ctx) => {
+                const { raw: {x, g} } = ctx;
+                let color, alpha;
+                if (x < "09:30" || x >= "16:00") {
+                    alpha = 0.3;
+                } else {
+                    alpha = 0.9;
+                }
+                if (g == 1) {
+                    color = `rgba(5, 170, 40, ${alpha})`;
+                } else {
+                    color = `rgba(237, 73, 55, ${alpha})`;
+                }
+                return color;
+            },
+            borderColor: "black",
+            borderWidth: chart_mode === "compact" ? 0.5 : 1,
+            yAxisID: "yLower",
+            barPercentage: 1.8,
+            categoryPercentage: 0.8,
         }]
     };
     const prev_close_annotation = {
@@ -107,7 +164,7 @@ function update_chart() {
         value: current_data["prev_close"],
         label: {
             display: chart_mode === "full",
-            backgroundColor: "rgba(100, 100, 100, 0.5)",
+            backgroundColor: "rgb(100, 100, 100)",
             content: `previous close ${current_data["prev_close"].toFixed(2)}`,
             position: "end"
         }
@@ -120,6 +177,10 @@ function update_chart() {
             interaction: {
                 intersect: false
             },
+            parsing: {
+                xAxisKey: "x",
+                yAxisKey: "s"
+            },
             plugins: {
                 legend: {
                     display: false
@@ -127,12 +188,16 @@ function update_chart() {
                 tooltip: {
                     callbacks: {
                         beforeBody: (ctx) => {
-                            return [
-                                `O: ${ctx[0].raw.o.toFixed(2)}`,
-                                `H: ${ctx[0].raw.h.toFixed(2)}`,
-                                `L: ${ctx[0].raw.l.toFixed(2)}`,
-                                `C: ${ctx[0].raw.c.toFixed(2)}`
-                            ];
+                            if (ctx[0].raw.o !== undefined) {
+                                return [
+                                    `O: ${ctx[0].raw.o.toFixed(2)}`,
+                                    `H: ${ctx[0].raw.h.toFixed(2)}`,
+                                    `L: ${ctx[0].raw.l.toFixed(2)}`,
+                                    `C: ${ctx[0].raw.c.toFixed(2)}`
+                                ];
+                            } else {
+                                return `Volume: ${ctx[0].raw.s}`
+                            }
                         },
                         label: (ctx) => {
                             return '';
@@ -143,10 +208,6 @@ function update_chart() {
                     annotations: [prev_close_annotation]
                 }
             },
-            parsing: {
-                xAxisKey: "x",
-                yAxisKey: "s"
-            },
             scales: {
                 x: {
                     ticks: {
@@ -155,15 +216,27 @@ function update_chart() {
                         maxRotation: 0
                     }
                 },
+                yLower: {
+                    beginAtZero: true,
+                    stack: "yScale",
+                    stackWeight: 1,
+                    ticks: {
+                        display: false
+                    }
+                },
                 y: {
-                    beginAtZero: false
+                    beginAtZero: false,
+                    stack: "yScale",
+                    stackWeight: 4
                 }
             }
         },
         plugins: [candlestick]
     };
+    intraday_alert.style.display = "none";
+    intraday_chart_container.style.removeProperty("display");
     if (chart === null) {
-        chart = new Chart(document.getElementById("graph-charts"), chart_config);
+        chart = new Chart(document.getElementById("graph-intraday-chart"), chart_config);
     } else {
         chart.data = chart_config.data;
         chart.options = chart_config.options;
@@ -172,19 +245,38 @@ function update_chart() {
     }
 }
 
-document.getElementById("chart-btn").addEventListener("click", get_chart);
+document.getElementById("intraday-chart-btn").addEventListener("click", get_intraday_chart);
 
 window.addEventListener("resize", function(event) {
     const width = window.innerWidth;
-    if (width <= 1300) {
+    if (width <= 1600) {
         if (chart_mode !== "compact") {
             chart_mode = "compact";
-            update_chart();
+            if (intraday_chart_container.style.display !== "none") {
+                update_intraday_chart();
+            }
         }
     } else {
         if (chart_mode !== "full") {
             chart_mode = "full";
-            update_chart();
+            if (intraday_chart_container.style.display !== "none") {
+                update_intraday_chart();
+            }
         }
     }
 }, true);
+
+function validateDate(date) {
+    return date.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) !== null;
+}
+
+function validateSymbol(symbol) {
+    return ALL_SYMBOLS.has(symbol);
+}
+
+if (typeof(DEFAULT_SYMBOL) !== "undefined" && typeof(DEFAULT_DATE) !== "undefined" && validateDate(DEFAULT_DATE) && validateSymbol(DEFAULT_SYMBOL)) {
+    get_chart_data(DEFAULT_DATE, DEFAULT_SYMBOL);
+    update_intraday_chart();
+} else {
+    displayAlert("info", "Enter date and symbol and click GO")
+}

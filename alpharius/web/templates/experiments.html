@@ -9,28 +9,37 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-header"><span class="card-title">Charts</span></div>
+    <div class="card-header"><span class="card-title">Intraday Chart</span></div>
     <div id="select-container">
          <span class="inline-span">
             <div class="input-group">
               <span class="input-group-text"><i class="uil uil-calendar-alt"></i></span>
-              <input type="text" class="form-control" id="datepicker" readonly>
+              <input type="text" class="form-control" id="intraday-datepicker" readonly>
             </div>
          </span><span class="padding-span"></span><span class="inline-span">
             <div class="input-group">
                 <span class="input-group-text"><i class="uil uil-search"></i></span>
-                <input type="text" class="form-control" id="symbol-input">
+                <input type="text" class="form-control" id="intraday-symbol-input">
             </div>
-         </span><button type="button" class="btn btn-secondary" id="chart-btn">GO</button>
+         </span><button type="button" class="btn btn-secondary" id="intraday-chart-btn">GO</button>
     </div>
 
-    <div class="chart-container">
-        <canvas id="graph-charts"></canvas>
+    <div class="alert" style="display:none" id="intraday-alert" role="alert"></div>
+
+    <div class="chart-container" id="intraday-chart-container" style="display:none">
+        <canvas id="graph-intraday-chart"></canvas>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script>
+    ALL_SYMBOLS = new Set({{ all_symbols | safe }});
+    {% if default_date and default_symbol %}
+    DEFAULT_DATE = "{{ default_date }}";
+    DEFAULT_SYMBOL = "{{ default_symbol }}";
+    {% endif %}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/js/datepicker.min.js"></script>
 <script src="{{ url_for('static', filename='js/experiments.js') }}"></script>
 {% endblock %}

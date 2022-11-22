@@ -3,8 +3,12 @@
     position: relative;
     margin: auto;
     padding: 0 15px 15px 15px;
-    height: 500px;
+    height: 650px;
     width: 100%;
+}
+
+.dash-content .card .alert {
+    margin: 25px 15px 25px 15px;
 }
 
 .dash-content .card .datepicker-picker {
@@ -23,6 +27,7 @@
 .dash-content .input-group .form-control {
     width: 250px;
     font-size: 15px;
+    text-transform: uppercase;
 }
 
 .dash-content .btn {
@@ -43,7 +48,7 @@
 
 @media (max-width: 1000px) {
     .dash-content .card .chart-container {
-        height: 370px;
+        height: 450px;
     }
 
     .dash-content .card .padding-span {
