@@ -64,6 +64,8 @@ def transactions():
             'slippage': get_colored_value(f'{t.slippage:+,.2f} ({t.slippage_pct * 100:+.2f}%)',
                                           'green' if t.slippage >= 0 else 'red') if t.slippage is not None else '',
             'slippage_pct': get_signed_percentage(t.slippage_pct) if t.slippage_pct is not None else '',
+            'link': (f'experiments?symbol={t.symbol}&'
+                     f'date={pd.to_datetime(t.exit_time).tz_convert(TIME_ZONE).strftime("%F")}')
         })
     return flask.render_template('transactions.html',
                                  transactions=trans,

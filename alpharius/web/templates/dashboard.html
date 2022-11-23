@@ -132,7 +132,7 @@
                     <tbody>
                         {% for position in positions %}
                         <tr>
-                            <td><a href="{{ position['link'] }}"> {{ position['symbol'] }}</a></td>
+                            <td><a href="{{ position['link'] }}">{{ position['symbol'] }}</a></td>
                             <td>
                                 <span class="badge-shape {{ 'badge-blue' if position['side'] == 'long' else 'badge-orange'}}">
                                     {{ position['side'] }}

@@ -34,7 +34,7 @@
             <tbody>
                 {% for transaction in transactions %}
                     <tr>
-                        <td>{{ transaction['symbol'] }}</td>
+                        <td><a href="{{ transaction['link'] }}">{{ transaction['symbol'] }}</a></td>
                         <td>
                             <span class="badge-shape {{ 'badge-blue' if transaction['side'] == 'long' else 'badge-purple'}}">
                                 {{ transaction['side'] }}
