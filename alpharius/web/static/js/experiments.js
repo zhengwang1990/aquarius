@@ -321,14 +321,20 @@ var currentFocus;
 /*execute a function when someone writes in the text field:*/
 symbol_input.addEventListener("input", function(e) {
     var a, b, val = this.value;
+    var s = val;
+    displayAlert("info", s);
     /*close any already open lists of autocompleted values*/
     closeAllLists();
+    s += ";closeList";
+    displayAlert("info", s);
     if (!val) { return false;}
     currentFocus = -1;
     /*create a DIV element that will contain the items (values):*/
     a = document.createElement("DIV");
     a.setAttribute("id", this.id + "-autocomplete-list");
     a.setAttribute("class", "autocomplete-items");
+    s += ";createlist";
+    displayAlert("info", s);
     /*append the DIV element as a child of the autocomplete container:*/
     this.parentNode.appendChild(a);
     var node = symbol_tree;
@@ -344,6 +350,8 @@ symbol_input.addEventListener("input", function(e) {
     if (node !== null) {
         arr = node.symbols;
     }
+    s += ";" + arr;
+    displayAlert("info", s);
     /*for each item in the array...*/
     for (var i = 0; i < arr.length; i++) {
         /*create a DIV element for each matching element:*/
@@ -363,6 +371,8 @@ symbol_input.addEventListener("input", function(e) {
         });
         a.appendChild(b);
     }
+    s += ";render";
+    displayAlert("info", s);
 });
 /*execute a function presses a key on the keyboard:*/
 symbol_input.addEventListener("keydown", function(e) {
