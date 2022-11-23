@@ -34,5 +34,6 @@ function update_job_status() {
         status.style.display = "none";
     }
 }
+
 update_job_status()
 setInterval(update_job_status, 60000);
