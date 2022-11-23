@@ -62,7 +62,8 @@ class FakeAlpaca:
     def list_assets(self):
         self.list_assets_call_count += 1
         return [Asset(symbol, True, True, True, True, True)
-                for symbol in ['QQQ', 'SPY', 'DIA', 'TQQQ', 'GOOG', 'AAPL', 'MSFT']]
+                for symbol in ['QQQ', 'SPY', 'DIA', 'TQQQ', 'GOOG', 'AAPL', 'MSFT'
+                               'UCO', 'TSLA']]
 
     def list_positions(self):
         self.list_positions_call_count += 1
@@ -161,8 +162,8 @@ class FakeAlpaca:
 
     def get_latest_trades(self, symbols, *args, **kwargs):
         self.get_latest_trades_call_count += 1
-        value = self.get_latest_trades_call_count % 3 * 50 + 5
-        return {symbol: Trade(value) for symbol in symbols}
+        values = [5 * i + 45 for i in range(len(symbols))]
+        return {symbol: Trade(value) for symbol, value in zip(symbols, values)}
 
 
 class FakePolygon:
@@ -196,7 +197,7 @@ class FakePolygon:
 
     def get_last_trade(self, symbol, *args, **kwargs):
         self.get_last_trade_call_count += 1
-        value = self.get_last_trade_call_count % 3 * 50 + 5
+        value = self.get_last_trade_call_count % 10 * 5 + 45
         return LastTrade(value)
 
 
