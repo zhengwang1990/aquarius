@@ -55,7 +55,8 @@ def test_run_with_processors(mock_smtp):
                            processors.O2lProcessorFactory(),
                            processors.O2hProcessorFactory(),
                            processors.BearMomentumProcessorFactory(),
-                           processors.HourlyReversionProcessorFactory()]
+                           processors.H2lOneHourProcessorFactory(),
+                           processors.H2lFiveMinProcessorFactory()]
     trading = trade.Trading(processor_factories=processor_factories)
 
     trading.run()

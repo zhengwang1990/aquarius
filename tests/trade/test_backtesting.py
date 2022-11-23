@@ -28,7 +28,8 @@ def test_run_with_processors():
                            processors.O2lProcessorFactory(),
                            processors.O2hProcessorFactory(),
                            processors.BearMomentumProcessorFactory(),
-                           processors.HourlyReversionProcessorFactory()]
+                           processors.H2lOneHourProcessorFactory(),
+                           processors.H2lFiveMinProcessorFactory()]
     backtesting = trade.Backtesting(start_date=pd.to_datetime('2021-03-17'),
                                     end_date=pd.to_datetime('2021-03-18'),
                                     processor_factories=processor_factories)
