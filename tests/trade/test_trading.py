@@ -74,6 +74,17 @@ def test_not_run_on_market_close_day(mocker, mock_alpaca):
     assert mock_alpaca.get_bars_call_count == 0
 
 
+def test_not_run_if_far_from_market_open(mocker, mock_alpaca):
+    trading = trade.Trading(processor_factories=[])
+    mocker.patch.object(time, 'time',
+                        return_value=mock_alpaca.get_clock().next_open.timestamp() - 4000)
+
+    trading.run()
+
+    assert mock_alpaca.get_account_call_count > 0
+    assert mock_alpaca.get_bars_call_count == 0
+
+
 def test_small_position_not_open(mocker, mock_alpaca):
     fake_processor_factory = FakeProcessorFactory(
         trade.TradingFrequency.CLOSE_TO_OPEN)
