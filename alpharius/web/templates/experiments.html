@@ -14,12 +14,12 @@
          <span class="inline-span">
             <div class="input-group">
               <span class="input-group-text"><i class="uil uil-calendar-alt"></i></span>
-              <input type="text" class="form-control" id="intraday-datepicker" readonly>
+              <input type="text" class="form-control" id="intraday-datepicker" placeholder="DATE" readonly>
             </div>
          </span><span class="padding-span"></span><span class="inline-span">
             <div class="input-group">
                 <span class="input-group-text"><i class="uil uil-search"></i></span>
-                <input type="text" class="form-control" id="intraday-symbol-input">
+                <input type="text" class="form-control symbol-input" placeholder="SYMBOL" id="intraday-symbol-input">
             </div>
          </span><button type="button" class="btn btn-secondary" id="intraday-chart-btn">GO</button>
     </div>
@@ -34,7 +34,7 @@
 
 {% block scripts %}
 <script>
-    ALL_SYMBOLS = new Set({{ all_symbols | safe }});
+    ALL_SYMBOLS = {{ all_symbols | safe }};
     {% if default_date and default_symbol %}
     DEFAULT_DATE = "{{ default_date }}";
     DEFAULT_SYMBOL = "{{ default_symbol }}";

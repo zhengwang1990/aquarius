@@ -11,6 +11,9 @@ var chart_mode = null;
 var chart_data = null;
 var trimmed_chart_data = null;
 var chart = null;
+var symbol_tree = {symbols: [], children: {}}
+var symbol_input = document.getElementById("intraday-symbol-input");
+const symbol_set = new Set(ALL_SYMBOLS)
 const intraday_alert = document.getElementById("intraday-alert");
 const intraday_chart_container = document.getElementById("intraday-chart-container");
 
@@ -91,7 +94,7 @@ function get_intraday_chart() {
         displayAlert("danger", `${date} is not a valid date`);
         return;
     }
-    var symbol = document.getElementById("intraday-symbol-input").value.toUpperCase();
+    var symbol = symbol_input.value.toUpperCase();
     if (symbol.length === 0) {
         displayAlert("danger", "Symbol must be entered");
         return;
@@ -285,14 +288,136 @@ function validateDate(date) {
 }
 
 function validateSymbol(symbol) {
-    return ALL_SYMBOLS.has(symbol);
+    return symbol_set.has(symbol);
 }
 
 if (typeof(DEFAULT_SYMBOL) !== "undefined" && typeof(DEFAULT_DATE) !== "undefined" && validateDate(DEFAULT_DATE) && validateSymbol(DEFAULT_SYMBOL)) {
     datepicker.setDate(Date.parse(DEFAULT_DATE) + (new Date().getTimezoneOffset() * 60000));
-    document.getElementById("intraday-symbol-input").value = DEFAULT_SYMBOL;
+    symbol_input.value = DEFAULT_SYMBOL;
     get_chart_data(DEFAULT_DATE, DEFAULT_SYMBOL);
     update_intraday_chart();
 } else {
-    displayAlert("info", "Enter date and symbol and click GO")
+    displayAlert("info", "Enter date and symbol, and click GO")
 }
+
+
+// Construct trie tree
+for (var symbol of ALL_SYMBOLS) {
+    var node = symbol_tree;
+    for (var char of symbol) {
+        if (node.children[char] === undefined) {
+            node.children[char] = {symbols: [], children: {}}
+        }
+        node = node.children[char];
+        if (node.symbols.length < 10) {
+            node.symbols.push(symbol);
+        }
+    }
+}
+
+/*the autocomplete function takes two arguments,
+the text field element and an array of possible autocompleted values:*/
+var currentFocus;
+/*execute a function when someone writes in the text field:*/
+symbol_input.addEventListener("input", function(e) {
+    var a, b, val = this.value;
+    /*close any already open lists of autocompleted values*/
+    closeAllLists();
+    if (!val) { return false;}
+    currentFocus = -1;
+    /*create a DIV element that will contain the items (values):*/
+    a = document.createElement("DIV");
+    a.setAttribute("id", this.id + "-autocomplete-list");
+    a.setAttribute("class", "autocomplete-items");
+    /*append the DIV element as a child of the autocomplete container:*/
+    this.parentNode.appendChild(a);
+    var node = symbol_tree;
+    for (var char of val) {
+        if (node.children[char] !== undefined) {
+            node = node.children[char]
+        } else {
+            node = null;
+            break;
+        }
+    }
+    var arr = [];
+    if (node !== null) {
+        arr = node.symbols;
+    }
+    /*for each item in the array...*/
+    for (var i = 0; i < arr.length; i++) {
+        /*create a DIV element for each matching element:*/
+        b = document.createElement("DIV");
+        /*make the matching letters bold:*/
+        b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
+        b.innerHTML += arr[i].substr(val.length);
+        /*insert a input field that will hold the current array item's value:*/
+        b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
+        /*execute a function when someone clicks on the item value (DIV element):*/
+        b.addEventListener("click", function(e) {
+            /*insert the value for the autocomplete text field:*/
+            symbol_input.value = this.getElementsByTagName("input")[0].value;
+            /*close the list of autocompleted values,
+            (or any other open lists of autocompleted values:*/
+            closeAllLists();
+        });
+        a.appendChild(b);
+    }
+});
+/*execute a function presses a key on the keyboard:*/
+symbol_input.addEventListener("keydown", function(e) {
+    var x = document.getElementById(this.id + "-autocomplete-list");
+    if (x) {
+        x = x.getElementsByTagName("div");
+    } else {
+        return;
+    }
+    if (e.keyCode == 40) {
+        /*If the arrow DOWN key is pressed,
+        increase the currentFocus variable:*/
+        currentFocus++;
+        /*and and make the current item more visible:*/
+        addActive(x);
+    } else if (e.keyCode == 38) { //up
+        /*If the arrow UP key is pressed,
+        decrease the currentFocus variable:*/
+        currentFocus--;
+        /*and and make the current item more visible:*/
+        addActive(x);
+    } else if (e.keyCode == 13) {
+        /*If the ENTER key is pressed, prevent the form from being submitted,*/
+        e.preventDefault();
+        if (currentFocus > -1) {
+            /*and simulate a click on the "active" item:*/
+            x[currentFocus].click();
+        }
+    }
+});
+function addActive(x) {
+    /*a function to classify an item as "active":*/
+    if (!x) return false;
+    /*start by removing the "active" class on all items:*/
+    removeActive(x);
+    if (currentFocus >= x.length) currentFocus = 0;
+    if (currentFocus < 0) currentFocus = (x.length - 1);
+    /*add class "autocomplete-active":*/
+    x[currentFocus].classList.add("autocomplete-active");
+ }
+function removeActive(x) {
+    /*a function to remove the "active" class from all autocomplete items:*/
+    for (var i = 0; i < x.length; i++) {
+        x[i].classList.remove("autocomplete-active");
+    }
+}
+function closeAllLists(elmnt) {
+    /*close all autocomplete lists in the document,
+    except the one passed as an argument:*/
+    var x = document.getElementsByClassName("autocomplete-items");
+    for (var i = 0; i < x.length; i++) {
+        if (elmnt != x[i] && elmnt != symbol_input) {
+            x[i].parentNode.removeChild(x[i]);
+        }
+    }
+}
+/*execute a function when someone clicks in the document:*/
+document.addEventListener("click", function (e) {closeAllLists(e.target);});

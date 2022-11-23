@@ -290,6 +290,9 @@ nav.close ~ .dashboard .top{
         left: 250px;
         width: calc(100% - 250px);
     }
+    .dash-content .card .input-group-text {
+        padding: 0.25rem 0.55rem;
+    }
 }
 
 @media (max-width: 550px) {

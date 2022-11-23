@@ -3,6 +3,7 @@ import datetime
 import functools
 import math
 import os
+import re
 import threading
 import time
 from concurrent import futures
@@ -395,4 +396,5 @@ class AlpacaClient:
     @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
     def get_all_symbols(self):
         assets = self._alpaca.list_assets()
-        return [asset.symbol for asset in assets]
+        return sorted(list(set([asset.symbol for asset in assets
+                                if re.match('^[A-Z]*$', asset.symbol)])))
