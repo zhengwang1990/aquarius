@@ -12,7 +12,7 @@ NUM_UNIVERSE_SYMBOLS = 20
 EXIT_TIME = datetime.time(16, 0)
 
 
-class HourlyReversionProcessor(Processor):
+class H2lOneHourProcessor(Processor):
 
     def __init__(self,
                  lookback_start_date: DATETIME_TYPE,
@@ -26,9 +26,9 @@ class HourlyReversionProcessor(Processor):
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._output_dir = output_dir
-        self._logger = logging_config(os.path.join(self._output_dir, 'hourly_reversion_processor.txt'),
+        self._logger = logging_config(os.path.join(self._output_dir, 'h2l_one_hour_processor.txt'),
                                       detail=True,
-                                      name='hourly_reversion_processor')
+                                      name='h2l_one_hour_processor')
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -72,12 +72,12 @@ class HourlyReversionProcessor(Processor):
             return
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
             return
-        hourly_loss = context.current_price / intraday_closes[-13] - 1
+        current_loss = context.current_price / intraday_closes[-13] - 1
         lower_threshold, upper_threshold = self._get_thresholds(context)
-        is_trade = lower_threshold < hourly_loss < upper_threshold
-        if is_trade or (context.mode == Mode.TRADE and hourly_loss < upper_threshold * 0.8):
+        is_trade = lower_threshold < current_loss < upper_threshold
+        if is_trade or (context.mode == Mode.TRADE and current_loss < upper_threshold * 0.8):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                               f'Hourly loss: {hourly_loss * 100:.2f}%. '
+                               f'Current loss: {current_loss * 100:.2f}%. '
                                f'Threshold: {lower_threshold * 100:.2f}% ~ {upper_threshold * 100:.2f}%. '
                                f'Current price {context.current_price}.')
         if is_trade:
@@ -92,9 +92,9 @@ class HourlyReversionProcessor(Processor):
         intraday_closes = context.intraday_lookback['Close']
         index = -13 - (context.current_time - position['entry_time']).seconds // 300
         if len(intraday_closes) >= abs(index):
-            loss = context.current_price / intraday_closes[index] - 1
+            current_loss = context.current_price / intraday_closes[index] - 1
             lower_threshold, _ = self._get_thresholds(context)
-            if loss < lower_threshold:
+            if current_loss < lower_threshold:
                 position['status'] = 'inactive'
                 return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
         if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
@@ -103,7 +103,7 @@ class HourlyReversionProcessor(Processor):
             return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
 
 
-class HourlyReversionProcessorFactory(ProcessorFactory):
+class H2lOneHourProcessorFactory(ProcessorFactory):
 
     def __init__(self):
         super().__init__()
@@ -113,5 +113,5 @@ class HourlyReversionProcessorFactory(ProcessorFactory):
                lookback_end_date: DATETIME_TYPE,
                data_source: DataSource,
                output_dir: str,
-               *args, **kwargs) -> HourlyReversionProcessor:
-        return HourlyReversionProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
+               *args, **kwargs) -> H2lOneHourProcessor:
+        return H2lOneHourProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)

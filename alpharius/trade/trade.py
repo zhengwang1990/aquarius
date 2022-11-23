@@ -15,7 +15,8 @@ PROCESSOR_FACTORIES = [
     processors.O2lProcessorFactory(),
     processors.O2hProcessorFactory(),
     processors.BearMomentumProcessorFactory(),
-    processors.HourlyReversionProcessorFactory(),
+    processors.H2lOneHourProcessorFactory(),
+    processors.H2lFiveMinProcessorFactory(),
 ]
 
 

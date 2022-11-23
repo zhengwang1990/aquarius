@@ -58,16 +58,17 @@ class ZScoreProcessor(Processor):
         z_price = (price_changes[-1] - np.mean(price_changes)) / (np.std(price_changes) + 1E-7)
         z_volume = (intraday_volumes[-1] - np.mean(intraday_volumes)) / (np.std(intraday_volumes) + 1E-7)
         is_trade = False
+        direction = 'up' if intraday_closes[-1] > intraday_closes[-2] else 'down'
         is_trade = is_trade or (z_price > 3 and z_volume > 6
-                                and intraday_closes[-1] > intraday_closes[-2])
+                                and direction == 'up')
         threshold = 2.5 if t < datetime.time(11, 0) else 3.5
         is_trade = is_trade or (z_price > threshold and z_volume < 6
-                                and intraday_closes[-1] < intraday_closes[-2])
+                                and direction == 'down')
         is_trade = is_trade and context.current_price / context.prev_day_close < 2
         if is_trade or (context.mode == Mode.TRADE and z_price > 1.5):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Price z-score: {z_price:.2f}. Volume z-score: {z_volume:.2f}. '
-                               f'Current price {context.current_price}.')
+                               f'Direction: {direction}. Current price {context.current_price}.')
         if not is_trade:
             return
         self._positions[context.symbol] = {'entry_time': context.current_time}
