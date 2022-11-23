@@ -51,9 +51,8 @@ class FakeAlpaca:
         self.get_bars_call_count = 0
         self.get_calendar_call_count = 0
         self.get_latest_trades_call_count = 0
-        self._value_cycle = itertools.cycle([30, 40, 41, 43, 42, 41.5, 50, 5,
-                                             100, 95, 90, 85, 80, 75, 70, 65,
-                                             60, 55, 50, 5])
+        self._value_cycle = itertools.cycle([42, 40, 41, 43, 42, 41.5, 40,
+                                             41, 42, 38, 41, 42])
 
     def get_account(self):
         self.get_account_call_count += 1
@@ -162,8 +161,8 @@ class FakeAlpaca:
 
     def get_latest_trades(self, symbols, *args, **kwargs):
         self.get_latest_trades_call_count += 1
-        values = [5 * i + 45 for i in range(len(symbols))]
-        return {symbol: Trade(value) for symbol, value in zip(symbols, values)}
+        value = next(self._value_cycle) + 5 * (-1) ** self.get_latest_trades_call_count
+        return {symbol: Trade(value) for symbol in symbols}
 
 
 class FakePolygon:
@@ -171,9 +170,8 @@ class FakePolygon:
     def __init__(self):
         self.get_aggs_call_count = 0
         self.get_last_trade_call_count = 0
-        self._value_cycle = itertools.cycle([30, 40, 41, 43, 42, 41.5, 50, 5,
-                                             100, 95, 90, 85, 80, 75, 70, 65,
-                                             60, 55, 50, 5])
+        self._value_cycle = itertools.cycle([42, 40, 41, 43, 42, 41.5, 40,
+                                             41, 42, 35, 41, 42])
 
     def get_aggs(self, ticker, multiplier, timespan, from_, to, *args, **kwargs):
         self.get_aggs_call_count += 1
@@ -197,7 +195,7 @@ class FakePolygon:
 
     def get_last_trade(self, symbol, *args, **kwargs):
         self.get_last_trade_call_count += 1
-        value = self.get_last_trade_call_count % 10 * 5 + 45
+        value = next(self._value_cycle) + 5 * (-1) ** self.get_last_trade_call_count
         return LastTrade(value)
 
 
