@@ -291,10 +291,10 @@ function validateSymbol(symbol) {
     return symbol_set.has(symbol);
 }
 
-if (typeof(DEFAULT_SYMBOL) !== "undefined" && typeof(DEFAULT_DATE) !== "undefined" && validateDate(DEFAULT_DATE) && validateSymbol(DEFAULT_SYMBOL)) {
-    datepicker.setDate(Date.parse(DEFAULT_DATE) + (new Date().getTimezoneOffset() * 60000));
-    symbol_input.value = DEFAULT_SYMBOL;
-    get_chart_data(DEFAULT_DATE, DEFAULT_SYMBOL);
+if (typeof(INIT_SYMBOL) !== "undefined" && typeof(INIT_DATE) !== "undefined" && validateDate(INIT_DATE) && validateSymbol(INIT_SYMBOL)) {
+    datepicker.setDate(Date.parse(INIT_DATE) + (new Date().getTimezoneOffset() * 60000));
+    symbol_input.value = INIT_SYMBOL;
+    get_chart_data(INIT_DATE, INIT_SYMBOL);
     update_intraday_chart();
 } else {
     displayAlert("info", "Enter date and symbol, and click GO")

@@ -35,9 +35,9 @@
 {% block scripts %}
 <script>
     ALL_SYMBOLS = {{ all_symbols | safe }};
-    {% if default_date and default_symbol %}
-    DEFAULT_DATE = "{{ default_date }}";
-    DEFAULT_SYMBOL = "{{ default_symbol }}";
+    {% if init_date and init_symbol %}
+    INIT_DATE = "{{ init_date }}";
+    INIT_SYMBOL = "{{ init_symbol }}";
     {% endif %}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/js/datepicker.min.js"></script>

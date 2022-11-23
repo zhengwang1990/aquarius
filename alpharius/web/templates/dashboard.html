@@ -14,12 +14,10 @@
                 <div class="d-flex">
                     <div class="mt-2">
                         <h6>{{ symbol }}</h6>
-                        <h2 class="mb-0">{{ watch[symbol]['price'] }}</h2>
+                        <h2 class="mb-0" id="{{symbol}}-watch-price"></h2>
                     </div>
                 </div>
-                <span class="text-muted footnote">
-                    {{ watch[symbol]['change'] | safe }} {{ watch[symbol]['date'] }}
-                </span>
+                <span class="text-muted footnote" id="{{symbol}}-watch-footnote"></span>
             </div>
         </div>
     </div>
@@ -87,22 +85,7 @@
                             </th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for order in orders %}
-                        <tr>
-                            <td><a href="{{ order['link'] }}">{{ order['symbol'] }}</a></td>
-                            <td>
-                                <span class="badge-shape {{ 'badge-blue' if order['side'] == 'buy' else 'badge-purple'}}">
-                                    {{ order['side'] }}
-                                </span>
-                            </td>
-                            <td>{{ order['price'] }}</td>
-                            <td class="xs-hidden">{{ order['value'] }}</td>
-                            <td>{{ order['time'] | safe }}</td>
-                            <td>{{ order['gl'] | safe }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
+                    <tbody id="orders-tbody"></tbody>
                 </table>
             </div>
         </div>
@@ -129,22 +112,7 @@
                             </th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for position in positions %}
-                        <tr>
-                            <td><a href="{{ position['link'] }}">{{ position['symbol'] }}</a></td>
-                            <td>
-                                <span class="badge-shape {{ 'badge-blue' if position['side'] == 'long' else 'badge-orange'}}">
-                                    {{ position['side'] }}
-                                </span>
-                            </td>
-                            <td>{{ position['current_price'] }}</td>
-                            <td>{{ position['value'] }}</td>
-                            <td class="xs-hidden">{{ position['day_change'] | safe }}</td>
-                            <td>{{ position['gl'] | safe }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
+                    <tbody id="positions-tbody"></tbody>
                 </table>
             </div>
         </div>
@@ -154,7 +122,11 @@
 
 {% block scripts %}
 <script>
-    const HISTORIES = {{ histories | safe }};
+    const INIT_HISTORIES = {{ histories | safe }};
+    const INIT_WATCH = {{ watch | safe }};
+    const INIT_ORDERS = {{ orders | safe }};
+    const INIT_POSITIONS = {{ positions | safe }};
+
 </script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}

@@ -18,8 +18,7 @@ from .scheduler import get_job_status
 bp = flask.Blueprint('web', __name__)
 
 
-@bp.route('/')
-def dashboard():
+def _get_dashdata():
     client = AlpacaClient()
     tasks = dict()
     with futures.ThreadPoolExecutor(max_workers=4) as pool:
@@ -27,11 +26,26 @@ def dashboard():
         tasks['orders'] = pool.submit(client.get_recent_orders)
         tasks['positions'] = pool.submit(client.get_current_positions)
         tasks['watch'] = pool.submit(client.get_market_watch)
+    return {'histories': tasks['histories'].result(),
+            'orders': tasks['orders'].result(),
+            'positions': tasks['positions'].result(),
+            'watch': tasks['watch'].result()}
+
+
+@bp.route('/')
+def dashboard():
+    data = _get_dashdata()
     return flask.render_template('dashboard.html',
-                                 histories=json.dumps(tasks['histories'].result()),
-                                 orders=tasks['orders'].result(),
-                                 positions=tasks['positions'].result(),
-                                 watch=tasks['watch'].result())
+                                 histories=json.dumps(data['histories']),
+                                 orders=data['orders'],
+                                 positions=data['positions'],
+                                 watch=data['watch'])
+
+
+@bp.route('/dashdata')
+def dashdata():
+    data = _get_dashdata()
+    return json.dumps(data)
 
 
 @bp.route('/transactions')
@@ -313,8 +327,8 @@ def experiments():
     all_symbols = client.get_all_symbols()
     return flask.render_template('experiments.html',
                                  all_symbols=all_symbols,
-                                 default_date=date,
-                                 default_symbol=symbol)
+                                 init_date=date,
+                                 init_symbol=symbol)
 
 
 @bp.route('/charts')

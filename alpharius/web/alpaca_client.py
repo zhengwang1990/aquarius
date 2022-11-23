@@ -228,6 +228,7 @@ class AlpacaClient:
                          'price': f'{price:.4g}',
                          'value': f'{price * qty:.2f}',
                          'link': f'experiments?date={filled_at.strftime("%F")}&symbol={order.symbol}',
+                         'gl': '',
                          'time': round_time(filled_at, time_fmt_with_year)}
             if order.symbol in position_symbols:
                 position_symbols.remove(order.symbol)

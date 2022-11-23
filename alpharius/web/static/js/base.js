@@ -35,4 +35,4 @@ function update_job_status() {
     }
 }
 update_job_status()
-setInterval(update_job_status, 100000);
+setInterval(update_job_status, 60000);
