@@ -61,8 +61,7 @@ class FakeAlpaca:
     def list_assets(self):
         self.list_assets_call_count += 1
         return [Asset(symbol, True, True, True, True, True)
-                for symbol in ['QQQ', 'SPY', 'DIA', 'TQQQ', 'GOOG', 'AAPL', 'MSFT'
-                               'UCO', 'TSLA']]
+                for symbol in ['QQQ', 'SPY', 'DIA', 'TQQQ', 'GOOG', 'AAPL', 'MSFT']]
 
     def list_positions(self):
         self.list_positions_call_count += 1
@@ -142,7 +141,7 @@ class FakeAlpaca:
         start_timestamp -= start_timestamp % time_interval
         end_timestamp = _to_timestamp(end) + time_interval
         return [Bar(pd.to_datetime(t, unit='s', utc=True),
-                    40, 41, 39, next(self._value_cycle), 40.123, 10)
+                    37, 41, 35, next(self._value_cycle), 40.123, 10)
                 for t in range(start_timestamp, end_timestamp, time_interval)
                 if pd.to_datetime(t, unit='s', utc=True).isoweekday() < 6]
 
@@ -187,7 +186,7 @@ class FakePolygon:
             raise ValueError('Time frame must be 5 min, 1 hour or 1 day.')
         start_timestamp = int(start.timestamp())
         start_timestamp -= start_timestamp % time_interval
-        return [Agg(t * 1000, 40, 41, 39, next(self._value_cycle), 40.123, 10)
+        return [Agg(t * 1000, 37, 41, 35, next(self._value_cycle), 40.123, 10)
                 for t in range(start_timestamp,
                                int(end.timestamp()) + time_interval,
                                time_interval)
