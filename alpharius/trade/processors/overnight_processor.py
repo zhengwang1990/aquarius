@@ -6,7 +6,8 @@ import numpy as np
 import tabulate
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, DATETIME_TYPE, DAYS_IN_A_YEAR, logging_config, get_header)
+    Position, ProcessorAction, DATETIME_TYPE, DAYS_IN_A_YEAR, DAYS_IN_A_QUARTER,
+    DAYS_IN_A_WEEK, logging_config, get_header)
 from ..stock_universe import TopVolumeUniverse
 
 NUM_UNIVERSE_SYMBOLS = 200
@@ -105,6 +106,9 @@ class OvernightProcessor(Processor):
         overnight_returns = []
         for close_price, open_price in zip(closes, opens):
             overnight_returns.append(np.log(open_price / close_price))
+        if (np.sum(overnight_returns[-DAYS_IN_A_QUARTER:]) < 0
+                and np.sum(overnight_returns[-DAYS_IN_A_WEEK:]) < 0):
+            return 0
         overnight_returns.sort()
         performance = float(np.sum(overnight_returns[30:-30]))
         return performance

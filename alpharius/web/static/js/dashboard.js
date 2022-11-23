@@ -237,6 +237,9 @@ update_orders();
 update_positions();
 
 function update_dashdata() {
+    if (document.hidden) {
+        return;
+    }
     var xmlHttp = new XMLHttpRequest();
     xmlHttp.open("GET", "/dashdata", false);
     xmlHttp.send(null);

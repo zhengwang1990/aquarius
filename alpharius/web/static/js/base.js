@@ -23,6 +23,9 @@ if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elain
 }
 
 function update_job_status() {
+    if (document.hidden) {
+        return;
+    }
     var xmlHttp = new XMLHttpRequest();
     xmlHttp.open("GET", "/job_status", false);
     xmlHttp.send(null);

@@ -78,6 +78,8 @@ class Trading:
             self._frequency_to_processor[processor.get_trading_frequency()].append(processor)
         for processor in self._processors:
             processor.setup(self._positions, self._today)
+        self._logger.info('Initialized processors: %s',
+                          [get_processor_name(processor) for processor in self._processors])
 
     def _init_stock_universe(self) -> None:
         for processor in self._processors:
@@ -95,6 +97,9 @@ class Trading:
         calendar = self._alpaca.get_calendar(start=today_str, end=today_str)
         if not calendar or calendar[0].date.strftime('%F') != today_str:
             self._logger.info('Market does not open on [%s]', today_str)
+            return
+        if time.time() < self._market_open - 3600:
+            self._logger.info('Market open is more than one hour away')
             return
 
         # Initialize
