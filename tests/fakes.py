@@ -161,7 +161,7 @@ class FakeAlpaca:
 
     def get_latest_trades(self, symbols, *args, **kwargs):
         self.get_latest_trades_call_count += 1
-        value = next(self._value_cycle) + 5 * (-1) ** self.get_latest_trades_call_count
+        value = next(self._value_cycle) + 10 * (-1) ** self.get_latest_trades_call_count
         return {symbol: Trade(value) for symbol in symbols}
 
 
@@ -195,7 +195,7 @@ class FakePolygon:
 
     def get_last_trade(self, symbol, *args, **kwargs):
         self.get_last_trade_call_count += 1
-        value = next(self._value_cycle) + 5 * (-1) ** self.get_last_trade_call_count
+        value = next(self._value_cycle) + 10 * (-1) ** self.get_last_trade_call_count
         return LastTrade(value)
 
 
