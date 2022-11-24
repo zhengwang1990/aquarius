@@ -1,3 +1,4 @@
+import os
 import time
 import threading
 
@@ -14,6 +15,8 @@ def test_trigger(client, mocker):
 
 
 def test_trade_impl(mocker):
+    mocker.patch('builtins.open', mocker.mock_open(read_data='data'))
+    mocker.patch.object(os, 'makedirs')
     # Return empty calendar so that the trading does not run
     mock_get_calendar = mocker.patch.object(fakes.FakeAlpaca,
                                             'get_calendar',
