@@ -187,4 +187,8 @@ input[type=submit] {
     .dash-content #daily-card .btn {
         margin-left: 5px;
     }
+
+    .form-control {
+        padding: 0.375rem 0.5rem;
+    }
 }
