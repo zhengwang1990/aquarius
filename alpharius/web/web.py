@@ -1,4 +1,5 @@
 import collections
+import datetime
 import math
 import json
 from concurrent import futures
@@ -323,20 +324,42 @@ def logs():
 def experiments():
     client = AlpacaClient()
     date = flask.request.args.get('date')
+    start_date = flask.request.args.get('start_date')
+    end_date = flask.request.args.get('end_date')
+    if start_date and end_date:
+        pd_start = pd.to_datetime(start_date)
+        if pd_start.isoweekday() > 5:
+            pd_start += datetime.timedelta(days=8 - pd_start.isoweekday())
+        start_date = pd_start.strftime('%F')
+        pd_end = pd.to_datetime(end_date)
+        if pd_end.isoweekday() > 5:
+            pd_end -= datetime.timedelta(days=pd_end.isoweekday() - 5)
+        end_date = pd_end.strftime('%F')
     symbol = flask.request.args.get('symbol')
     all_symbols = client.get_all_symbols()
     return flask.render_template('experiments.html',
                                  all_symbols=all_symbols,
                                  init_date=date,
+                                 init_start_date=start_date,
+                                 init_end_date=end_date,
                                  init_symbol=symbol)
 
 
 @bp.route('/charts')
 def charts():
     client = AlpacaClient()
-    date = flask.request.args.get('date')
+    timeframe = flask.request.args.get('timeframe')
+    if timeframe == 'intraday':
+        start_date = flask.request.args.get('date')
+        end_date = start_date
+    elif timeframe == 'daily':
+        start_date = flask.request.args.get('start_date')
+        end_date = flask.request.args.get('end_date')
+    else:
+        return ''
     symbol = flask.request.args.get('symbol')
-    res = client.get_charts(date=date, symbol=symbol)
+    res = client.get_charts(start_date=start_date, end_date=end_date,
+                            symbol=symbol, timeframe=timeframe)
     return json.dumps(res)
 
 

@@ -3,6 +3,7 @@
 {% block header %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/logs.css') }}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/css/datepicker.min.css">
+<script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/js/datepicker.min.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -71,6 +72,5 @@
     const DATES= {{ dates | safe }};
     var current_logger = "{{ loggers[0] if loggers else '' }}";
 </script>
-<script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/js/datepicker.min.js"></script>
 <script src="{{ url_for('static', filename='js/logs.js') }}"></script>
 {% endblock %}

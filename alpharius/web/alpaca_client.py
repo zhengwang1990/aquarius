@@ -362,28 +362,32 @@ class AlpacaClient:
         return result
 
     @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
-    def get_charts(self, symbol: str, date: str):
-        pd_date = pd.to_datetime(date)
+    def get_charts(self, start_date: str, end_date: str, symbol: str, timeframe: str):
         start_time = pd.to_datetime(
-            pd.Timestamp.combine(pd_date.date(), datetime.time(0, 0))).tz_localize(TIME_ZONE)
+            pd.Timestamp.combine(pd.to_datetime(start_date).date(), datetime.time(0, 0))).tz_localize(TIME_ZONE)
         end_time = pd.to_datetime(
-            pd.Timestamp.combine(pd_date.date(), datetime.time(23, 59))).tz_localize(TIME_ZONE)
+            pd.Timestamp.combine(pd.to_datetime(end_date).date(), datetime.time(23, 59))).tz_localize(TIME_ZONE)
+        if timeframe == 'intraday':
+            tf = tradeapi.TimeFrame(5, tradeapi.TimeFrameUnit.Minute)
+        else:
+            tf = tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day)
         bars = self._alpaca.get_bars(symbol=symbol,
-                                     timeframe=tradeapi.TimeFrame(5, tradeapi.TimeFrameUnit.Minute),
+                                     timeframe=tf,
                                      start=start_time.isoformat(),
                                      end=end_time.isoformat(),
                                      adjustment='split')
         prev_day_bar = self._alpaca.get_bars(symbol=symbol,
                                              timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
-                                             start=(pd_date - datetime.timedelta(days=7)).strftime('%F'),
-                                             end=(pd_date - datetime.timedelta(days=1)).strftime('%F'),
+                                             start=(start_time - datetime.timedelta(days=7)).strftime('%F'),
+                                             end=(start_time - datetime.timedelta(days=1)).strftime('%F'),
                                              adjustment='split')[-1]
         labels = []
         prices = []
         volumes = []
+        time_format = '%H:%M' if timeframe == 'intraday' else '%F'
         for bar in bars:
-            label = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime('%H:%M')
-            if not "04:00" <= label <= "19:55":
+            label = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime(time_format)
+            if timeframe == "intraday" and not "04:00" <= label <= "19:55":
                 continue
             labels.append(label)
             price = {'h': bar.h, 'l': bar.l, 'o': bar.o, 'c': bar.c,

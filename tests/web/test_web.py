@@ -107,5 +107,6 @@ def test_experiments(client):
 
 
 def test_charts(client, mock_alpaca):
-    assert client.get('/charts?date=2022-11-03&symbol=QQQ').status_code == 200
+    assert client.get('/charts?date=2022-11-18&symbol=QQQ'
+                      '&start_date=2022-11-13&end_date=2022-11-20').status_code == 200
     assert mock_alpaca.get_bars_call_count > 0

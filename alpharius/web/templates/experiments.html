@@ -5,22 +5,23 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/css/datepicker.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.1.0/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/js/datepicker-full.min.js"></script>
 {% endblock %}
 
 {% block content %}
-<div class="card">
+<div class="card" id="intraday-card">
     <div class="card-header"><span class="card-title">Intraday Chart</span></div>
-    <div id="select-container">
+    <div class="select-container">
          <span class="inline-span">
-            <div class="input-group">
-              <span class="input-group-text"><i class="uil uil-calendar-alt"></i></span>
-              <input type="text" class="form-control" id="intraday-datepicker" placeholder="DATE" readonly>
-            </div>
+              <div class="input-group">
+                  <span class="input-group-text"><i class="uil uil-calendar-alt"></i></span>
+                  <input type="text" class="form-control right-most-input" id="intraday-datepicker" placeholder="DATE" readonly>
+              </div>
          </span><span class="padding-span"></span><span class="inline-span">
-            <div class="input-group">
-                <span class="input-group-text"><i class="uil uil-search"></i></span>
-                <input type="text" class="form-control symbol-input" placeholder="SYMBOL" id="intraday-symbol-input">
-            </div>
+              <div class="input-group">
+                  <span class="input-group-text"><i class="uil uil-search"></i></span>
+                  <input type="text" class="form-control symbol-input" placeholder="SYMBOL" id="intraday-symbol-input">
+              </div>
          </span><button type="button" class="btn btn-secondary" id="intraday-chart-btn">GO</button>
     </div>
 
@@ -30,16 +31,40 @@
         <canvas id="graph-intraday-chart"></canvas>
     </div>
 </div>
+
+<div class="card" id="daily-card">
+    <div class="card-header"><span class="card-title">Daily Chart</span></div>
+    <div class="select-container">
+         <span class="inline-span">
+              <div class="input-group" id="daily-datepicker">
+                  <span class="input-group-text"><i class="uil uil-calendar-alt"></i></span>
+                  <input type="text" class="form-control" name="start" placeholder="START" readonly>
+                  <span class="input-group-text" id="input-to">TO</span>
+                  <input type="text" class="form-control right-most-input" name="end" placeholder="END" readonly>
+              </div>
+         </span><span class="padding-span"></span><span class="inline-span">
+              <div class="input-group">
+                  <span class="input-group-text"><i class="uil uil-search"></i></span>
+                  <input type="text" class="form-control symbol-input" placeholder="SYMBOL" id="daily-symbol-input">
+              </div>
+         </span><button type="button" class="btn btn-secondary" id="daily-chart-btn">GO</button>
+    </div>
+
+    <div class="alert" style="display:none" id="daily-alert" role="alert"></div>
+
+    <div class="chart-container" id="daily-chart-container" style="display:none">
+        <canvas id="graph-daily-chart"></canvas>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
     ALL_SYMBOLS = {{ all_symbols | safe }};
-    {% if init_date and init_symbol %}
-    INIT_DATE = "{{ init_date }}";
     INIT_SYMBOL = "{{ init_symbol }}";
-    {% endif %}
+    INIT_DATE = "{{ init_date }}";
+    INIT_START_DATE = "{{ init_start_date }}";
+    INIT_END_DATE = "{{ init_end_date }}";
 </script>
-<script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/js/datepicker.min.js"></script>
 <script src="{{ url_for('static', filename='js/experiments.js') }}"></script>
 {% endblock %}
