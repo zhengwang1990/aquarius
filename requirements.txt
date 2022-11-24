@@ -4,7 +4,6 @@ bs4
 coverage
 flask
 matplotlib
-mplfinance
 numpy
 pandas
 polygon-api-client
