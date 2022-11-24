@@ -12,7 +12,7 @@ from typing import List, Tuple
 import alpaca_trade_api as tradeapi
 import pandas as pd
 import retrying
-from alpharius.utils import get_signed_percentage, get_colored_value, TIME_ZONE
+from alpharius.utils import construct_experiment_link, get_signed_percentage, get_colored_value, TIME_ZONE
 from dateutil.relativedelta import relativedelta
 from flask import Flask
 
@@ -227,7 +227,7 @@ class AlpacaClient:
                          'side': order.side,
                          'price': f'{price:.4g}',
                          'value': f'{price * qty:.2f}',
-                         'link': f'experiments?date={filled_at.strftime("%F")}&symbol={order.symbol}',
+                         'link': construct_experiment_link(order.symbol, filled_at.strftime('%F')),
                          'gl': '',
                          'time': round_time(filled_at, time_fmt_with_year)}
             if order.symbol in position_symbols:
@@ -278,7 +278,7 @@ class AlpacaClient:
                 'side': side,
                 'day_change': get_signed_percentage(info['change']),
                 'gl': get_signed_percentage(gl),
-                'link': f'experiments?date={last_trading_day}&symbol={symbol}'
+                'link': construct_experiment_link(symbol, last_trading_day),
             })
         result.sort(key=lambda p: p['symbol'])
         app.logger.info('Time cost for get_current_positions: [%.2fs]', time.time() - start)
@@ -387,7 +387,7 @@ class AlpacaClient:
         time_format = '%H:%M' if timeframe == 'intraday' else '%F'
         for bar in bars:
             label = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime(time_format)
-            if timeframe == "intraday" and not "04:00" <= label <= "19:55":
+            if timeframe == 'intraday' and not '04:00' <= label <= '19:55':
                 continue
             labels.append(label)
             price = {'h': bar.h, 'l': bar.l, 'o': bar.o, 'c': bar.c,

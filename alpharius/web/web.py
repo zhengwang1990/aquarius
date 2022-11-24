@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 from alpharius.db import Aggregation, Db
 from alpharius.utils import (
-    compute_drawdown, compute_risks, get_signed_percentage,
-    get_colored_value, TIME_ZONE,
+    construct_experiment_link, compute_drawdown, compute_risks,
+    get_signed_percentage, get_colored_value, TIME_ZONE,
 )
 from .alpaca_client import AlpacaClient
 from .scheduler import get_job_status
@@ -79,8 +79,9 @@ def transactions():
             'slippage': get_colored_value(f'{t.slippage:+,.2f} ({t.slippage_pct * 100:+.2f}%)',
                                           'green' if t.slippage >= 0 else 'red') if t.slippage is not None else '',
             'slippage_pct': get_signed_percentage(t.slippage_pct) if t.slippage_pct is not None else '',
-            'link': (f'experiments?symbol={t.symbol}&'
-                     f'date={pd.to_datetime(t.exit_time).tz_convert(TIME_ZONE).strftime("%F")}')
+            'link': construct_experiment_link(
+                t.symbol,
+                pd.to_datetime(t.exit_time).tz_convert(TIME_ZONE).strftime('%F')),
         })
     return flask.render_template('transactions.html',
                                  transactions=trans,
@@ -352,11 +353,9 @@ def charts():
     if timeframe == 'intraday':
         start_date = flask.request.args.get('date')
         end_date = start_date
-    elif timeframe == 'daily':
+    else:
         start_date = flask.request.args.get('start_date')
         end_date = flask.request.args.get('end_date')
-    else:
-        return ''
     symbol = flask.request.args.get('symbol')
     res = client.get_charts(start_date=start_date, end_date=end_date,
                             symbol=symbol, timeframe=timeframe)
