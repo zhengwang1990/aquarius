@@ -9,7 +9,7 @@ from alpharius.notification.email_sender import EmailSender
 from flask_apscheduler import APScheduler
 
 app = flask.Flask(__name__)
-bp = flask.Blueprint('scheduler', __name__, url_prefix="/scheduler")
+bp = flask.Blueprint('scheduler', __name__)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 scheduler = APScheduler()
