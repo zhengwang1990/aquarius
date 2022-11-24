@@ -31,3 +31,10 @@ def mock_engine(mocker):
     engine = fakes.FakeDbEngine()
     mocker.patch.object(sqlalchemy, 'create_engine', return_value=engine)
     return engine
+
+
+@pytest.fixture(autouse=True)
+def mock_os(mocker):
+    mocker.patch('builtins.open', mocker.mock_open(read_data='data'))
+    mocker.patch.object(os.path, 'isfile', return_value=False)
+    mocker.patch.object(os, 'makedirs')
