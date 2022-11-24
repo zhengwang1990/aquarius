@@ -242,8 +242,6 @@ class Db:
             if t.isoweekday() < 6:
                 # Backfill aggregation table
                 self.update_aggregation(t.strftime('%F'))
-                # Backfill log table
-                self.update_log(t.strftime('%F'))
             t += datetime.timedelta(days=1)
 
 
