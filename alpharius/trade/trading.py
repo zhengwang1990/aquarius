@@ -1,5 +1,6 @@
 import collections
 import datetime
+import socket
 import threading
 import time
 import os
@@ -31,6 +32,7 @@ class Trading:
         os.makedirs(self._output_dir, exist_ok=True)
         self._logger = logging_config(os.path.join(self._output_dir, 'trading.txt'),
                                       detail=True, name='trading')
+        self._logger.info('Trading is running on [%s]', socket.gethostname())
         self._equity, self._cash = 0, 0
         self._cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         self._today = get_today()
