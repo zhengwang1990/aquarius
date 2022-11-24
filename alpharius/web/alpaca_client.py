@@ -384,7 +384,10 @@ class AlpacaClient:
         labels = []
         prices = []
         volumes = []
-        time_format = '%H:%M' if timeframe == 'intraday' else '%F'
+        if timeframe == 'intraday':
+            time_format = '%H:%M'
+        else:
+            time_format = '%m-%d' if len(bars) < 200 else '%F'
         for bar in bars:
             label = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime(time_format)
             if timeframe == 'intraday' and not '04:00' <= label <= '19:55':
