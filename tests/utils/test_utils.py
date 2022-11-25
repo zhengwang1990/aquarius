@@ -1,7 +1,7 @@
 import datetime
 
 import pandas as pd
-from alpharius.utils import get_transactions
+from alpharius.utils import get_transactions, get_latest_day
 from tests.fakes import Order
 
 
@@ -22,3 +22,12 @@ def test_get_transactions(mocker, mock_alpaca):
 
     assert list_orders.call_count == 2
     assert len(transactions) == 400
+
+
+def test_get_latest_day_returns_previous_day(mocker):
+    mocker.patch.object(pd, 'to_datetime',
+                        return_value=pd.to_datetime('2022-11-13 06:00:00+0'))
+
+    latest_day = get_latest_day()
+
+    assert latest_day == datetime.date(2022, 11, 12)

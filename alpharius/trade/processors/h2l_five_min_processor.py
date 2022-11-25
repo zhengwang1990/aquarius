@@ -77,7 +77,7 @@ class H2lFiveMinProcessor(Processor):
         if is_trade or (context.mode == Mode.TRADE and current_loss < upper_threshold * 0.8):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Current loss: {current_loss * 100:.2f}%. '
-                               f'Threshold: {current_loss * 100:.2f}% ~ {upper_threshold * 100:.2f}%. '
+                               f'Threshold: {lower_threshold * 100:.2f}% ~ {upper_threshold * 100:.2f}%. '
                                f'Current price {context.current_price}.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,

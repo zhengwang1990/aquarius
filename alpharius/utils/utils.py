@@ -156,6 +156,18 @@ def get_today():
             datetime.time(0, 0))).tz_localize(TIME_ZONE)
 
 
+def get_latest_day():
+    """Gets latest day of trading.
+
+    Either the return value is not a trading day, or if the time is before pre-market open,
+    it returns previous day.
+    """
+    latest_day = pd.to_datetime('now', utc=True).tz_convert(TIME_ZONE)
+    if latest_day.time() < datetime.time(4, 0):
+        latest_day -= datetime.timedelta(days=1)
+    return latest_day.date()
+
+
 def compute_risks(values: List[float],
                   market_values: List[float]) -> Tuple[Optional[float], Optional[float], float]:
     """Computes alpha, beta and sharpe ratio risk factors.
