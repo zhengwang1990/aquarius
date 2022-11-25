@@ -36,6 +36,7 @@ def _get_memory_stats():
 
 @bp.route('/memoryz')
 def memoryz():
+    # Run in a child process so that the memory will be returned to OS after it finishes.
     with futures.ProcessPoolExecutor(max_workers=1) as pool:
         stats = pool.submit(_get_memory_stats).result()
     return flask.render_template('memoryz.html', stats=stats)

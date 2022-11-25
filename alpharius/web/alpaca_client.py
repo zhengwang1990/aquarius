@@ -61,8 +61,6 @@ class AlpacaClient:
 
     def __init__(self):
         self._alpaca = tradeapi.REST()
-        self._pool = futures.ThreadPoolExecutor(max_workers=10)
-        self._lock = threading.RLock()
 
     @functools.lru_cache(maxsize=5)
     def get_calendar(self, last_day: str):
@@ -81,16 +79,17 @@ class AlpacaClient:
         result['market_close'] = calendar[-1].close.strftime('%H:%M')
         market_dates = [c.date for c in calendar]
         tasks = dict()
-        for start_index, timeframe in [(-1, '5Min'), (0, '1D')]:
-            extended_hours = True if start_index == - 1 else False
-            tasks[timeframe] = self._pool.submit(self._alpaca.get_portfolio_history,
-                                                 date_start=market_dates[start_index].strftime('%F'),
-                                                 date_end=market_dates[-1].strftime('%F'),
-                                                 timeframe=timeframe,
-                                                 extended_hours=extended_hours)
-        histories = dict()
-        for timeframe in ['5Min', '1D']:
-            histories[timeframe] = tasks[timeframe].result()
+        with futures.ThreadPoolExecutor(max_workers=2) as pool:
+            for start_index, timeframe in [(-1, '5Min'), (0, '1D')]:
+                extended_hours = True if start_index == - 1 else False
+                tasks[timeframe] = pool.submit(self._alpaca.get_portfolio_history,
+                                               date_start=market_dates[start_index].strftime('%F'),
+                                               date_end=market_dates[-1].strftime('%F'),
+                                               timeframe=timeframe,
+                                               extended_hours=extended_hours)
+            histories = dict()
+            for timeframe in ['5Min', '1D']:
+                histories[timeframe] = tasks[timeframe].result()
         cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         result['time_1d'], result['equity_1d'] = get_time_vs_equity(
             histories['5Min'].equity,
@@ -150,15 +149,23 @@ class AlpacaClient:
                     result['equity_1d'] = result['equity_1d'][i:]
                     break
         compare_symbols = ['QQQ', 'SPY', 'TQQQ']
-        for symbol in compare_symbols:
-            tasks[symbol] = self._pool.submit(self.get_compare_symbol, symbol,
-                                              market_dates[-1].date(), time_points, result)
-        for symbol in compare_symbols:
-            tasks[symbol].result()
+        with futures.ThreadPoolExecutor(max_workers=3) as pool:
+            lock = threading.RLock()
+            for symbol in compare_symbols:
+                tasks[symbol] = pool.submit(self.get_compare_symbol, symbol,
+                                            market_dates[-1].date(), time_points,
+                                            result, lock)
+            for symbol in compare_symbols:
+                tasks[symbol].result()
         app.logger.info('Time cost for get_portfolio_histories: [%.2fs]', time.time() - start)
         return result
 
-    def get_compare_symbol(self, symbol: str, last_day, time_points, portfolio_histories):
+    def get_compare_symbol(self,
+                           symbol: str,
+                           last_day,
+                           time_points,
+                           portfolio_histories,
+                           lock: threading.RLock):
         day_bars = self._alpaca.get_bars(
             symbol,
             tradeapi.TimeFrame(5, tradeapi.TimeFrameUnit.Minute),
@@ -195,7 +202,8 @@ class AlpacaClient:
             for i in range(len(symbol_values[timeframe])):
                 if symbol_values[timeframe][i] is not None:
                     symbol_values[timeframe][i] = symbol_values[timeframe][i] / symbol_base * portfolio_base
-            with self._lock:
+            # Using a lock as multiple threads are writing this object simultaneously
+            with lock:
                 portfolio_histories[symbol.lower() + '_' + timeframe] = symbol_values[timeframe]
 
     def get_recent_orders(self):
@@ -295,19 +303,20 @@ class AlpacaClient:
         current_prices = {symbol: trade.p for symbol, trade in trades.items()}
         prev_day = calendar[-2].date.strftime('%F')
         tasks = dict()
-        for symbol in symbols:
-            tasks[symbol] = self._pool.submit(self._alpaca.get_bars,
-                                              symbol=symbol,
-                                              timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
-                                              start=prev_day,
-                                              end=prev_day)
-        today_str = datetime.datetime.today().astimezone(TIME_ZONE).strftime('%b %d')
-        trading_day = calendar[-1].date.strftime('%b %d')
-        for symbol in symbols:
-            bars = tasks[symbol].result()
-            result[symbol] = {'price': current_prices[symbol],
-                              'change': current_prices[symbol] / bars[0].c - 1,
-                              'date': trading_day if trading_day != today_str else 'Today'}
+        with futures.ThreadPoolExecutor(max_workers=4) as pool:
+            for symbol in symbols:
+                tasks[symbol] = pool.submit(self._alpaca.get_bars,
+                                            symbol=symbol,
+                                            timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
+                                            start=prev_day,
+                                            end=prev_day)
+            today_str = datetime.datetime.today().astimezone(TIME_ZONE).strftime('%b %d')
+            trading_day = calendar[-1].date.strftime('%b %d')
+            for symbol in symbols:
+                bars = tasks[symbol].result()
+                result[symbol] = {'price': current_prices[symbol],
+                                  'change': current_prices[symbol] / bars[0].c - 1,
+                                  'date': trading_day if trading_day != today_str else 'Today'}
         return result
 
     def get_market_watch(self):
@@ -328,36 +337,37 @@ class AlpacaClient:
         last_day = get_last_day()
         calendar = self.get_calendar(last_day.strftime('%F'))
         end_date = calendar[-1].date.strftime('%F')
-        portfolio_task = self._pool.submit(self._alpaca.get_portfolio_history,
-                                           date_start=START_DATE,
-                                           date_end=end_date,
-                                           timeframe='1D',
-                                           extended_hours=False)
-        compare_symbols = ['QQQ', 'SPY']
-        tasks = dict()
-        for symbol in compare_symbols:
-            tasks[symbol] = self._pool.submit(self._alpaca.get_bars,
-                                              symbol=symbol,
-                                              timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
-                                              start=START_DATE,
-                                              end=end_date,
-                                              adjustment='split')
-        portfolio_result = portfolio_task.result()
-        portfolio_dates = [pd.to_datetime(t, utc=True, unit='s').tz_convert(TIME_ZONE).strftime('%F')
-                           for t in portfolio_result.timestamp]
-        cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
-        portfolio_values = [e - cash_reserve for e in portfolio_result.equity]
-        start_index = 0
-        while start_index < len(portfolio_values) and portfolio_values[start_index] == 0:
-            start_index += 1
-        result = {'dates': portfolio_dates[start_index:],
-                  'symbols': ['My Portfolio'] + compare_symbols,
-                  'values': [portfolio_values[start_index:]]}
-        for symbol in compare_symbols:
-            bars = tasks[symbol].result()
-            symbol_values = [bar.c for bar in bars]
-            assert len(symbol_values) == len(portfolio_values)
-            result['values'].append(symbol_values[start_index:])
+        with futures.ThreadPoolExecutor(max_workers=4) as pool:
+            portfolio_task = pool.submit(self._alpaca.get_portfolio_history,
+                                         date_start=START_DATE,
+                                         date_end=end_date,
+                                         timeframe='1D',
+                                         extended_hours=False)
+            compare_symbols = ['QQQ', 'SPY']
+            tasks = dict()
+            for symbol in compare_symbols:
+                tasks[symbol] = pool.submit(self._alpaca.get_bars,
+                                            symbol=symbol,
+                                            timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
+                                            start=START_DATE,
+                                            end=end_date,
+                                            adjustment='split')
+            portfolio_result = portfolio_task.result()
+            portfolio_dates = [pd.to_datetime(t, utc=True, unit='s').tz_convert(TIME_ZONE).strftime('%F')
+                               for t in portfolio_result.timestamp]
+            cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
+            portfolio_values = [e - cash_reserve for e in portfolio_result.equity]
+            start_index = 0
+            while start_index < len(portfolio_values) and portfolio_values[start_index] == 0:
+                start_index += 1
+            result = {'dates': portfolio_dates[start_index:],
+                      'symbols': ['My Portfolio'] + compare_symbols,
+                      'values': [portfolio_values[start_index:]]}
+            for symbol in compare_symbols:
+                bars = tasks[symbol].result()
+                symbol_values = [bar.c for bar in bars]
+                assert len(symbol_values) == len(portfolio_values)
+                result['values'].append(symbol_values[start_index:])
         app.logger.info('Time cost for get_daily_prices: [%.2fs]', time.time() - start)
         return result
 

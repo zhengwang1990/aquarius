@@ -27,10 +27,11 @@ def _get_dashdata():
         tasks['orders'] = pool.submit(client.get_recent_orders)
         tasks['positions'] = pool.submit(client.get_current_positions)
         tasks['watch'] = pool.submit(client.get_market_watch)
-    return {'histories': tasks['histories'].result(),
-            'orders': tasks['orders'].result(),
-            'positions': tasks['positions'].result(),
-            'watch': tasks['watch'].result()}
+        response = {'histories': tasks['histories'].result(),
+                    'orders': tasks['orders'].result(),
+                    'positions': tasks['positions'].result(),
+                    'watch': tasks['watch'].result()}
+    return response
 
 
 @bp.route('/')

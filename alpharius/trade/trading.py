@@ -211,8 +211,8 @@ class Trading:
                 t = pool.submit(data_loader.load_daily_data,
                                 symbol, self._today)
                 tasks[symbol] = t
-        for symbol, t in tasks.items():
-            self._intraday_data[symbol] = t.result()
+            for symbol, t in tasks.items():
+                self._intraday_data[symbol] = t.result()
         latest_trades = data_loader.get_last_trades(all_symbols)
         for symbol, price in latest_trades.items():
             intraday_lookback = self._intraday_data[symbol]

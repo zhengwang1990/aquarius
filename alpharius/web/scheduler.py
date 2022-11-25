@@ -1,6 +1,7 @@
 import os
 import threading
 import traceback
+from concurrent import futures
 
 import flask
 from alpharius.db import Db
@@ -26,7 +27,14 @@ def _trade_impl():
         job_status = 'running'
         app.logger.info('Start trading')
         try:
-            Trading(processor_factories=PROCESSOR_FACTORIES).run()
+            trading = Trading(processor_factories=PROCESSOR_FACTORIES)
+            # Live trading consumes a significant amount of memory. If the execution runs
+            # in the same process, the allocated memory is not returned to the operating
+            # system by the garbage collector after running, but owned and managed by Python.
+            # Therefore, here it spawns a child process to run trading. The memory will
+            # be returned to the OS after child process is shutdown.
+            with futures.ProcessPoolExecutor(max_workers=1) as pool:
+                pool.submit(trading.run).result()
         except Exception as e:
             error_message = str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
             app.logger.error('Fail in trading: %s', error_message)
