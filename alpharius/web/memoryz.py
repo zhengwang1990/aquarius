@@ -1,4 +1,5 @@
 import tracemalloc
+from concurrent import futures
 
 import flask
 
@@ -6,8 +7,7 @@ bp = flask.Blueprint('memoryz', __name__)
 tracemalloc.start(5)
 
 
-@bp.route('/memoryz')
-def memoryz():
+def _get_memory_stats():
     snapshot = tracemalloc.take_snapshot()
     top_stats = snapshot.statistics('traceback')
     total = sum(stat.size for stat in top_stats)
@@ -31,4 +31,10 @@ def memoryz():
     other = top_stats[limit:]
     if other:
         stats['other'] = sum(stat.size for stat in other) // (1024 * 1024)
+
+
+@bp.route('/memoryz')
+def memoryz():
+    with futures.ProcessPoolExecutor(max_workers=1) as pool:
+        stats = pool.submit(_get_memory_stats).result()
     return flask.render_template('memoryz.html', stats=stats)
