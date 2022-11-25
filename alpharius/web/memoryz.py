@@ -31,6 +31,7 @@ def _get_memory_stats():
     other = top_stats[limit:]
     if other:
         stats['other'] = sum(stat.size for stat in other) // (1024 * 1024)
+    return stats
 
 
 @bp.route('/memoryz')
