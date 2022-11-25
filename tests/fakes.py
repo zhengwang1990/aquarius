@@ -254,19 +254,3 @@ class FakeDbEngine:
             yield self.conn
         finally:
             self.disconnect_cnt += 1
-
-
-class FakeProcessPool:
-    def __init__(self):
-        pass
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        pass
-
-    @staticmethod
-    def submit(f, *args, **kwargs):
-        return Future(lambda: f(*args, **kwargs))
-

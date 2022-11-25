@@ -1,5 +1,4 @@
 import os
-from concurrent import futures
 
 import alpaca_trade_api as tradeapi
 import pytest
@@ -32,8 +31,3 @@ def mock_engine(mocker):
     engine = fakes.FakeDbEngine()
     mocker.patch.object(sqlalchemy, 'create_engine', return_value=engine)
     return engine
-
-
-@pytest.fixture(autouse=True)
-def mock_process_pool(mocker):
-    mocker.patch.object(futures, 'ProcessPoolExecutor', return_value=fakes.FakeProcessPool())

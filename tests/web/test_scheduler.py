@@ -1,10 +1,9 @@
-import os
 import time
 import threading
+from concurrent import futures
 
 import pytest
 from alpharius.web import scheduler
-from .. import fakes
 
 
 def test_trigger(client, mocker):
@@ -15,16 +14,13 @@ def test_trigger(client, mocker):
 
 
 def test_trade_impl(mocker):
-    mocker.patch('builtins.open', mocker.mock_open(read_data='data'))
-    mocker.patch.object(os, 'makedirs')
-    # Return empty calendar so that the trading does not run
-    mock_get_calendar = mocker.patch.object(fakes.FakeAlpaca,
-                                            'get_calendar',
-                                            return_value=[])
+    mock_submit = mocker.Mock()
+    mock_pool = mocker.patch.object(futures, 'ProcessPoolExecutor')
+    mock_pool.return_value.__enter__.return_value.submit = mock_submit
 
     scheduler._trade_impl()
 
-    mock_get_calendar.assert_called_once()
+    mock_submit.assert_called_once()
 
 
 def test_backfill(mock_engine):
