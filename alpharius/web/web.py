@@ -17,6 +17,14 @@ from .alpaca_client import AlpacaClient
 from .scheduler import get_job_status
 
 bp = flask.Blueprint('web', __name__)
+process_pool = None
+
+
+def _get_process_pool():
+    global process_pool
+    if process_pool is None:
+        process_pool = futures.ProcessPoolExecutor(max_workers=3)
+    return process_pool
 
 
 def _get_dashdata():
@@ -36,7 +44,7 @@ def _get_dashdata():
 
 @bp.route('/')
 def dashboard():
-    data = _get_dashdata()
+    data = _get_process_pool().submit(_get_dashdata).result()
     return flask.render_template('dashboard.html',
                                  histories=json.dumps(data['histories']),
                                  orders=data['orders'],
@@ -46,7 +54,7 @@ def dashboard():
 
 @bp.route('/dashdata')
 def dashdata():
-    data = _get_dashdata()
+    data = _get_process_pool().submit(_get_dashdata).result()
     return json.dumps(data)
 
 
@@ -240,8 +248,7 @@ def _get_risks(daily_prices):
 @bp.route('/analytics')
 def analytics():
     alpaca_client = AlpacaClient()
-    with futures.ThreadPoolExecutor(max_workers=1) as pool:
-        get_daily_price_task = pool.submit(alpaca_client.get_daily_prices)
+    get_daily_price_task = _get_process_pool().submit(alpaca_client.get_daily_prices)
     db_client = Db()
     aggs = db_client.list_aggregations()
     stats, transaction_cnt = _get_stats(aggs)
@@ -358,8 +365,11 @@ def charts():
         start_date = flask.request.args.get('start_date')
         end_date = flask.request.args.get('end_date')
     symbol = flask.request.args.get('symbol')
-    res = client.get_charts(start_date=start_date, end_date=end_date,
-                            symbol=symbol, timeframe=timeframe)
+    res = _get_process_pool().submit(client.get_charts,
+                                     start_date=start_date,
+                                     end_date=end_date,
+                                     symbol=symbol,
+                                     timeframe=timeframe).result()
     return json.dumps(res)
 
 
