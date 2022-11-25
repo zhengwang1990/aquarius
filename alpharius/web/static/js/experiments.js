@@ -394,7 +394,7 @@ if (validateDate(INIT_DATE) && validateSymbol(INIT_SYMBOL)) {
     get_chart_data([INIT_DATE], INIT_SYMBOL, "intraday");
     update_chart("intraday");
 } else {
-    displayAlert("info", "Enter date and symbol. Then click GO", "intraday");
+    displayAlert("info", "Enter date and symbol. Then click GO.", "intraday");
 }
 
 if (validateDate(INIT_START_DATE) && validateDate(INIT_END_DATE) && validateSymbol(INIT_SYMBOL)) {
@@ -404,7 +404,7 @@ if (validateDate(INIT_START_DATE) && validateDate(INIT_END_DATE) && validateSymb
     get_chart_data([INIT_START_DATE, INIT_END_DATE], INIT_SYMBOL, "daily");
     update_chart("daily");
 } else {
-    displayAlert("info", "Enter start date, end date and symbol. Then click GO", "daily");
+    displayAlert("info", "Enter start date, end date and symbol. Then click GO.", "daily");
 }
 
 // Construct trie tree
