@@ -20,10 +20,11 @@ lock = threading.RLock()
 job_status = 'idle'
 
 
-def _trade_impl():
-    def _run():
-        Trading(processor_factories=PROCESSOR_FACTORIES).run()
+def _trading_run():
+    Trading(processor_factories=PROCESSOR_FACTORIES).run()
 
+
+def _trade_impl():
     global job_status, lock
     acquired = lock.acquire(blocking=False)
     if acquired:
@@ -36,7 +37,7 @@ def _trade_impl():
             # Therefore, here it spawns a child process to run trading. The memory will
             # be returned to the OS after child process is shutdown.
             with futures.ProcessPoolExecutor(max_workers=1) as pool:
-                pool.submit(_run).result()
+                pool.submit(_trading_run).result()
         except Exception as e:
             error_message = str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
             app.logger.error('Fail in trading: %s', error_message)
