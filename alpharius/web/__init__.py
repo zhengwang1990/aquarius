@@ -3,7 +3,6 @@ import os
 
 
 from flask import Flask
-from . import memoryz
 from . import scheduler
 from . import web
 
@@ -19,6 +18,5 @@ def create_app(test_config=None):
     app.logger.setLevel(logging.INFO)
     app.register_blueprint(web.bp)
     app.register_blueprint(scheduler.bp)
-    app.register_blueprint(memoryz.bp)
 
     return app
