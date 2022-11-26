@@ -42,13 +42,9 @@
                 <i class="uil uil-file-alt {{ 'active' if url_for(request.endpoint) == '/logs' else ''}}"></i>
                 <span class="link-name {{ 'active' if url_for(request.endpoint) == '/logs' else ''}}">Logs</span>
             </a></li>
-            <li><a href="{{ '#' if url_for(request.endpoint) == '/experiments' else url_for('web.experiments')}}">
-                <i class="uil uil-flask {{ 'active' if url_for(request.endpoint) == '/experiments' else ''}}"></i>
-                <span class="link-name {{ 'active' if url_for(request.endpoint) == '/experiments' else ''}}">Experiments</span>
-            </a></li>
-            <li><a href="#">
-                <i class="uil uil-shield-exclamation"></i>
-                <span class="link-name">Emergency</span>
+            <li><a href="{{ '#' if url_for(request.endpoint) == '/charts' else url_for('web.charts')}}">
+                <i class="uil uil-chart-line {{ 'active' if url_for(request.endpoint) == '/charts' else ''}}"></i>
+                <span class="link-name {{ 'active' if url_for(request.endpoint) == '/charts' else ''}}">Charts</span>
             </a></li>
         </ul>
     </div>

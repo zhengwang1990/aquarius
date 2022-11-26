@@ -104,9 +104,9 @@ function get_chart_data(dates, symbol, timeframe) {
     var xmlHttp = new XMLHttpRequest();
     var route;
     if (timeframe === "intraday") {
-        route = `/charts?date=${dates[0]}&symbol=${symbol}&timeframe=intraday`
+        route = `/charts_data?date=${dates[0]}&symbol=${symbol}&timeframe=intraday`
     } else {
-        route = `/charts?start_date=${dates[0]}&end_date=${dates[1]}&symbol=${symbol}&timeframe=daily`
+        route = `/charts_data?start_date=${dates[0]}&end_date=${dates[1]}&symbol=${symbol}&timeframe=daily`
     }
     xmlHttp.open("GET", route, false);
     xmlHttp.send(null);

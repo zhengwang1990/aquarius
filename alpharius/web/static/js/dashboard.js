@@ -236,15 +236,15 @@ update_watch();
 update_orders();
 update_positions();
 
-function update_dashdata() {
+function update_dashboard_data() {
     if (document.hidden) {
         return;
     }
     var xmlHttp = new XMLHttpRequest();
-    xmlHttp.open("GET", "/dashdata", false);
+    xmlHttp.open("GET", "/dashboard_data", false);
     xmlHttp.send(null);
     if (xmlHttp.status !== 200) {
-        console.log("Error loading dashdata");
+        console.log("Error loading dashboard data");
         return;
     }
     var res = xmlHttp.responseText;
@@ -267,4 +267,4 @@ function update_dashdata() {
     }
 }
 
-setInterval(update_dashdata, 60000);
+setInterval(update_dashboard_data, 60000);

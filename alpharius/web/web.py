@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from alpharius.db import Aggregation, Db
 from alpharius.utils import (
-    construct_experiment_link, compute_drawdown, compute_risks,
+    construct_charts_link, compute_drawdown, compute_risks,
     get_signed_percentage, get_colored_value, TIME_ZONE,
 )
 from .alpaca_client import AlpacaClient
@@ -19,7 +19,7 @@ from .scheduler import get_job_status
 bp = flask.Blueprint('web', __name__)
 
 
-def _get_dashdata():
+def _get_dashboard_data():
     client = AlpacaClient()
     tasks = dict()
     with futures.ThreadPoolExecutor(max_workers=4) as pool:
@@ -36,7 +36,7 @@ def _get_dashdata():
 
 @bp.route('/')
 def dashboard():
-    data = _get_dashdata()
+    data = _get_dashboard_data()
     return flask.render_template('dashboard.html',
                                  histories=json.dumps(data['histories']),
                                  orders=data['orders'],
@@ -44,9 +44,9 @@ def dashboard():
                                  watch=data['watch'])
 
 
-@bp.route('/dashdata')
-def dashdata():
-    data = _get_dashdata()
+@bp.route('/dashboard_data')
+def dashboard_data():
+    data = _get_dashboard_data()
     return json.dumps(data)
 
 
@@ -80,7 +80,7 @@ def transactions():
             'slippage': get_colored_value(f'{t.slippage:+,.2f} ({t.slippage_pct * 100:+.2f}%)',
                                           'green' if t.slippage >= 0 else 'red') if t.slippage is not None else '',
             'slippage_pct': get_signed_percentage(t.slippage_pct) if t.slippage_pct is not None else '',
-            'link': construct_experiment_link(
+            'link': construct_charts_link(
                 t.symbol,
                 pd.to_datetime(t.exit_time).tz_convert(TIME_ZONE).strftime('%F')),
         })
@@ -322,8 +322,8 @@ def logs():
                                  dates=dates)
 
 
-@bp.route('/experiments')
-def experiments():
+@bp.route('/charts')
+def charts():
     client = AlpacaClient()
     date = flask.request.args.get('date')
     start_date = flask.request.args.get('start_date')
@@ -339,7 +339,7 @@ def experiments():
         end_date = pd_end.strftime('%F')
     symbol = flask.request.args.get('symbol')
     all_symbols = client.get_all_symbols()
-    return flask.render_template('experiments.html',
+    return flask.render_template('charts.html',
                                  all_symbols=all_symbols,
                                  init_date=date,
                                  init_start_date=start_date,
@@ -347,8 +347,8 @@ def experiments():
                                  init_symbol=symbol)
 
 
-@bp.route('/charts')
-def charts():
+@bp.route('/charts_data')
+def charts_data():
     client = AlpacaClient()
     timeframe = flask.request.args.get('timeframe')
     if timeframe == 'intraday':

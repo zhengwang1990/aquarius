@@ -13,7 +13,7 @@ import alpaca_trade_api as tradeapi
 import pandas as pd
 import retrying
 from alpharius.utils import (
-    construct_experiment_link, get_signed_percentage, get_colored_value,
+    construct_charts_link, get_signed_percentage, get_colored_value,
     get_latest_day, TIME_ZONE,
 )
 from dateutil.relativedelta import relativedelta
@@ -231,7 +231,7 @@ class AlpacaClient:
                          'side': order.side,
                          'price': f'{price:.4g}',
                          'value': f'{price * qty:.2f}',
-                         'link': construct_experiment_link(order.symbol, filled_at.strftime('%F')),
+                         'link': construct_charts_link(order.symbol, filled_at.strftime('%F')),
                          'gl': '',
                          'time': round_time(filled_at, time_fmt_with_year)}
             if order.symbol in position_symbols:
@@ -282,7 +282,7 @@ class AlpacaClient:
                 'side': side,
                 'day_change': get_signed_percentage(info['change']),
                 'gl': get_signed_percentage(gl),
-                'link': construct_experiment_link(symbol, last_trading_day),
+                'link': construct_charts_link(symbol, last_trading_day),
             })
         result.sort(key=lambda p: p['symbol'])
         app.logger.info('Time cost for get_current_positions: [%.2fs]', time.time() - start)

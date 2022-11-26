@@ -205,7 +205,7 @@ def compute_drawdown(values: List[float]) -> float:
     return d
 
 
-def construct_experiment_link(symbol: str, date: str):
-    """Constructs link to experiment page for the given symbol on a given day."""
+def construct_charts_link(symbol: str, date: str):
+    """Constructs link to charts page for the given symbol on a given day."""
     start_date = (pd.to_datetime(date) - datetime.timedelta(days=92)).strftime('%F')
-    return f'experiments?date={date}&start_date={start_date}&end_date={date}&symbol={symbol}'
+    return f'charts?date={date}&start_date={start_date}&end_date={date}&symbol={symbol}'
