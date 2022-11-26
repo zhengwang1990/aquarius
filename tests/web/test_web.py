@@ -6,7 +6,7 @@ from alpharius.web import web
 
 
 @pytest.mark.parametrize('route',
-                         ['/', '/dashdata'])
+                         ['/', '/dashboard_data'])
 def test_dashboard(route, client, mock_alpaca):
     assert client.get(route).status_code == 200
     assert mock_alpaca.get_portfolio_history_call_count > 0
@@ -103,18 +103,18 @@ def test_get_risks():
 
 
 @pytest.mark.parametrize('route',
-                         ['/experiments',
-                          ('/experiments?date=2022-11-18&symbol=QQQ'
+                         ['/charts',
+                          ('/charts?date=2022-11-18&symbol=QQQ'
                            '&start_date=2022-11-13&end_date=2022-11-20'),
-                          ('/experiments?date=2022-11-18&symbol=QQQ'
+                          ('/charts?date=2022-11-18&symbol=QQQ'
                            '&start_date=2022-11-14&end_date=2022-11-18')])
-def test_experiments(route, client):
+def test_charts(route, client):
     assert client.get(route).status_code == 200
 
 
 @pytest.mark.parametrize('route',
-                         ['/charts?date=2022-11-18&symbol=QQQ&timeframe=intraday',
-                          '/charts?start_date=2022-11-13&end_date=2022-11-23&symbol=QQQ&timeframe=daily'])
-def test_charts(route, client, mock_alpaca):
+                         ['/charts_data?date=2022-11-18&symbol=QQQ&timeframe=intraday',
+                          '/charts_data?start_date=2022-11-13&end_date=2022-11-23&symbol=QQQ&timeframe=daily'])
+def test_charts_data(route, client, mock_alpaca):
     assert client.get(route).status_code == 200
     assert mock_alpaca.get_bars_call_count > 0
