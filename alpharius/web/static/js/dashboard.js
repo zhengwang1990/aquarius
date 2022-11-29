@@ -231,15 +231,17 @@ function update_positions() {
 }
 
 // Initial load of data
+var last_dashboard_update = new Date().getTime();
 update_histories();
 update_watch();
 update_orders();
 update_positions();
 
 function update_dashboard_data() {
-    if (document.hidden) {
+    if (document.hidden || new Date().getTime() - last_dashboard_update < 60000) {
         return;
     }
+    console.log(`Update dashboard at ${new Date()}`);
     var xmlHttp = new XMLHttpRequest();
     xmlHttp.open("GET", "/dashboard_data", false);
     xmlHttp.send(null);
@@ -265,6 +267,7 @@ function update_dashboard_data() {
         positions = obj.positions;
         update_positions();
     }
+    last_dashboard_update = new Date().getTime();
 }
 
-setInterval(update_dashboard_data, 60000);
+setInterval(update_dashboard_data, 1000);

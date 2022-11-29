@@ -22,10 +22,13 @@ if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elain
     isMobile = true;
 }
 
+var last_status_update;
+
 function update_job_status() {
-    if (document.hidden) {
+    if (document.hidden || new Date().getTime() - last_status_update < 60000) {
         return;
     }
+    console.log(`Update job status at ${new Date()}`);
     var xmlHttp = new XMLHttpRequest();
     xmlHttp.open("GET", "/job_status", false);
     xmlHttp.send(null);
@@ -36,7 +39,8 @@ function update_job_status() {
     } else {
         status.style.display = "none";
     }
+    last_status_update = new Date().getTime();
 }
 
-update_job_status()
-setInterval(update_job_status, 60000);
+update_job_status();
+setInterval(update_job_status, 1000);
