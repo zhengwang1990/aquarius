@@ -110,7 +110,7 @@ class OvernightProcessor(Processor):
         weekly = np.sum(overnight_returns[-DAYS_IN_A_WEEK:])
         if quarterly < 0 and weekly < 0:
             return 0
-        yearly = np.sum(sorted(overnight_returns)[25:-25])
+        yearly = np.sum(sorted(overnight_returns)[20:-25])
         performance = yearly + 0.3 * quarterly + 0.3 * weekly
         return performance
 
