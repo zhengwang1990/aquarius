@@ -68,8 +68,8 @@ class O2hProcessor(Processor):
         is_trade = 3 > z_score > 2
         if is_trade or (context.mode == Mode.TRADE and z_score > 1):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                               f'Current gain: {current_gain * 100:.2f}%. Z-score: {z_score}. '
-                               f'Current price {context.current_price}.')
+                               f'Current gain: {current_gain * 100:.2f}%. Z-score: {z_score:.2f}. '
+                               f'Current price: {context.current_price}.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'status': 'active'}
