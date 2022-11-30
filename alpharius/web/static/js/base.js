@@ -22,7 +22,7 @@ if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elain
     isMobile = true;
 }
 
-var last_status_update;
+var last_status_update = 0;
 
 function update_job_status() {
     if (document.hidden || new Date().getTime() - last_status_update < 60000) {
