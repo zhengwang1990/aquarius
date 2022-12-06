@@ -34,6 +34,14 @@ if (window.innerWidth <= 800) {
     chart_mode = "full";
 }
 
+function drawLine(ctx, startX, startY, endX, endY) {
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    ctx.closePath();
+}
+
 const candlestick = {
     id: "candlestick",
     beforeDatasetsDraw: ((chart, args, pluginOptions) => {
@@ -47,21 +55,19 @@ const candlestick = {
             const bar_bottom = Math.min(dataPoint.c, dataPoint.o);
             const x = chart.getDatasetMeta(0).data[index].x;
 
-            ctx.beginPath();
-            ctx.moveTo(x, y.getPixelForValue(bar_top));
-            ctx.lineTo(x, y.getPixelForValue(dataPoint.h));
-            ctx.stroke();
+            drawLine(ctx,
+                     x, y.getPixelForValue(bar_top),
+                     x, y.getPixelForValue(dataPoint.h));
 
-            ctx.beginPath();
-            ctx.moveTo(x, y.getPixelForValue(bar_bottom));
-            ctx.lineTo(x, y.getPixelForValue(dataPoint.l));
-            ctx.stroke();
+            drawLine(ctx,
+                     x, y.getPixelForValue(bar_bottom),
+                     x, y.getPixelForValue(dataPoint.l));
 
             if (bar_top === bar_bottom) {
                 const bar_width = chart.getDatasetMeta(0).data[index].width;
-                ctx.moveTo(x - bar_width / 2, y.getPixelForValue(bar_top));
-                ctx.lineTo(x + bar_width / 2, y.getPixelForValue(bar_top));
-                ctx.stroke();
+                drawLine(ctx,
+                         x - bar_width / 2, y.getPixelForValue(bar_top),
+                         x + bar_width / 2, y.getPixelForValue(bar_top));
             }
         });
     })
@@ -78,7 +84,30 @@ const barPosition = {
             });
         }
     })
-}
+};
+
+const crosshair = {
+    id: "crosshair",
+    beforeDatasetsDraw: ((chart, args, pluginOptions) => {
+        const { ctx, data, tooltip, chartArea: { top, bottom, left, right }, scales: { y } } = chart;
+        if (tooltip._active && tooltip._active.length && tooltip.dataPoints[0].raw.c) {
+            const activePoint = tooltip._active[0];
+            const closeValue = tooltip.dataPoints[0].raw.c;
+            ctx.setLineDash([3, 3]);
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "rgb(102, 102, 102)";
+
+            drawLine(ctx,
+                     activePoint.element.x, top,
+                     activePoint.element.x, bottom);
+
+            drawLine(ctx,
+                     left, y.getPixelForValue(closeValue),
+                     right, y.getPixelForValue(closeValue));
+            ctx.setLineDash([]);
+        }
+    })
+};
 
 function displayAlert(type, message, timeframe) {
     var chart_container, alert;
@@ -324,7 +353,7 @@ function update_chart(timeframe) {
                 }
             }
         },
-        plugins: [candlestick, barPosition]
+        plugins: [candlestick, barPosition, crosshair]
     };
     var alert, chart_container, chart;
     if (timeframe === "intraday") {
