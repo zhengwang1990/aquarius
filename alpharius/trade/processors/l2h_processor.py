@@ -1,18 +1,19 @@
 import datetime
 import os
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DATETIME_TYPE, logging_config)
+    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DAYS_IN_A_YEAR, DATETIME_TYPE,
+    logging_config)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
 EXIT_TIME = datetime.time(16, 0)
 
 
-class H2lFiveMinProcessor(Processor):
+class L2hProcessor(Processor):
 
     def __init__(self,
                  lookback_start_date: DATETIME_TYPE,
@@ -26,9 +27,9 @@ class H2lFiveMinProcessor(Processor):
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._output_dir = output_dir
-        self._logger = logging_config(os.path.join(self._output_dir, 'h2l_five_min_processor.txt'),
+        self._logger = logging_config(os.path.join(self._output_dir, 'l2h_short_processor.txt'),
                                       detail=True,
-                                      name='h2l_five_min_processor')
+                                      name='l2h_short_processor')
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -50,55 +51,67 @@ class H2lFiveMinProcessor(Processor):
             return self._open_position(context)
 
     @staticmethod
-    def _get_thresholds(context: Context) -> Tuple[float, float]:
+    def _get_thresholds(context: Context) -> float:
         interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
         interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
-        h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
-        h2l_avg = np.average(h2l_losses)
-        lower_threshold = h2l_avg
-        upper_threshold = h2l_avg * 0.4
-        return lower_threshold, upper_threshold
+        l2h_gains = [h / l - 1 for h, l in zip(interday_highs, interday_lows)]
+        l2h_avg = np.average(l2h_gains)
+        threshold = l2h_avg * 0.8
+        return threshold
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
         if t >= EXIT_TIME:
             return
+        interday_closes = context.interday_lookback['Close']
+        if len(interday_closes) < DAYS_IN_A_YEAR:
+            return
+        if (context.current_price < 1.2 * interday_closes[-DAYS_IN_A_MONTH] or
+                context.current_price > interday_closes[-DAYS_IN_A_MONTH] * 2 or
+                context.current_price > interday_closes[-DAYS_IN_A_YEAR] * 3):
+            return
         market_open_index = context.market_open_index
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
-        if len(intraday_closes) < 2:
-            return
-        if context.current_price > np.min(intraday_closes):
+        if len(intraday_closes) < 10:
             return
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
             return
-        current_loss = context.current_price / intraday_closes[-2] - 1
-        lower_threshold, upper_threshold = self._get_thresholds(context)
-        is_trade = lower_threshold < current_loss < upper_threshold
-        if is_trade or (context.mode == Mode.TRADE and current_loss < upper_threshold * 0.8):
+        if context.current_price < np.max(intraday_closes):
+            return
+        for i in range(-1, -6, -1):
+            if interday_closes[i] <= intraday_closes[i - 1]:
+                break
+        else:
+            return
+        current_loss = context.current_price / intraday_closes[-10] - 1
+        threshold = self._get_thresholds(context)
+        is_trade = threshold < current_loss
+        if is_trade or (context.mode == Mode.TRADE and current_loss > threshold * 0.8):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Current loss: {current_loss * 100:.2f}%. '
-                               f'Threshold: {lower_threshold * 100:.2f}% ~ {upper_threshold * 100:.2f}%. '
+                               f'Threshold: {threshold * 100:.2f}%. '
                                f'Current price {context.current_price}.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'status': 'active'}
-            return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
+            return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
         if position['status'] != 'active':
             return
         intraday_closes = context.intraday_lookback['Close']
-        take_profit = len(intraday_closes) >= 2 and context.current_price > intraday_closes[-2]
+        take_profit = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=10) and
+                       len(intraday_closes) >= 3 and intraday_closes[-1] < intraday_closes[-3])
         is_close = (take_profit or
-                    context.current_time >= position['entry_time'] + datetime.timedelta(minutes=10) or
+                    context.current_time >= position['entry_time'] + datetime.timedelta(minutes=15) or
                     context.current_time.time() >= EXIT_TIME)
         if is_close:
             position['status'] = 'inactive'
-            return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
+            return ProcessorAction(context.symbol, ActionType.BUY_TO_CLOSE, 1)
 
 
-class H2lFiveMinProcessorFactory(ProcessorFactory):
+class L2hProcessorFactory(ProcessorFactory):
 
     def __init__(self):
         super().__init__()
@@ -108,5 +121,5 @@ class H2lFiveMinProcessorFactory(ProcessorFactory):
                lookback_end_date: DATETIME_TYPE,
                data_source: DataSource,
                output_dir: str,
-               *args, **kwargs) -> H2lFiveMinProcessor:
-        return H2lFiveMinProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
+               *args, **kwargs) -> L2hProcessor:
+        return L2hProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)

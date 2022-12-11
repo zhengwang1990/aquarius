@@ -211,6 +211,8 @@ function update_chart(timeframe) {
         current_data = daily_chart_data;
      }
     var prices = current_data["prices"];
+    var price_max = prices.reduce((a, b) => Math.max(a.h, b.h), -Infinity);
+    var price_min = prices.reduce((a, b) => Math.min(a.l, b.l), Infinity);
     const data = {
         labels: current_data["labels"],
         datasets: [{
@@ -349,7 +351,8 @@ function update_chart(timeframe) {
                     beginAtZero: false,
                     stack: "yScale",
                     stackWeight: 4,
-                    grace: 1
+                    suggestedMax: price_max,
+                    suggestedMin: price_min
                 }
             }
         },
