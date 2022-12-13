@@ -250,12 +250,17 @@ def load_cached_daily_data(symbol: str,
                            day: DATETIME_TYPE,
                            time_interval: TimeInterval,
                            data_source: DataSource) -> pd.DataFrame:
+
+    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
+    def read_csv(file):
+        return pd.read_csv(file, index_col=0, parse_dates=True)
+
     assert time_interval in [TimeInterval.FIVE_MIN, TimeInterval.HOUR]
     cache_dir = os.path.join(CACHE_DIR, str(time_interval), day.strftime('%F'))
     os.makedirs(cache_dir, exist_ok=True)
     cache_file = os.path.join(cache_dir, f'history_{symbol}.csv')
     if os.path.isfile(cache_file):
-        hist = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+        hist = read_csv(cache_file)
     else:
         data_loader = DataLoader(time_interval, data_source)
         hist = data_loader.load_daily_data(symbol, day)

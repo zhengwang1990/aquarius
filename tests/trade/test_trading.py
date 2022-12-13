@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 import sqlalchemy
 from alpharius import trade
-from alpharius.trade import processors
+from alpharius.trade import PROCESSOR_FACTORIES
 from ..fakes import Account, FakeAlpaca, FakeProcessorFactory, FakeDbEngine
 
 
@@ -50,15 +50,7 @@ def test_run_success(mock_alpaca, mock_smtp, trading_frequency):
 
 
 def test_run_with_processors(mock_smtp):
-    processor_factories = [processors.OvernightProcessorFactory(),
-                           processors.ZScoreProcessorFactory(),
-                           processors.O2lProcessorFactory(),
-                           processors.O2hProcessorFactory(),
-                           processors.BearMomentumProcessorFactory(),
-                           processors.H2lOneHourProcessorFactory(),
-                           processors.H2lFiveMinProcessorFactory(),
-                           processors.L2hProcessorFactory()]
-    trading = trade.Trading(processor_factories=processor_factories)
+    trading = trade.Trading(processor_factories=PROCESSOR_FACTORIES)
 
     trading.run()
 
