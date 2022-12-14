@@ -205,14 +205,18 @@ function get_chart(timeframe) {
 
 function update_chart(timeframe) {
     var current_data;
-     if (timeframe === "intraday") {
+    if (timeframe === "intraday") {
         current_data = chart_mode === "compact" ? trimmed_intraday_chart_data : intraday_chart_data;
-     } else {
+    } else {
         current_data = daily_chart_data;
-     }
+    }
     var prices = current_data["prices"];
-    var price_max = prices.reduce((a, b) => Math.max(a.h, b.h), -Infinity);
-    var price_min = prices.reduce((a, b) => Math.min(a.l, b.l), Infinity);
+    var price_max = prices.reduce((res, elem) => Math.max(res, elem.h), -Infinity);
+    var price_min = prices.reduce((res, elem) => Math.min(res, elem.l), Infinity);
+    if (timeframe === "intraday") {
+        price_max = Math.max(price_max, current_data["prev_close"]);
+        price_min = Math.min(price_min, current_data["prev_close"]);
+    }
     const data = {
         labels: current_data["labels"],
         datasets: [{
@@ -279,8 +283,9 @@ function update_chart(timeframe) {
         }
         const prev_close_annotation = {
             type: "line",
+            drawTime: "beforeDatasetsDraw",
             borderWidth: chart_mode === "compact" ? 0.5 : 1,
-            borderColor: "rgba(141, 141, 141, 0.3)",
+            borderColor: "rgba(141, 141, 141, 0.5)",
             borderDash: [6, 6],
             scaleID: "y",
             value: current_data["prev_close"],
