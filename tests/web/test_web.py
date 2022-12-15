@@ -36,11 +36,11 @@ def test_transactions(client, mock_engine):
 def test_analytics(client, mock_alpaca, mock_engine):
     mock_engine.conn.execute.return_value = [
         (pd.to_datetime('2022-11-02').date(), 'Processor1',
-         100, 0.01, 0, 0, 3, 2, 1, 0),
+         100, 0.01, 0, 0, 3, 2, 1, 0, 1000),
         (pd.to_datetime('2022-11-03').date(), 'Processor1',
-         100, 0.01, 10, 0.01, 2, 2, 0, 2),
+         100, 0.01, 10, 0.01, 2, 2, 0, 2, 1000),
         (pd.to_datetime('2022-11-03').date(), 'Processor2',
-         100, 0.01, -10, -0.01, 3, 2, 1, 1)]
+         100, 0.01, -10, -0.01, 3, 2, 1, 1, 1000)]
 
     assert client.get('/analytics').status_code == 200
     assert mock_engine.conn.execute.call_count == 1

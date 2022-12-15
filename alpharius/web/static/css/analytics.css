@@ -7,7 +7,7 @@
     width: 100%;
 }
 
-.dash-content .second-row .chart-container {
+.dash-content .row .card .short-chart-container {
     padding-top: 15px;
     height: 300px;
 }
@@ -25,6 +25,10 @@
     font-size: 15px;
 }
 
+.dash-content .table>:not(caption)>*>* {
+    border-bottom-width: 0.5px;
+}
+
 @media (max-width: 800px) {
     #select-container .inline-span {
         width: calc(50% - 10px);
@@ -33,5 +37,9 @@
     .dash-content .input-group .form-select {
         font-size: 0.7rem;
         width: calc(100% - 200px);
+    }
+
+    .card .card-body table {
+        font-size: 9px;
     }
 }

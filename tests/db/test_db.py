@@ -78,7 +78,7 @@ def test_get_transaction_count(client, mock_engine):
 def test_list_aggregations(client, mock_engine):
     mock_engine.conn.execute.return_value = [
         (pd.to_datetime('2022-11-03').date(), 'Processor',
-         100, 0.01, -10, -0.01, 3, 2, 1, 1)]
+         100, 0.01, -10, -0.01, 3, 2, 1, 1, 100)]
 
     aggs = client.list_aggregations()
 

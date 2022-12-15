@@ -200,6 +200,10 @@ nav.close ~ .dashboard .top{
     display: none;
 }
 
+.card .card-body .lg-show {
+    display: none;
+}
+
 .card .card-body table {
     margin-bottom: 0;
     font-size: 15px;
@@ -249,6 +253,15 @@ nav.close ~ .dashboard .top{
 
 .dash-content .card .card-body {
     padding: 10px 16px 10px 16px;
+}
+
+@media (max-width: 1600px) {
+    .card .card-body .lg-hidden {
+        display: none;
+    }
+    .card .card-body .lg-show {
+        display: inline;
+    }
 }
 
 @media (max-width: 1000px) {
@@ -358,19 +371,19 @@ nav.close ~ .dashboard .top{
 }
 
 .run-animation {
-  border-width: 0;
-  width: 40px;
-  height: 40px;
-  -webkit-animation: spin 5s linear infinite;
-  animation: spin 5s linear infinite;
+    border-width: 0;
+    width: 40px;
+    height: 40px;
+    -webkit-animation: spin 5s linear infinite;
+    animation: spin 5s linear infinite;
 }
 
 @-webkit-keyframes spin {
-  0% { -webkit-transform: rotate(0deg); }
-  100% { -webkit-transform: rotate(360deg); }
+    0% { -webkit-transform: rotate(0deg); }
+    100% { -webkit-transform: rotate(360deg); }
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

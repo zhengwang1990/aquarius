@@ -11,7 +11,7 @@ import pandas as pd
 from alpharius.db import Aggregation, Db
 from alpharius.utils import (
     construct_charts_link, compute_drawdown, compute_risks,
-    get_signed_percentage, get_colored_value, TIME_ZONE,
+    get_signed_percentage, get_colored_value, get_today, TIME_ZONE,
 )
 from .alpaca_client import AlpacaClient
 from .scheduler import get_job_status
@@ -101,21 +101,36 @@ def _shift_to_last(arr, target_value):
 def _get_stats(aggs: List[Aggregation]):
     stats = dict()
     transaction_cnt = []
+    cash_flows = []
+    three_month_ago = get_today() - datetime.timedelta(days=90)
     for agg in aggs:
         processor = agg.processor
         if processor not in stats:
             stats[processor] = {'gl': 0, 'gl_pct_acc': 0, 'cnt': 0, 'win_cnt': 0,
-                                'slip': 0, 'slip_pct_acc': 0, 'slip_cnt': 0}
+                                'slip': 0, 'slip_pct_acc': 0, 'slip_cnt': 0, 'cash_flow': 0,
+                                'gl_3m': 0, 'win_cnt_3m': 0, 'cnt_3m': 0, 'slip_3m': 0,
+                                'slip_pct_acc_3m': 0, 'slip_cnt_3m': 0}
         stats[processor]['gl'] += agg.gl
         stats[processor]['cnt'] += agg.count
         stats[processor]['win_cnt'] += agg.win_count
         stats[processor]['slip'] += agg.slippage
+        stats[processor]['cash_flow'] += agg.cash_flow
+        if agg.date >= three_month_ago:
+            stats[processor]['gl_3m'] += agg.gl
+            stats[processor]['cnt_3m'] += agg.count
+            stats[processor]['win_cnt_3m'] += agg.win_count
+            stats[processor]['slip_3m'] += agg.slippage
         if agg.slippage_count > 0:
             stats[processor]['slip_pct_acc'] += agg.avg_slippage_pct * agg.slippage_count
             stats[processor]['slip_cnt'] += agg.slippage_count
+            if agg.date >= three_month_ago:
+                stats[processor]['slip_pct_acc_3m'] += agg.avg_slippage_pct * agg.slippage_count
+                stats[processor]['slip_cnt_3m'] += agg.slippage_count
+
     total_stats = dict()
     for processor, stat in stats.items():
         transaction_cnt.append({'processor': processor, 'cnt': stat['cnt']})
+        cash_flows.append({'processor': processor, 'cash_flow': int(stat['cash_flow'])})
         for k, v in stat.items():
             if processor == 'UNKNOWN' and k in ['slip', 'slip_pct_acc', 'slip_cnt']:
                 continue
@@ -124,14 +139,19 @@ def _get_stats(aggs: List[Aggregation]):
             total_stats[k] += v
     stats['ALL'] = total_stats
     transaction_cnt.sort(key=lambda entry: entry['cnt'], reverse=True)
+    cash_flows.sort(key=lambda entry: entry['cash_flow'], reverse=True)
 
     for processor, stat in stats.items():
         stat['processor'] = processor
         stat['avg_slip_pct'] = (get_signed_percentage(stat['slip_pct_acc'] / stat['slip_cnt'])
                                 if stat.get('slip_cnt', 0) > 0 and processor != 'UNKNOWN' else 'N/A')
-        win_rate = stat['win_cnt'] / stat['cnt'] if stat.get('cnt', 0) > 0 else 0
-        stat['win_rate'] = f'{win_rate * 100:.2f}%'
-        for k in ['gl', 'slip']:
+        stat['avg_slip_pct_3m'] = (get_signed_percentage(stat['slip_pct_acc_3m'] / stat['slip_cnt_3m'])
+                                   if stat.get('slip_cnt_3m', 0) > 0 and processor != 'UNKNOWN' else 'N/A')
+        win_rate = stat['win_cnt'] / stat['cnt'] if stat.get('cnt', 0) > 0 else None
+        stat['win_rate'] = f'{win_rate * 100:.2f}%' if win_rate is not None else 'N/A'
+        win_rate_3m = stat['win_cnt_3m'] / stat['cnt_3m'] if stat.get('cnt_3m', 0) > 0 else None
+        stat['win_rate_3m'] = f'{win_rate_3m * 100:.2f}%' if win_rate_3m is not None else 'N/A'
+        for k in ['gl', 'slip', 'gl_3m', 'slip_3m']:
             v = stat.get(k, 0)
             color = 'green' if v >= 0 else 'red'
             if k == 'slip' and processor == 'UNKNOWN':
@@ -143,7 +163,7 @@ def _get_stats(aggs: List[Aggregation]):
     processors = sorted(stats.keys())
     _shift_to_last(processors, 'UNKNOWN')
     _shift_to_last(processors, 'ALL')
-    return [stats[processor] for processor in processors], transaction_cnt
+    return [stats[processor] for processor in processors], transaction_cnt, cash_flows
 
 
 def _get_gl_bars(aggs: List[Aggregation]):
@@ -244,7 +264,7 @@ def analytics():
         get_daily_price_task = pool.submit(alpaca_client.get_daily_prices)
     db_client = Db()
     aggs = db_client.list_aggregations()
-    stats, transaction_cnt = _get_stats(aggs)
+    stats, transaction_cnt, cash_flows = _get_stats(aggs)
     gl_bars, processors = _get_gl_bars(aggs)
     daily_price = get_daily_price_task.result()
     annual_return = _get_annual_return(daily_price)
@@ -252,6 +272,7 @@ def analytics():
     return flask.render_template('analytics.html',
                                  stats=stats,
                                  transaction_cnt=transaction_cnt,
+                                 cash_flows=cash_flows,
                                  gl_bars=gl_bars,
                                  annual_return=annual_return,
                                  risks=risks,

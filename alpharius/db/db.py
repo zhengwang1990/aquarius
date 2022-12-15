@@ -84,7 +84,7 @@ SET gl = :gl,
 SELECT_AGGREGATION_QUERY = sqlalchemy.text("""
 SELECT   
   date, processor, gl, avg_gl_pct, slippage, avg_slippage_pct, 
-  count, win_count, lose_count, slippage_count
+  count, win_count, lose_count, slippage_count, cash_flow
 FROM aggregation;
 """)
 
@@ -112,7 +112,7 @@ WHERE date = :date;
 Aggregation = collections.namedtuple(
     'Aggregation',
     ['date', 'processor', 'gl', 'avg_gl_pct', 'slippage', 'avg_slippage_pct', 'count',
-     'win_count', 'lose_count', 'slippage_count'])
+     'win_count', 'lose_count', 'slippage_count', 'cash_flow'])
 
 
 class Db:

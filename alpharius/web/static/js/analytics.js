@@ -43,31 +43,47 @@ function update_gl_chart() {
     gl_chart.update();
 }
 update_gl_chart();
-for (select of [processor_select, timeframe_select]) {
+for (var select of [processor_select, timeframe_select]) {
     select.addEventListener("change", function(event){
         update_gl_chart();
     });
 }
 
+var pie_chart_processors = [];
 var trans_label = [];
 var trans_value = [];
-for (entry of TRANSACTION_CNT) {
+var trans_color = [];
+for (var entry of TRANSACTION_CNT) {
     trans_label.push(entry["processor"]);
     trans_value.push(entry["cnt"]);
+    if (!pie_chart_processors.includes(entry["processor"])) {
+        pie_chart_processors.push(entry["processor"]);
+    }
 }
-const trans_cnt_config = {
+var cash_flow_label = [];
+var cash_flow_value = [];
+var cash_flow_color = [];
+for (var entry of CASH_FLOWS) {
+    cash_flow_label.push(entry["processor"]);
+    cash_flow_value.push(entry["cash_flow"]);
+    if (!pie_chart_processors.includes(entry["processor"])) {
+        pie_chart_processors.push(entry["processor"]);
+    }
+}
+const color_pool = ["#4890e8", "#4fdba8", "#915bde", "#fabe57", "#1bd1cf", "#eb624d",
+                    "#8f8f7f", "#eb57cd", "#eb57cd", "#d1ce6d", "#8097b0"];
+const color_assignments = {};
+for (var i = 0; i < pie_chart_processors.length; i++) {
+    color_assignments[pie_chart_processors[i]] = color_pool[i];
+}
+for (var processor of trans_label) {
+    trans_color.push(color_assignments[processor]);
+}
+for (var processor of cash_flow_label) {
+    cash_flow_color.push(color_assignments[processor]);
+}
+const pie_chart_config = {
     type: "pie",
-    data:  {
-        labels: trans_label,
-        datasets: [
-            {
-              label: '',
-              data: trans_value,
-              backgroundColor: ["#4890e8", "#4fdba8", "#915bde", "#fabe57", "#1bd1cf", "#eb624d",
-                                "#8f8f7f", "#eb57cd"]
-            }
-        ]
-    },
     options: {
         maintainAspectRatio: false,
         responsive: true,
@@ -76,8 +92,18 @@ const trans_cnt_config = {
         }
     }
 };
-
+var trans_cnt_config = Object.assign({}, pie_chart_config);
+trans_cnt_config.data = {
+    labels: trans_label,
+    datasets: [{label: '', data: trans_value, backgroundColor: trans_color}]
+};
 const trans_chart = new Chart(document.getElementById("graph-trans-cnt"), trans_cnt_config);
+var cash_flow_config = Object.assign({}, pie_chart_config);
+cash_flow_config.data = {
+    labels: cash_flow_label,
+    datasets: [{label: '', data: cash_flow_value, backgroundColor: cash_flow_color}]
+};
+const cash_flow_chart = new Chart(document.getElementById("graph-cash-flow"), cash_flow_config);
 
 var annual_return_datasets = [];
 const symbol_colors = {
