@@ -25,10 +25,6 @@
     font-size: 15px;
 }
 
-.dash-content .table>:not(caption)>*>* {
-    border-bottom-width: 0.5px;
-}
-
 @media (max-width: 800px) {
     #select-container .inline-span {
         width: calc(50% - 10px);
