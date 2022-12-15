@@ -45,7 +45,7 @@
     }
 
     .dash-content .input-group .form-select {
-        font-size: 0.7rem;
+        font-size: 8px;
         width: calc(100% - 200px);
     }
 
