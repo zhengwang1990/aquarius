@@ -38,7 +38,8 @@ SET slippage = :slippage,
 
 SELECT_TRANSACTION_AGG_QUERY = sqlalchemy.text("""
 SELECT
-  processor, gl, gl_pct, slippage, slippage_pct
+  processor, gl, gl_pct, slippage, slippage_pct, 
+  entry_price * qty AS cash_flow
 FROM transaction
 WHERE
   exit_time >= :start_time AND exit_time < :end_time;
@@ -61,12 +62,12 @@ SELECT COUNT(*) FROM transaction;
 UPSERT_AGGREGATION_QUERY = sqlalchemy.text("""
 INSERT INTO aggregation (
   date, processor, gl, avg_gl_pct, slippage, avg_slippage_pct, 
-  count, win_count, lose_count, slippage_count
+  count, win_count, lose_count, slippage_count, cash_flow
 )
 VALUES (
   :date, :processor, :gl, :avg_gl_pct, :slippage,
   :avg_slippage_pct, :count, :win_count, :lose_count,
-  :slippage_count
+  :slippage_count, :cash_flow
 )
 ON CONFLICT (date, processor) DO UPDATE
 SET gl = :gl,
@@ -76,7 +77,8 @@ SET gl = :gl,
     count = :count,
     win_count = :win_count,
     lose_count = :lose_count,
-    slippage_count = :slippage_count;
+    slippage_count = :slippage_count,
+    cash_flow = :cash_flow;
 """)
 
 SELECT_AGGREGATION_QUERY = sqlalchemy.text("""
@@ -157,17 +159,18 @@ class Db:
                                 end_time=pd.to_datetime(end_time).tz_localize(TIME_ZONE))
         processor_aggs = dict()
         for result in results:
-            processor, gl, gl_pct, slippage, slippage_pct = result
+            processor, gl, gl_pct, slippage, slippage_pct, cash_flow = result
             if not processor:
                 processor = 'UNKNOWN'
             if processor not in processor_aggs:
                 processor_aggs[processor] = {'gl': 0, 'gl_pct_acc': 0,
                                              'slippage': 0, 'slippage_pct_acc': 0,
                                              'count': 0, 'win_count': 0, 'lose_count': 0,
-                                             'slippage_count': 0}
+                                             'slippage_count': 0, 'cash_flow': 0}
             agg = processor_aggs[processor]
             agg['gl'] += gl
             agg['gl_pct_acc'] += gl_pct
+            agg['cash_flow'] += cash_flow
             if slippage:
                 agg['slippage'] += slippage
                 agg['slippage_pct_acc'] += slippage_pct
@@ -189,7 +192,8 @@ class Db:
                 count=agg['count'],
                 win_count=agg['win_count'],
                 lose_count=agg['lose_count'],
-                slippage_count=agg['slippage_count'])
+                slippage_count=agg['slippage_count'],
+                cash_flow=agg['cash_flow'])
 
     def update_log(self, date: str) -> None:
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))

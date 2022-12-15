@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS aggregation (
     win_count int,
     lose_count int,
     slippage_count int,
+    cash_flow real,
     PRIMARY KEY (date, processor)
 );
 

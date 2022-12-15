@@ -23,10 +23,10 @@ def test_upsert_transaction(client, mock_engine):
 
 def test_update_aggregation(client, mock_engine):
     mock_engine.conn.execute.return_value = [
-        ('Processor1', 1, 0.01, None, None),
-        ('Processor1', 2, 0.02, -1, -0.01),
-        ('Processor2', -3, -0.03, 1, 0.01),
-        (None, 2, 0.02, -1, -0.01),
+        ('Processor1', 1, 0.01, None, None, 100),
+        ('Processor1', 2, 0.02, -1, -0.01, 200),
+        ('Processor2', -3, -0.03, 1, 0.01, 300),
+        (None, 2, 0.02, -1, -0.01, 500),
     ]
 
     client.update_aggregation('2022-11-03')
