@@ -16,6 +16,8 @@ def test_dashboard(route, client, mock_alpaca):
 
 def test_transactions(client, mock_engine):
     mock_engine.conn.execute.side_effect = [
+        [(pd.to_datetime('2022-11-02').date(), 'Processor1',
+          100, 0.01, 0, 0, 3, 2, 1, 0, 1000)],
         iter([[2]]),
         [
             ('SYMA', True, 'Processor', 11.1, 12.3,
@@ -30,7 +32,7 @@ def test_transactions(client, mock_engine):
     ]
 
     assert client.get('/transactions').status_code == 200
-    assert mock_engine.conn.execute.call_count == 2
+    assert mock_engine.conn.execute.call_count == 3
 
 
 def test_analytics(client, mock_alpaca, mock_engine):

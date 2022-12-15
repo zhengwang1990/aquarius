@@ -55,8 +55,24 @@ LIMIT :limit
 OFFSET :offset;
 """)
 
+SELECT_PROCESSOR_TRANSACTION_DETAIL_QUERY = sqlalchemy.text("""
+SELECT
+  symbol, is_long, processor, entry_price, exit_price,
+  entry_time, exit_time, qty, gl, gl_pct, slippage, slippage_pct
+FROM transaction
+WHERE processor = :processor
+ORDER BY exit_time DESC
+LIMIT :limit
+OFFSET :offset;
+""")
+
 COUNT_TRANSACTION_QUERY = sqlalchemy.text("""
 SELECT COUNT(*) FROM transaction;
+""")
+
+COUNT_PROCESSOR_TRANSACTION_QUERY = sqlalchemy.text("""
+SELECT COUNT(*) FROM transaction
+WHERE processor = :processor;
 """)
 
 UPSERT_AGGREGATION_QUERY = sqlalchemy.text("""
@@ -209,13 +225,20 @@ class Db:
                         continue
                     self._execute(UPSERT_LOG_QUERY, date=date, logger=logger, content=content)
 
-    def list_transactions(self, limit: int, offset: int) -> List[Transaction]:
-        results = self._execute(SELECT_TRANSACTION_DETAIL_QUERY,
-                                limit=limit, offset=offset)
+    def list_transactions(self, limit: int, offset: int, processor: Optional[str] = None) -> List[Transaction]:
+        if processor:
+            results = self._execute(SELECT_PROCESSOR_TRANSACTION_DETAIL_QUERY,
+                                    limit=limit, offset=offset, processor=processor)
+        else:
+            results = self._execute(SELECT_TRANSACTION_DETAIL_QUERY,
+                                    limit=limit, offset=offset)
         return [Transaction(*result) for result in results]
 
-    def get_transaction_count(self) -> int:
-        results = self._execute(COUNT_TRANSACTION_QUERY)
+    def get_transaction_count(self, processor: Optional[str] = None) -> int:
+        if processor:
+            results = self._execute(COUNT_PROCESSOR_TRANSACTION_QUERY, processor=processor)
+        else:
+            results = self._execute(COUNT_TRANSACTION_QUERY)
         return int(next(results)[0])
 
     def list_aggregations(self) -> List[Aggregation]:

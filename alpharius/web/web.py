@@ -59,13 +59,20 @@ def transactions():
     else:
         page = 1
     client = Db()
-    count = client.get_transaction_count()
+    aggs = client.list_aggregations()
+    processors = sorted(list(set([agg.processor for agg in aggs
+                                  if agg.processor != 'UNKNOWN'])))
+    active_processor = flask.request.args.get('processor')
+    if active_processor not in processors:
+        active_processor = None
+    processors = ['ALL PROCESSORS'] + processors
+    count = client.get_transaction_count(active_processor)
     total_page = max(int(np.ceil(count / items_per_page)), 1)
     page = max(min(page, total_page), 1)
     offset = (page - 1) * items_per_page
     trans = []
     time_fmt = f'<span class="med-hidden">%Y-%m-%d </span>%H:%M'
-    for t in client.list_transactions(items_per_page, offset):
+    for t in client.list_transactions(items_per_page, offset, active_processor):
         trans.append({
             'symbol': t.symbol,
             'side': 'long' if t.is_long else 'short',
@@ -87,7 +94,9 @@ def transactions():
     return flask.render_template('transactions.html',
                                  transactions=trans,
                                  current_page=page,
-                                 total_page=total_page)
+                                 total_page=total_page,
+                                 active_processor=active_processor,
+                                 processors=processors)
 
 
 def _shift_to_last(arr, target_value):
@@ -102,7 +111,7 @@ def _get_stats(aggs: List[Aggregation]):
     stats = dict()
     transaction_cnt = []
     cash_flows = []
-    three_month_ago = get_today() - datetime.timedelta(days=90)
+    three_month_ago = (get_today() - datetime.timedelta(days=90)).date()
     for agg in aggs:
         processor = agg.processor
         if processor not in stats:

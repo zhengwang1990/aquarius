@@ -1,6 +1,7 @@
 import os
 
 import pandas as pd
+import pytest
 from alpharius.utils import Transaction
 
 TEST_TRANSACTION = Transaction('SYMB', True, 'Processor', 10, 12,
@@ -51,7 +52,9 @@ def test_backfill(client, mock_engine):
     assert mock_engine.conn.execute.call_count > 0
 
 
-def test_list_transactions(client, mock_engine):
+@pytest.mark.parametrize('processor',
+                         [None, 'Processor'])
+def test_list_transactions(processor, client, mock_engine):
     mock_engine.conn.execute.return_value = [
         ('SYMA', True, 'Processor', 11.1, 12.3,
          pd.to_datetime('2022-11-03T09:35:00-04:00'),
@@ -63,14 +66,16 @@ def test_list_transactions(client, mock_engine):
          10, 100, 0.01, None, None),
     ]
 
-    trans = client.list_transactions(10, 0)
+    trans = client.list_transactions(10, 0, processor)
 
     mock_engine.conn.execute.assert_called_once()
     assert len(trans) == 2
 
 
-def test_get_transaction_count(client, mock_engine):
-    client.get_transaction_count()
+@pytest.mark.parametrize('processor',
+                         [None, 'Processor'])
+def test_get_transaction_count(processor, client, mock_engine):
+    client.get_transaction_count(processor)
 
     mock_engine.conn.execute.assert_called_once()
 
