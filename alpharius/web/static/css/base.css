@@ -255,15 +255,6 @@ nav.close ~ .dashboard .top{
     padding: 10px 16px 10px 16px;
 }
 
-@media (max-width: 1600px) {
-    .card .card-body .lg-hidden {
-        display: none;
-    }
-    .card .card-body .lg-show {
-        display: inline;
-    }
-}
-
 @media (max-width: 1000px) {
     nav{
         width: 73px;

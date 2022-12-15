@@ -25,6 +25,20 @@
     font-size: 15px;
 }
 
+@media (max-width: 1600px) {
+    .card .card-body .lg-hidden {
+        display: none;
+    }
+
+    .card .card-body .lg-show {
+        display: inline;
+    }
+
+    .card .card-body table {
+        font-size: 12px;
+    }
+}
+
 @media (max-width: 800px) {
     #select-container .inline-span {
         width: calc(50% - 10px);
