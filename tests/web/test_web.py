@@ -14,7 +14,11 @@ def test_dashboard(route, client, mock_alpaca):
     assert mock_alpaca.list_positions_call_count > 0
 
 
-def test_transactions(client, mock_engine):
+@pytest.mark.parametrize('route',
+                         ['/transactions',
+                          '/transactions?page=2',
+                          '/transactions?processor=Processor1'])
+def test_transactions(route, client, mock_engine):
     mock_engine.conn.execute.side_effect = [
         [(pd.to_datetime('2022-11-02').date(), 'Processor1',
           100, 0.01, 0, 0, 3, 2, 1, 0, 1000)],
@@ -31,7 +35,7 @@ def test_transactions(client, mock_engine):
         ],
     ]
 
-    assert client.get('/transactions').status_code == 200
+    assert client.get(route).status_code == 200
     assert mock_engine.conn.execute.call_count == 3
 
 
