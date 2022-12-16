@@ -104,19 +104,24 @@ class AlpacaClient:
         result['prev_close'] = (result['equity_5y'][-2]
                                 if len(result['equity_5y']) > 2 else math.nan)
         for time_period, time_delta in [('1w', relativedelta(weeks=1)),
+                                        ('2w', relativedelta(weeks=2)),
                                         ('1m', relativedelta(months=1)),
                                         ('6m', relativedelta(months=6)),
+                                        ('ytd', None),
                                         ('1y', relativedelta(years=1))]:
-            cut = (latest_day - time_delta - relativedelta(days=1)).strftime('%F')
+            if time_period == 'ytd':
+                cut = f'{latest_day.year}-01-01'
+            else:
+                cut = (latest_day - time_delta).strftime('%F')
             time_str = 'time_' + time_period
             equity_str = 'equity_' + time_period
             result[time_str] = result[equity_str] = []
             for i in range(len(result['time_5y'])):
-                if result['time_5y'][i] > cut and result['equity_5y'][i] > 0:
+                if result['time_5y'][i] >= cut and result['equity_5y'][i] > 0:
                     result[time_str] = result['time_5y'][i:]
                     result[equity_str] = result['equity_5y'][i:]
                     break
-        for time_period in ['1d', '1w', '1m', '6m', '1y', '5y']:
+        for time_period in ['1d', '1w', '2w', '1m', '6m', 'ytd', '1y', '5y']:
             if time_period == '1d':
                 base_value = (result['prev_close']
                               if result['prev_close'] > 0 else current_equity)

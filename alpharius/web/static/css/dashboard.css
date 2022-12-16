@@ -116,16 +116,26 @@ a:hover {
     text-decoration: underline;
 }
 
+@media (max-width: 1300px) {
+    .dash-content .card .btn {
+        font-size: 12px;
+        margin-right: 5px;
+        width: 60px;
+    }
+}
+
 @media (max-width: 800px) {
     #current-equity {
         font-size: 26px;
     }
+
     #current-change {
         font-size: 14px;
     }
 
     .dash-content .card .btn {
-        font-size: 11px;
-        width: 60px;
+        font-size: 10px;
+        margin-right: 0px;
+        width: 55px;
     }
 }

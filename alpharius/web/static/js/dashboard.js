@@ -12,13 +12,13 @@ var histories = INIT_HISTORIES;
 var watch = INIT_WATCH;
 var orders = INIT_ORDERS;
 var positions = INIT_POSITIONS;
-const graph_timeframes = ["1d", "1w", "1m", "6m", "1y", "5y"];
+const graph_timeframes = ["1d", "1w", "2w", "1m", "6m", "ytd", "1y", "5y"];
 const watch_symbols = ["QQQ", "SPY", "DIA", "TQQQ"];
 const compare_symbols = ["qqq", "spy", "tqqq"];
 
 const graph_point_radius = {
-    "1d": 0, "1w": 3, "1m": 2,
-    "6m": 0, "1y": 0, "5y": 0,
+    "1d": 0, "1w": 3, "2w": 3, "1m": 2,
+    "6m": 0, "ytd": 0, "1y": 0, "5y": 0
 };
 const symbol_colors = {
     "qqq": "rgb(11, 166, 188)",

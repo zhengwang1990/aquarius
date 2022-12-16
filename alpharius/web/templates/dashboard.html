@@ -43,14 +43,14 @@
                 </div>
                 <div class="button-title"><i class="uil uil-clock"></i> TIMEFRAME</div>
                 <div class="row button-row">
-                    {% for timeframe in ['1d', '1w', '1m', '6m', '1y', '5y'] %}
-                    {% if loop.index0 % 3 == 0 %}
-                    <div class="col-sm-12 col-md-6 col-lg-6 col-xl-6 button-col">
+                    {% for timeframe in ['1d', '1w', '2w', '1m', '6m', 'ytd', '1y', '5y'] %}
+                    {% if loop.index0 % 4 == 0 %}
+                    <div class="col-sm-12 col-md-12 col-lg-6 col-xl-6 button-col">
                     {% endif %}
                         <span class="btn my-btn-outline my-btn-primary" id="btn-{{timeframe}}">
-                            {{timeframe[0] + ' ' + timeframe[1] | upper}}
+                            {{timeframe[0] + ' ' + timeframe[1] | upper if timeframe != 'ytd' else timeframe | upper}}
                         </span>
-                    {% if loop.index0 % 3 == 2 %}
+                    {% if loop.index0 % 4 == 3 %}
                     </div>
                     {% endif %}
                     {% endfor %}
