@@ -255,7 +255,7 @@ nav.close ~ .dashboard .top{
     padding: 10px 16px 10px 16px;
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 1200px) {
     nav{
         width: 73px;
     }
@@ -299,7 +299,7 @@ nav.close ~ .dashboard .top{
     }
 }
 
-@media (max-width: 550px) {
+@media (max-width: 650px) {
     nav{
         width: 0px;
     }
