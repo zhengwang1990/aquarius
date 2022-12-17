@@ -81,6 +81,8 @@ class O2hProcessor(Processor):
             return
         if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
                 context.current_time.time() >= EXIT_TIME):
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                               f'Closing position. Current price {context.current_price}.')
             position['status'] = 'inactive'
             return ProcessorAction(context.symbol, ActionType.BUY_TO_CLOSE, 1)
 

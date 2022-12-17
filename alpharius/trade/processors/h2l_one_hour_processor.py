@@ -91,14 +91,16 @@ class H2lOneHourProcessor(Processor):
             return
         intraday_closes = context.intraday_lookback['Close']
         index = -13 - (context.current_time - position['entry_time']).seconds // 300
+        stop_loss = False
         if len(intraday_closes) >= abs(index):
             current_loss = context.current_price / intraday_closes[index] - 1
             lower_threshold, _ = self._get_thresholds(context)
-            if current_loss < lower_threshold:
-                position['status'] = 'inactive'
-                return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
-        if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
+            stop_loss = current_loss < lower_threshold
+        if (stop_loss or
+                context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
                 context.current_time.time() >= EXIT_TIME):
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                               f'Closing position. Current price {context.current_price}.')
             position['status'] = 'inactive'
             return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
 

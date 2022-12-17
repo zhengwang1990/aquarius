@@ -76,6 +76,8 @@ class BearMomentumProcessor(Processor):
         action = ProcessorAction(context.symbol, action_type, 1)
         if context.current_time < position['entry_time'] + datetime.timedelta(minutes=60):
             return
+        self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                           f'Closing position. Current price {context.current_price}.')
         self._positions.pop(context.symbol)
         return action
 
