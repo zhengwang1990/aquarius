@@ -28,6 +28,7 @@ function update_job_status() {
     if (document.hidden || new Date().getTime() - last_status_update < 60000) {
         return;
     }
+    last_status_update = new Date().getTime();
     console.log(`Update job status at ${new Date()}`);
     var xmlHttp = new XMLHttpRequest();
     xmlHttp.open("GET", "/job_status", false);
@@ -39,7 +40,6 @@ function update_job_status() {
     } else {
         status.style.display = "none";
     }
-    last_status_update = new Date().getTime();
 }
 
 update_job_status();

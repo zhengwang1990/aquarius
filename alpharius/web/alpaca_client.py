@@ -186,14 +186,15 @@ class AlpacaClient:
             t = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime('%F')
             dict_5y[t] = bar.c
         symbol_values = dict()
-        for timeframe in ['1d', '1w', '1m', '6m', '1y', '5y']:
+        timeframes = ['1d', '1w', '2w', '1m', '6m', 'ytd', '1y', '5y']
+        for timeframe in timeframes:
             symbol_values[timeframe] = []
             timeline = portfolio_histories['time_' + timeframe]
             dict_ref = dict_1d if timeframe == '1d' else dict_5y
             for t in timeline:
                 symbol_values[timeframe].append(dict_ref.get(t))
             symbol_values[timeframe][-1] = day_bars[-1].c
-        for timeframe in ['1d', '1w', '1m', '6m', '1y', '5y']:
+        for timeframe in timeframes:
             if timeframe == '1d':
                 symbol_base = dict_5y[time_points[-2]]
                 portfolio_base = portfolio_histories['prev_close']

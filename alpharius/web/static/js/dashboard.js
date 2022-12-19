@@ -241,6 +241,7 @@ function update_dashboard_data() {
     if (document.hidden || new Date().getTime() - last_dashboard_update < 60000) {
         return;
     }
+    last_dashboard_update = new Date().getTime();
     console.log(`Update dashboard at ${new Date()}`);
     var xmlHttp = new XMLHttpRequest();
     xmlHttp.open("GET", "/dashboard_data", false);
@@ -267,7 +268,6 @@ function update_dashboard_data() {
         positions = obj.positions;
         update_positions();
     }
-    last_dashboard_update = new Date().getTime();
 }
 
 setInterval(update_dashboard_data, 1000);
