@@ -65,6 +65,24 @@ const config = {
         plugins: {
             legend: {
                 display: false
+            },
+            tooltip: {
+                callbacks: {
+                    afterLabel: (ctx) => {
+                        if (ctx.dataset.label === "previous close") {
+                            return;
+                        }
+                        var base;
+                        if (active_timeframe === "1d") {
+                            base = histories["prev_close"];
+                        } else {
+                            base = ctx.dataset.data[0];
+                        }
+                        var change = (ctx.raw / base - 1) * 100;
+                        var sign = change >= 0 ? "+" : "-";
+                        return `${sign}${(Math.abs(change)).toFixed(2)}%`;
+                    }
+                }
             }
         },
         scales: {
