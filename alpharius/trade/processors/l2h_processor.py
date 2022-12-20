@@ -27,9 +27,9 @@ class L2hProcessor(Processor):
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._output_dir = output_dir
-        self._logger = logging_config(os.path.join(self._output_dir, 'l2h_short_processor.txt'),
+        self._logger = logging_config(os.path.join(self._output_dir, 'l2h_processor.txt'),
                                       detail=True,
-                                      name='l2h_short_processor')
+                                      name='l2h_processor')
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
