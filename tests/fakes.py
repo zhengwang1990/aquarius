@@ -201,7 +201,7 @@ class FakePolygon:
 
 class FakeProcessor(trade.Processor):
     def __init__(self, trading_frequency):
-        super().__init__()
+        super().__init__('fake_output_dir')
         self.get_stock_universe_call_count = 0
         self.process_data_call_count = 0
         self.trading_frequency = trading_frequency
