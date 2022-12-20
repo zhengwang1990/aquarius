@@ -1,11 +1,10 @@
 import datetime
-import os
 from typing import List, Optional
 
 import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    ProcessorAction, Mode, DATETIME_TYPE, logging_config)
+    ProcessorAction, Mode, DATETIME_TYPE)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -20,16 +19,12 @@ class ZScoreProcessor(Processor):
                  lookback_end_date: DATETIME_TYPE,
                  data_source: DataSource,
                  output_dir: str) -> None:
-        super().__init__()
+        super().__init__(output_dir)
         self._positions = dict()
         self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
                                                                lookback_end_date,
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
-        self._output_dir = output_dir
-        self._logger = logging_config(os.path.join(self._output_dir, 'z_score_processor.txt'),
-                                      detail=True,
-                                      name='z_score_processor')
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN

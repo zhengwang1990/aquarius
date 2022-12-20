@@ -1,11 +1,10 @@
 import datetime
-import os
 from typing import List, Optional
 
 import numpy as np
 from ..common import (
     ProcessorAction, ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
-    DATETIME_TYPE, DAYS_IN_A_MONTH, logging_config)
+    DATETIME_TYPE, DAYS_IN_A_MONTH)
 
 ENTRY_TIME = datetime.time(10, 0)
 EXIT_TIME = datetime.time(14, 0)
@@ -17,12 +16,8 @@ class BearMomentumProcessor(Processor):
 
     def __init__(self,
                  output_dir: str) -> None:
-        super().__init__()
+        super().__init__(output_dir)
         self._positions = dict()
-        self._output_dir = output_dir
-        self._logger = logging_config(os.path.join(self._output_dir, 'bear_momentum_processor.txt'),
-                                      detail=True,
-                                      name='bear_momentum_processor')
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN

@@ -4,6 +4,7 @@ import functools
 import inspect
 import logging
 import os
+import re
 from enum import Enum
 from typing import List, Optional, Union
 
@@ -194,8 +195,14 @@ class Context:
 
 class Processor:
 
-    def __init__(self) -> None:
-        return
+    def __init__(self, output_dir: str) -> None:
+        processor_name = get_processor_name(self)
+        split = re.findall('[A-Z][^A-Z]*', processor_name)
+        logger_name = '_'.join([s.lower() for s in split])
+        self._output_dir = output_dir
+        self._logger = logging_config(os.path.join(self._output_dir, logger_name + '.txt'),
+                                      detail=True,
+                                      name=logger_name)
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         raise NotImplementedError('Calling parent interface')

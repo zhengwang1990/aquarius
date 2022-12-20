@@ -1,11 +1,10 @@
 import datetime
-import os
 from typing import List, Optional, Tuple
 
 import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DATETIME_TYPE, logging_config)
+    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DATETIME_TYPE)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -19,16 +18,12 @@ class H2lFiveMinProcessor(Processor):
                  lookback_end_date: DATETIME_TYPE,
                  data_source: DataSource,
                  output_dir: str) -> None:
-        super().__init__()
+        super().__init__(output_dir)
         self._positions = dict()
         self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
                                                                lookback_end_date,
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
-        self._output_dir = output_dir
-        self._logger = logging_config(os.path.join(self._output_dir, 'h2l_five_min_processor.txt'),
-                                      detail=True,
-                                      name='h2l_five_min_processor')
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN

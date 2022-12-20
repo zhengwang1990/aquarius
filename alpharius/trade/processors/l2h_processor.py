@@ -1,12 +1,11 @@
 import datetime
-import os
 from typing import List, Optional
 
 import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DAYS_IN_A_YEAR, DATETIME_TYPE,
-    logging_config)
+    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DAYS_IN_A_YEAR, DATETIME_TYPE)
+from ..data_loader import get_shortable_symbols
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -20,16 +19,13 @@ class L2hProcessor(Processor):
                  lookback_end_date: DATETIME_TYPE,
                  data_source: DataSource,
                  output_dir: str) -> None:
-        super().__init__()
+        super().__init__(output_dir)
         self._positions = dict()
         self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
                                                                lookback_end_date,
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
-        self._output_dir = output_dir
-        self._logger = logging_config(os.path.join(self._output_dir, 'l2h_processor.txt'),
-                                      detail=True,
-                                      name='l2h_processor')
+        self._shortable_symbols = set(get_shortable_symbols())
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -42,7 +38,7 @@ class L2hProcessor(Processor):
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
-                        list(self._positions.keys())))
+                        list(self._positions.keys())) & self._shortable_symbols)
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
         if context.symbol in self._positions:

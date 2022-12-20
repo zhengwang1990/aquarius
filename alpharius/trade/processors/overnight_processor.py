@@ -1,4 +1,3 @@
-import os
 import datetime
 from typing import Dict, List, Optional, Tuple
 
@@ -7,7 +6,7 @@ import tabulate
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
     Position, ProcessorAction, DATETIME_TYPE, DAYS_IN_A_YEAR, DAYS_IN_A_QUARTER,
-    DAYS_IN_A_WEEK, logging_config, get_header)
+    DAYS_IN_A_WEEK, get_header)
 from ..stock_universe import TopVolumeUniverse
 
 NUM_UNIVERSE_SYMBOLS = 200
@@ -21,15 +20,12 @@ class OvernightProcessor(Processor):
                  lookback_end_date: DATETIME_TYPE,
                  data_source: DataSource,
                  output_dir: str) -> None:
-        super().__init__()
+        super().__init__(output_dir)
         self._stock_universe = TopVolumeUniverse(lookback_start_date, lookback_end_date, data_source,
                                                  num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._universe_symbols = []
         self._hold_positions = []
         self._output_dir = output_dir
-        self._logger = logging_config(os.path.join(self._output_dir, 'overnight_processor.txt'),
-                                      detail=True,
-                                      name='overnight_processor')
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.CLOSE_TO_OPEN
