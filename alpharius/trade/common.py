@@ -196,8 +196,7 @@ class Context:
 class Processor:
 
     def __init__(self, output_dir: str) -> None:
-        processor_name = get_processor_name(self)
-        split = re.findall('[A-Z][^A-Z]*', processor_name)
+        split = re.findall('[A-Z][^A-Z]*', type(self).__name__)
         logger_name = '_'.join([s.lower() for s in split])
         self._output_dir = output_dir
         self._logger = logging_config(os.path.join(self._output_dir, logger_name + '.txt'),
