@@ -31,7 +31,7 @@ function update_job_status() {
     last_status_update = new Date().getTime();
     console.log(`Update job status at ${new Date()}`);
     var xmlHttp = new XMLHttpRequest();
-    xmlHttp.open("GET", "/job_status", false);
+    xmlHttp.open("GET", "/job_status", true);
     xmlHttp.onreadystatechange = function() {
         if (xmlHttp.readyState !== 4 || xmlHttp.status !== 200) {
             return;
