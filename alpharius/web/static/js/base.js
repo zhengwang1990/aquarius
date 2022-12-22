@@ -32,14 +32,19 @@ function update_job_status() {
     console.log(`Update job status at ${new Date()}`);
     var xmlHttp = new XMLHttpRequest();
     xmlHttp.open("GET", "/job_status", false);
-    xmlHttp.send(null);
-    var res = xmlHttp.responseText;
-    var status = document.getElementById("job_status");
-    if (res === "running") {
-        status.style.removeProperty("display")
-    } else {
-        status.style.display = "none";
+    xmlHttp.onreadystatechange = function() {
+        if (xmlHttp.readyState !== 4 || xmlHttp.status !== 200) {
+            return;
+        }
+        var res = xmlHttp.responseText;
+        var status = document.getElementById("job_status");
+        if (res === "running") {
+            status.style.removeProperty("display")
+        } else {
+            status.style.display = "none";
+        }
     }
+    xmlHttp.send(null);
 }
 
 update_job_status();

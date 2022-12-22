@@ -51,8 +51,8 @@ for (const symbol of active_compares.values()) {
     document.getElementById("btn-" + symbol).classList.add("active");
 }
 
-var graph_data = {}
-var symbol_data = {}
+var graph_data = {};
+var symbol_data = {};
 
 const config = {
     type: "line",
@@ -133,10 +133,12 @@ for (var button of buttons) {
 function get_histories_hash(his) {
     var time_1d = his["time_1d"];
     var time_1w = his["time_1w"];
-    return time_1w[time_1d.length - 1] + time_1d[time_1d.length - 1];
+    var equity_1d = his["equity_1d"];
+    return time_1w[time_1w.length - 1] + time_1d[time_1d.length - 1] + equity_1d[equity_1d.length - 1];
 }
 
-function update_histories() {
+// Initial load of graph_data and symbol_data
+function init_histories() {
     document.getElementById("current-equity").innerHTML = histories["current_equity"];
     for (const timeframe of graph_timeframes) {
         graph_data[timeframe] = [{
@@ -181,6 +183,32 @@ function update_histories() {
         }
     }
     update_chart();
+}
+
+// Update graph_data and symbol_data from most recent histories
+function update_histories() {
+    document.getElementById("current-equity").innerHTML = histories["current_equity"];
+    document.getElementById("current-change").innerHTML = histories["change_" + active_timeframe];
+    chart.data.labels = histories["time_" + active_timeframe];
+    for (const timeframe of graph_timeframes) {
+        var g_data = graph_data[timeframe][0];
+        g_data.backgroundColor = histories["color_" + timeframe];
+        g_data.borderColor = histories["color_" + timeframe];
+        g_data.data = histories["equity_" + timeframe];
+    }
+    const light_color = histories["color_1d"] === "red" ? "rgba(252, 0, 0, 0.25)" : "rgba(0, 128, 0, 0.25)";
+    graph_data["1d"][0].segment.borderColor = ctx => histories["time_1d"][ctx.p1DataIndex] > histories['market_close'] ? light_color : undefined;
+    graph_data["1d"][1].data = Array(histories["time_1d"].length).fill(histories["prev_close"]);
+    for (const timeframe of graph_timeframes) {
+        for (const symbol of compare_symbols) {
+            var s_data = symbol_data[timeframe][symbol];
+            s_data.data = histories[symbol + "_" + timeframe];
+            if (timeframe === "1d") {
+                s_data.segment.borderColor = ctx => histories["time_1d"][ctx.p1DataIndex] > histories['market_close'] ? symbol_colors[symbol + "light"] : undefined;
+            }
+        }
+    }
+    chart.update();
 }
 
 function get_watch_hash(wat) {
@@ -250,7 +278,7 @@ function update_positions() {
 
 // Initial load of data
 var last_dashboard_update = new Date().getTime();
-update_histories();
+init_histories();
 update_watch();
 update_orders();
 update_positions();
@@ -262,30 +290,31 @@ function update_dashboard_data() {
     last_dashboard_update = new Date().getTime();
     console.log(`Update dashboard at ${new Date()}`);
     var xmlHttp = new XMLHttpRequest();
-    xmlHttp.open("GET", "/dashboard_data", false);
+    xmlHttp.open("GET", "/dashboard_data", true);
+    xmlHttp.onreadystatechange = function() {
+        if (xmlHttp.readyState !== 4 || xmlHttp.status !== 200) {
+            return;
+        }
+        var res = xmlHttp.responseText;
+        var obj = JSON.parse(res);
+        if (get_histories_hash(histories) !==  get_histories_hash(obj.histories)) {
+            histories = obj.histories;
+            update_histories();
+        }
+        if (get_watch_hash(watch) !== get_watch_hash(obj.watch)) {
+            watch = obj.watch;
+            update_watch();
+        }
+        if (get_orders_hash(orders) !== get_orders_hash(obj.orders)) {
+            orders = obj.orders;
+            update_orders();
+        }
+        if (get_positions_hash(positions) != get_positions_hash(obj.positions)) {
+            positions = obj.positions;
+            update_positions();
+        }
+    }
     xmlHttp.send(null);
-    if (xmlHttp.status !== 200) {
-        console.log("Error loading dashboard data");
-        return;
-    }
-    var res = xmlHttp.responseText;
-    var obj = JSON.parse(res);
-    if (get_histories_hash(histories) !==  get_histories_hash(obj.histories)) {
-        histories = obj.histories;
-        update_histories();
-    }
-    if (get_watch_hash(watch) !== get_watch_hash(obj.watch)) {
-        watch = obj.watch;
-        update_watch();
-    }
-    if (get_orders_hash(orders) !== get_orders_hash(obj.orders)) {
-        orders = obj.orders;
-        update_orders();
-    }
-    if (get_positions_hash(positions) != get_positions_hash(obj.positions)) {
-        positions = obj.positions;
-        update_positions();
-    }
 }
 
 setInterval(update_dashboard_data, 1000);
