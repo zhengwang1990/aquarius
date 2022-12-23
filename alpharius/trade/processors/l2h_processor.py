@@ -79,12 +79,12 @@ class L2hProcessor(Processor):
                 break
         else:
             return
-        current_loss = context.current_price / intraday_closes[-10] - 1
+        current_gain = context.current_price / intraday_closes[-10] - 1
         threshold = self._get_thresholds(context)
-        is_trade = threshold < current_loss
-        if is_trade or (context.mode == Mode.TRADE and current_loss > threshold * 0.8):
+        is_trade = threshold < current_gain
+        if is_trade or (context.mode == Mode.TRADE and current_gain > threshold * 0.8):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                               f'Current loss: {current_loss * 100:.2f}%. '
+                               f'Current gain: {current_gain * 100:.2f}%. '
                                f'Threshold: {threshold * 100:.2f}%. '
                                f'Current price {context.current_price}.')
         if is_trade:

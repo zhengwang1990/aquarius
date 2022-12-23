@@ -20,7 +20,9 @@ class O2hProcessor(Processor):
                  data_source: DataSource,
                  output_dir: str) -> None:
         super().__init__(output_dir)
-        self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date, lookback_end_date, data_source,
+        self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
+                                                               lookback_end_date,
+                                                               data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._positions = dict()
         self._shortable_symbols = set(get_shortable_symbols())
@@ -61,7 +63,7 @@ class O2hProcessor(Processor):
         current_gain = context.current_price / market_open_price - 1
         z_score = (current_gain - o2h_avg) / (o2h_std + 1E-7)
         is_trade = 3 > z_score > 2
-        if is_trade or (context.mode == Mode.TRADE and z_score > 1):
+        if is_trade or (context.mode == Mode.TRADE and z_score > 1.5):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Current gain: {current_gain * 100:.2f}%. Z-score: {z_score:.2f}. '
                                f'Current price: {context.current_price}.')
