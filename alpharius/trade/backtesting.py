@@ -97,7 +97,7 @@ class Backtesting:
                                        output_dir=self._output_dir)
             self._processors.append(processor)
 
-    def _take_diff(self):
+    def _record_diff(self):
         repo = git.Repo(BASE_DIR)
         html = ''
         for item in repo.head.commit.diff(None):
@@ -121,7 +121,7 @@ class Backtesting:
 
     def run(self) -> None:
         self._run_start_time = time.time()
-        self._take_diff()
+        self._record_diff()
         history_start = self._start_date - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
         self._interday_data = load_tradable_history(
             history_start, self._end_date, DEFAULT_DATA_SOURCE)
