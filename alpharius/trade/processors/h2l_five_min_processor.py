@@ -51,7 +51,7 @@ class H2lFiveMinProcessor(Processor):
         h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
         h2l_avg = np.average(h2l_losses)
         lower_threshold = h2l_avg
-        upper_threshold = h2l_avg * 0.4
+        upper_threshold = h2l_avg * 0.375
         return lower_threshold, upper_threshold
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:

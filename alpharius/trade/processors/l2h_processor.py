@@ -8,7 +8,7 @@ from ..common import (
 from ..data_loader import get_shortable_symbols
 from ..stock_universe import IntradayVolatilityStockUniverse
 
-NUM_UNIVERSE_SYMBOLS = 20
+NUM_UNIVERSE_SYMBOLS = 25
 EXIT_TIME = datetime.time(16, 0)
 
 
@@ -52,7 +52,7 @@ class L2hProcessor(Processor):
         interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
         l2h_gains = [h / l - 1 for h, l in zip(interday_highs, interday_lows)]
         l2h_avg = np.average(l2h_gains)
-        threshold = l2h_avg * 0.8
+        threshold = l2h_avg * 0.75
         return threshold
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
@@ -74,8 +74,8 @@ class L2hProcessor(Processor):
             return
         if context.current_price < np.max(intraday_closes):
             return
-        for i in range(-1, -6, -1):
-            if interday_closes[i] <= intraday_closes[i - 1]:
+        for i in range(-1, -9, -1):
+            if intraday_closes[i] <= intraday_closes[i - 1]:
                 break
         else:
             return
