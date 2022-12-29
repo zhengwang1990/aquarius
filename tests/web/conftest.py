@@ -26,6 +26,11 @@ def client(app):
 
 
 @pytest.fixture(autouse=True)
+def mock_cash_reserve(mocker):
+    mocker.patch.dict(os.environ, {'CASH_RESERVE': '0'})
+
+
+@pytest.fixture(autouse=True)
 def mock_engine(mocker):
     mocker.patch.dict(os.environ, {'SQL_STRING': 'fake_path'})
     engine = fakes.FakeDbEngine()
