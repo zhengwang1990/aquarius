@@ -230,20 +230,10 @@ class Processor:
 class ProcessorFactory:
 
     def __init__(self) -> None:
-        self._source_file = inspect.getfile(self.__class__)
-        create_signature = inspect.signature(self.create)
-        processor_class = create_signature.return_annotation
-        # Check if processor class is written in the same file as factory class
-        assert inspect.getfile(processor_class) == self._source_file
+        return
 
     def create(self, *args, **kwargs) -> Processor:
         raise NotImplementedError('Calling parent interface')
-
-    def snapshot(self, output_dir: str) -> None:
-        snapshot_file = os.path.join(output_dir, os.path.basename(self._source_file))
-        with open(snapshot_file, 'w') as f_snapshot:
-            with open(self._source_file, 'r') as f_source:
-                f_snapshot.write(f_source.read())
 
 
 def get_processor_name(processor: Processor) -> str:

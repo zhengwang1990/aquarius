@@ -1,8 +1,21 @@
+import git
 import pandas as pd
 import pytest
 from alpharius import trade
 from alpharius.trade import PROCESSOR_FACTORIES
 from ..fakes import FakeProcessorFactory
+
+
+@pytest.fixture(autouse=True)
+def mock_git(mocker):
+    mock_repo = mocker.MagicMock()
+    mock_diff = mocker.MagicMock()
+    mock_stream = mocker.MagicMock()
+    mock_repo.head.commit.diff.return_value = [mock_diff]
+    mock_diff.change_type = 'M'
+    mock_diff.a_blob.datastream.read.return_value = mock_stream
+    mock_stream.decode.return_value = 'line1\nline2'
+    mocker.patch.object(git, 'Repo', return_value=mock_repo)
 
 
 @pytest.mark.parametrize('trading_frequency',

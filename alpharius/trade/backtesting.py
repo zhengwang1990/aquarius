@@ -1,5 +1,6 @@
 import collections
 import datetime
+import difflib
 import functools
 import os
 import signal
@@ -8,6 +9,7 @@ from concurrent import futures
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import alpaca_trade_api as tradeapi
+import git
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
@@ -95,13 +97,31 @@ class Backtesting:
                                        output_dir=self._output_dir)
             self._processors.append(processor)
 
-    def _take_snapshot(self):
-        for factory in self._processor_factories:
-            factory.snapshot(self._output_dir)
+    def _take_diff(self):
+        repo = git.Repo(BASE_DIR)
+        html = ''
+        for item in repo.head.commit.diff(None):
+            old_content, new_content = [], []
+            if item.change_type != 'A':
+                old_content = item.a_blob.data_stream.read().decode('utf-8').split('\n')
+            if item.change_type != 'D':
+                with open(os.path.join(BASE_DIR, item.b_path), 'r') as f:
+                    new_content = f.read().split('\n')
+            html_diff = difflib.HtmlDiff(wrapcolumn=120)
+            html += f'<div><h1>{item.b_path}</h1>'
+            html += html_diff.make_table(old_content, new_content, context=True)
+            html += '</div>'
+        if html:
+            template_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                         'html', 'diff.html')
+            with open(template_file, 'r') as f:
+                template = f.read()
+            with open(os.path.join(self._output_dir, 'diff.html'), 'w') as f:
+                f.write(template.format(html=html))
 
     def run(self) -> None:
         self._run_start_time = time.time()
-        self._take_snapshot()
+        self._take_diff()
         history_start = self._start_date - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
         self._interday_data = load_tradable_history(
             history_start, self._end_date, DEFAULT_DATA_SOURCE)

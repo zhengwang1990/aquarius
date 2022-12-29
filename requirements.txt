@@ -3,6 +3,7 @@ alpaca-trade-api
 bs4
 coverage
 flask
+GitPython
 matplotlib
 numpy
 pandas
