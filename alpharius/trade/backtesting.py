@@ -100,6 +100,7 @@ class Backtesting:
     def _record_diff(self):
         repo = git.Repo(BASE_DIR)
         html = ''
+        max_num_line = 0
         for item in repo.head.commit.diff(None):
             old_content, new_content = [], []
             if item.change_type != 'A':
@@ -107,6 +108,7 @@ class Backtesting:
             if item.change_type != 'D':
                 with open(os.path.join(BASE_DIR, item.b_path), 'r') as f:
                     new_content = f.read().split('\n')
+            max_num_line = max(max_num_line, len(old_content), len(new_content))
             html_diff = difflib.HtmlDiff(wrapcolumn=120)
             html += f'<div><h1>{item.b_path}</h1>'
             html += html_diff.make_table(old_content, new_content, context=True)
@@ -114,10 +116,11 @@ class Backtesting:
         if html:
             template_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                          'html', 'diff.html')
+            header_width = (int(np.log10(max_num_line)) + 1) * 7 + 6
             with open(template_file, 'r') as f:
                 template = f.read()
             with open(os.path.join(self._output_dir, 'diff.html'), 'w') as f:
-                f.write(template.format(html=html))
+                f.write(template.format(header_width=header_width, html=html))
 
     def run(self) -> None:
         self._run_start_time = time.time()

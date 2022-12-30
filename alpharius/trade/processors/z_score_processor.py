@@ -67,13 +67,11 @@ class ZScoreProcessor(Processor):
                                f'Direction: {direction}. Current price {context.current_price}.')
         if not is_trade:
             return
-        self._positions[context.symbol] = {'entry_time': context.current_time}
+        self._positions[context.symbol] = {'entry_time': context.current_time,
+                                           'direction': direction}
         return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
-        position = self._positions[context.symbol]
-        if context.current_time < position['entry_time'] + datetime.timedelta(minutes=5):
-            return
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'Closing position. Current price {context.current_price}')
         self._positions.pop(context.symbol)
