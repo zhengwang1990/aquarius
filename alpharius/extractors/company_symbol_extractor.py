@@ -4,11 +4,12 @@ Extracts all stock symbols in the US stock market.
 2. Run this script to extract the stock symbols
 """
 import argparse
-import pandas as pd
 import pathlib
 import os
 import re
 import textwrap
+
+import pandas as pd
 
 
 def main():
@@ -27,7 +28,7 @@ def main():
                 break
         else:
             raise ValueError('Input file not found')
-    df = pd.read_csv(input_path)
+    df = pd.read_csv(input_path, na_filter=False)
     symbols = [f"'{symbol}'" for symbol in df['Symbol'] if re.match('^[A-Z]*$', symbol)]
     symbols_line = ', '.join(symbols)
     lines = textwrap.wrap(symbols_line, width=80)
