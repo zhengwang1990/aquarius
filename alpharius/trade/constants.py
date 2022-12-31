@@ -1764,5 +1764,5 @@ COMPANY_SYMBOLS = [
     'ZEUS', 'ZEV', 'ZFOX', 'ZFOXW', 'ZG', 'ZGN', 'ZH', 'ZI', 'ZIM', 'ZIMV', 'ZING',
     'ZINGW', 'ZION', 'ZIONL', 'ZIONO', 'ZIONP', 'ZIP', 'ZIVO', 'ZIVOW', 'ZKIN',
     'ZLAB', 'ZM', 'ZNH', 'ZNTL', 'ZOM', 'ZS', 'ZT', 'ZTAQU', 'ZTAQW', 'ZTEK', 'ZTO',
-    'ZTR', 'ZTS', 'ZUMZ', 'ZUO', 'ZVIA', 'ZVSA', 'ZWS', 'ZYME', 'ZYNE', 'ZYXI'
+    'ZTR', 'ZTS', 'ZUMZ', 'ZUO', 'ZVIA', 'ZVSA', 'ZWS', 'ZYME', 'ZYNE', 'ZYXI',
 ]
