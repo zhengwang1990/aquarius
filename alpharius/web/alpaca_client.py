@@ -186,6 +186,7 @@ class AlpacaClient:
             t = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime('%F')
             dict_5y[t] = bar.c
         symbol_values = dict()
+        current_symbol_value = day_bars[-1].c
         timeframes = ['1d', '1w', '2w', '1m', '6m', 'ytd', '1y', '5y']
         for timeframe in timeframes:
             symbol_values[timeframe] = []
@@ -193,14 +194,17 @@ class AlpacaClient:
             dict_ref = dict_1d if timeframe == '1d' else dict_5y
             for t in timeline:
                 symbol_values[timeframe].append(dict_ref.get(t))
-            symbol_values[timeframe][-1] = day_bars[-1].c
+            if symbol_values[timeframe]:
+                symbol_values[timeframe][-1] = current_symbol_value
         for timeframe in timeframes:
             if timeframe == '1d':
                 symbol_base = dict_5y[time_points[-2]]
                 portfolio_base = portfolio_histories['prev_close']
             else:
-                symbol_base = symbol_values[timeframe][0]
-                portfolio_base = portfolio_histories['equity_' + timeframe][0]
+                symbol_base = symbol_values[timeframe][0] if symbol_values[timeframe] else current_symbol_value
+                portfolio_base = (portfolio_histories['equity_' + timeframe][0]
+                                  if portfolio_histories['equity_' + timeframe]
+                                  else portfolio_histories['equity_1d'][-1])
             for i in range(len(symbol_values[timeframe])):
                 if symbol_values[timeframe][i] is not None:
                     symbol_values[timeframe][i] = symbol_values[timeframe][i] / symbol_base * portfolio_base
