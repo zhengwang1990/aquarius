@@ -110,7 +110,12 @@ class AlpacaClient:
                                         ('ytd', None),
                                         ('1y', relativedelta(years=1))]:
             if time_period == 'ytd':
-                cut = f'{latest_day.year}-01-01'
+                new_year_day = f'{latest_day.year}-01-01'
+                cut_i = len(result['time_5y']) - 1
+                cut = result['time_5y'][cut_i]
+                while cut_i > 0 and cut >= new_year_day:
+                    cut_i -= 1
+                    cut = result['time_5y'][cut_i]
             else:
                 cut = (latest_day - time_delta).strftime('%F')
             time_str = 'time_' + time_period
