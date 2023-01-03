@@ -1,7 +1,4 @@
-import email.mime.image as image
-import email.mime.multipart as multipart
 import os
-import smtplib
 
 import alpaca_trade_api as tradeapi
 import matplotlib.font_manager as fm
@@ -45,12 +42,3 @@ def mock_os(mocker):
     mocker.patch('builtins.open', mocker.mock_open(read_data='data'))
     mocker.patch.object(os.path, 'isfile', return_value=False)
     mocker.patch.object(os, 'makedirs')
-
-
-@pytest.fixture(autouse=True)
-def mock_email(mocker):
-    mocker.patch.object(image, 'MIMEImage', autospec=True)
-    mocker.patch.object(multipart.MIMEMultipart, 'as_string', return_value='')
-    mocker.patch.dict(os.environ, {'EMAIL_USERNAME': 'fake_user',
-                                   'EMAIL_PASSWORD': 'fake_password',
-                                   'EMAIL_RECEIVER': 'fake_receiver'})
