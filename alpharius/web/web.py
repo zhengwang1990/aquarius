@@ -238,9 +238,9 @@ def _get_risks(daily_prices):
         a, b, s = compute_risks(v, mv)
         d = compute_drawdown(v)
         r = v[-1] / v[0] - 1
-        return {'alpha': get_signed_percentage(a) if a != math.nan else 'N/A',
-                'beta': f'{b:.2f}' if b != math.nan else 'N/A',
-                'sharpe': f'{s:.2f}' if s != math.nan else 'N/A',
+        return {'alpha': get_signed_percentage(a) if not math.isnan(a) else 'N/A',
+                'beta': f'{b:.2f}' if not math.isnan(b) else 'N/A',
+                'sharpe': f'{s:.2f}' if not math.isnan(s) else 'N/A',
                 'drawdown': get_signed_percentage(d),
                 'return': get_signed_percentage(r)}
 
