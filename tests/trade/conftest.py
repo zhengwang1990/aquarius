@@ -54,8 +54,3 @@ def mock_email(mocker):
     mocker.patch.dict(os.environ, {'EMAIL_USERNAME': 'fake_user',
                                    'EMAIL_PASSWORD': 'fake_password',
                                    'EMAIL_RECEIVER': 'fake_receiver'})
-
-
-@pytest.fixture(autouse=True)
-def mock_smtp(mocker):
-    return mocker.patch.object(smtplib, 'SMTP', autospec=True)

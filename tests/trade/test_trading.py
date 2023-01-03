@@ -33,7 +33,7 @@ def mock_engine(mocker):
                          [trade.TradingFrequency.FIVE_MIN,
                           trade.TradingFrequency.CLOSE_TO_CLOSE,
                           trade.TradingFrequency.CLOSE_TO_OPEN])
-def test_run_success(mock_alpaca, mock_smtp, trading_frequency):
+def test_run_success(mock_alpaca, trading_frequency):
     fake_processor_factory = FakeProcessorFactory(trading_frequency)
     fake_processor = fake_processor_factory.processor
     trading = trade.Trading(processor_factories=[fake_processor_factory])
@@ -46,15 +46,14 @@ def test_run_success(mock_alpaca, mock_smtp, trading_frequency):
     assert mock_alpaca.get_account_call_count > 0
     assert fake_processor.get_stock_universe_call_count > 0
     assert fake_processor.process_data_call_count > 0
-    mock_smtp.assert_called_once()
 
 
-def test_run_with_processors(mock_smtp):
+def test_run_with_processors(mock_alpaca):
     trading = trade.Trading(processor_factories=PROCESSOR_FACTORIES)
 
     trading.run()
 
-    mock_smtp.assert_called_once()
+    assert mock_alpaca.get_account_call_count > 0
 
 
 def test_not_run_on_market_close_day(mocker, mock_alpaca):

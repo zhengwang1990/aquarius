@@ -133,8 +133,6 @@ class Trading:
                     processed.append(checkpoint_time)
             time.sleep(1)
 
-        # Send email
-        EmailSender(self._logger).send_summary()
         self._upload_log()
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
