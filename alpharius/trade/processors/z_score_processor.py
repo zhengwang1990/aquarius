@@ -48,6 +48,8 @@ class ZScoreProcessor(Processor):
         intraday_volumes = context.intraday_lookback['Volume'][market_open_index:]
         if len(intraday_closes) < 6:
             return
+        if intraday_closes[-1] < context.prev_day_close < intraday_closes[-2]:
+            return
         price_changes = [abs(intraday_closes[i] - intraday_closes[i - 1])
                          for i in range(1, len(intraday_closes))]
         z_price = (price_changes[-1] - np.mean(price_changes)) / (np.std(price_changes) + 1E-7)

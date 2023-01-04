@@ -51,7 +51,7 @@ class CrossCloseProcessor(Processor):
         interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
         h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
         h2l_avg = np.average(h2l_losses)
-        return h2l_avg * 0.6
+        return h2l_avg * 0.5
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
@@ -62,12 +62,9 @@ class CrossCloseProcessor(Processor):
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         if len(intraday_closes) < 2:
             return
-        open_price = intraday_opens[0]
-        if context.current_price > np.min(intraday_closes):
-            return
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
             return
-        current_loss = context.current_price / open_price - 1
+        current_loss = context.current_price / intraday_closes[-2] - 1
         threshold = self._get_threshold(context)
         is_cross = intraday_opens[-1] > context.prev_day_close > intraday_closes[-1]
         is_trade = current_loss < threshold and is_cross
