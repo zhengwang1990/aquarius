@@ -6,3 +6,4 @@ from .bear_momentum_processor import BearMomentumProcessorFactory
 from .h2l_one_hour_processor import H2lOneHourProcessorFactory
 from .h2l_five_min_processor import H2lFiveMinProcessorFactory
 from .l2h_processor import L2hProcessorFactory
+from .cross_close_processor import CrossCloseProcessorFactory
