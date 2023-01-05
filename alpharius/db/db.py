@@ -159,8 +159,8 @@ class Db:
             qty=transaction.qty,
             gl=transaction.gl,
             gl_pct=transaction.gl_pct,
-            slippage=transaction.slippage if transaction.slippage else None,
-            slippage_pct=transaction.slippage_pct if transaction.slippage_pct else None)
+            slippage=transaction.slippage,
+            slippage_pct=transaction.slippage_pct)
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
     def _execute(self, query, **kwargs):
@@ -187,7 +187,7 @@ class Db:
             agg['gl'] += gl
             agg['gl_pct_acc'] += gl_pct
             agg['cash_flow'] += cash_flow
-            if slippage:
+            if slippage is not None:
                 agg['slippage'] += slippage
                 agg['slippage_pct_acc'] += slippage_pct
                 agg['slippage_count'] += 1
