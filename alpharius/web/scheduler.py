@@ -22,6 +22,18 @@ lock = threading.RLock()
 job_status = 'idle'
 
 
+def email_on_exception(func):
+    """Decorator that sends exceptions via email."""
+    def wrap(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception as e:
+            error_message = str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
+            EmailSender().send_alert(error_message)
+    return wrap
+
+
+@email_on_exception
 def _trading_run():
     Trading(processor_factories=PROCESSOR_FACTORIES).run()
 
@@ -32,18 +44,13 @@ def _trade_impl():
     if acquired:
         job_status = 'running'
         app.logger.info('Start trading')
-        try:
-            # Live trading consumes a significant amount of memory. If the execution runs
-            # in the same process, the allocated memory is not returned to the operating
-            # system by the garbage collector after running, but owned and managed by Python.
-            # Therefore, here it spawns a child process to run trading. The memory will
-            # be returned to the OS after child process is shutdown.
-            with futures.ProcessPoolExecutor(max_workers=1) as pool:
-                pool.submit(_trading_run).result()
-        except Exception as e:
-            error_message = str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
-            app.logger.error('Fail in trading: %s', error_message)
-            EmailSender().send_alert(error_message)
+        # Live trading consumes a significant amount of memory. If the execution runs
+        # in the same process, the allocated memory is not returned to the operating
+        # system by the garbage collector after running, but owned and managed by Python.
+        # Therefore, here it spawns a child process to run trading. The memory will
+        # be returned to the OS after child process is shutdown.
+        with futures.ProcessPoolExecutor(max_workers=1) as pool:
+            pool.submit(_trading_run).result()
         job_status = 'idle'
         app.logger.info('Finish trading')
         lock.release()
@@ -51,6 +58,7 @@ def _trade_impl():
         app.logger.warning('Cannot acquire trade lock')
 
 
+@email_on_exception
 def _backtest_run():
     latest_day = get_latest_day()
     start_date = (latest_day - datetime.timedelta(days=1)).strftime('%F')
@@ -94,19 +102,13 @@ def backfill():
                 hour=16, minute=20, timezone='America/New_York')
 def backtest():
     app.logger.info('Start backtesting')
-    try:
-        with futures.ProcessPoolExecutor(max_workers=1) as pool:
-            pool.submit(_backtest_run).result()
-    except Exception as e:
-        error_message = str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
-        app.logger.error('Fail in backtesting: %s', error_message)
-        EmailSender().send_alert(error_message)
+    with futures.ProcessPoolExecutor(max_workers=1) as pool:
+        pool.submit(_backtest_run).result()
     app.logger.info('Finish backtesting')
 
 
 @bp.route('/trigger', methods=['POST'])
 def trigger():
     app.logger.info('Trade triggered manually')
-    t = threading.Thread(target=_trade_impl)
-    t.start()
+    trade()
     return ''

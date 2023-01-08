@@ -66,7 +66,8 @@ class Backtesting:
         alpaca = tradeapi.REST()
         calendar = alpaca.get_calendar(start=self._start_date.strftime('%F'),
                                        end=(self._end_date - datetime.timedelta(days=1)).strftime('%F'))
-        self._market_dates = [market_day.date for market_day in calendar]
+        self._market_dates = [market_day.date for market_day in calendar
+                              if market_day.date < self._end_date]
         signal.signal(signal.SIGINT, self._safe_exit)
 
         self._run_start_time = None
