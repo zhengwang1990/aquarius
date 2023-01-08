@@ -8,5 +8,3 @@ coverage:
       default:
         target: auto
         threshold: 5.0
-fixes:
-  - "main/::"

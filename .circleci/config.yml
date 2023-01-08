@@ -23,6 +23,6 @@ jobs:
       - codecov/upload
 
 workflows:
-  main:
+  build-test:
     jobs:
       - build-and-test
