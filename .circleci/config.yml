@@ -15,8 +15,11 @@ jobs:
           name: Install codecov
           command: pip install codecov
       - run:
+          name: Install pytest-cov
+          command: pip install pytest-cov
+      - run:
           name: Run tests
-          command: coverage run -m pytest
+          command: pytest --cov=./ --cov-report=xml
       - run:
           name: Generate coverage report
           command: codecov

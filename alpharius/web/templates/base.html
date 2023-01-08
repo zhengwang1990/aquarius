@@ -42,6 +42,10 @@
                 <i class="uil uil-file-alt {{ 'active' if url_for(request.endpoint) == '/logs' else ''}}"></i>
                 <span class="link-name {{ 'active' if url_for(request.endpoint) == '/logs' else ''}}">Logs</span>
             </a></li>
+            <li><a href="{{ '#' if url_for(request.endpoint) == '/backtest' else url_for('web.backtest')}}">
+                <i class="uil uil-backward {{ 'active' if url_for(request.endpoint) == '/backtest' else ''}}"></i>
+                <span class="link-name {{ 'active' if url_for(request.endpoint) == '/backtest' else ''}}">Backtest</span>
+            </a></li>
             <li><a href="{{ '#' if url_for(request.endpoint) == '/charts' else url_for('web.charts')}}">
                 <i class="uil uil-chart-line {{ 'active' if url_for(request.endpoint) == '/charts' else ''}}"></i>
                 <span class="link-name {{ 'active' if url_for(request.endpoint) == '/charts' else ''}}">Charts</span>

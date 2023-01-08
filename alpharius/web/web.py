@@ -393,6 +393,11 @@ def charts_data():
     return json.dumps(res)
 
 
+@bp.route('/backtest')
+def backtest():
+    return flask.render_template('backtest.html')
+
+
 @bp.route('/job_status')
 def job_status():
     return get_job_status()
