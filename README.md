@@ -1,6 +1,6 @@
 # Alpharius
 
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/zhengwang1990/alpharius/tree/main.svg?style=shield&circle-token=de2eb83bcc2a27a75b5c924042fda16d4a03e027)](https://dl.circleci.com/status-badge/redirect/gh/zhengwang1990/alpharius/tree/main)
+[![Build and Test](https://github.com/zhengwang1990/alpharius/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/zhengwang1990/alpharius/actions/workflows/build-and-test.yml)
 [![codecov](https://codecov.io/gh/zhengwang1990/alpharius/branch/main/graph/badge.svg?token=R8RUFJJ1CV)](https://codecov.io/gh/zhengwang1990/alpharius)
 
 ## Install
