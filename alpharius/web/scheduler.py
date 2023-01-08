@@ -1,4 +1,5 @@
 import datetime
+import functools
 import os
 import threading
 import traceback
@@ -24,6 +25,7 @@ job_status = 'idle'
 
 def email_on_exception(func):
     """Decorator that sends exceptions via email."""
+    @functools.wraps(func)
     def wrap(*args, **kwargs):
         try:
             func(*args, **kwargs)
