@@ -19,10 +19,7 @@ jobs:
           command: pytest --cov-config=.coveragerc --cov=alpharius
       - run:
           name: Upload to codecov
-          command:
-            - curl -Os https://uploader.codecov.io/latest/linux/codecov
-            - chmod +x codecov
-            - ./codecov
+          command: curl -Os https://uploader.codecov.io/latest/linux/codecov; chmod +x codecov; ./codecov
 
 workflows:
   main:
