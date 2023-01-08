@@ -157,10 +157,9 @@ def get_today():
 
 
 def get_latest_day():
-    """Gets latest day of trading.
+    """Gets the latest day of trading.
 
-    Either the return value is not a trading day, or if the time is before pre-market open,
-    it returns previous day.
+    If the time is before pre-market open it returns previous day.
     """
     latest_day = pd.to_datetime('now', utc=True).tz_convert(TIME_ZONE)
     if latest_day.time() < datetime.time(4, 0):

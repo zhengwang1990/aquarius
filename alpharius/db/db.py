@@ -125,6 +125,17 @@ FROM log
 WHERE date = :date;
 """)
 
+INSERT_BACKTEST_QUERY = sqlalchemy.text("""
+INSERT INTO backtest (
+  id, symbol, is_long, processor, entry_price, exit_price,
+  entry_time, exit_time, gl_pct
+)
+VALUES (
+  :id, :symbol, :is_long, :processor, :entry_price, :exit_price,
+  :entry_time, :exit_time, :gl_pct
+)
+""")
+
 Aggregation = collections.namedtuple(
     'Aggregation',
     ['date', 'processor', 'gl', 'avg_gl_pct', 'slippage', 'avg_slippage_pct', 'count',
@@ -143,7 +154,7 @@ class Db:
     def insert_transaction(self, transaction: Transaction) -> None:
         self._insert_transaction(transaction, False)
 
-    def _insert_transaction(self, transaction: Transaction, allow_conflict: bool):
+    def _insert_transaction(self, transaction: Transaction, allow_conflict: bool) -> None:
         transaction_id = transaction.symbol + ' ' + transaction.exit_time.strftime('%F %H:%M')
         query = UPSERT_TRANSACTION_QUERY if allow_conflict else INSERT_TRANSACTION_QUERY
         self._execute(
@@ -161,6 +172,20 @@ class Db:
             gl_pct=transaction.gl_pct,
             slippage=transaction.slippage,
             slippage_pct=transaction.slippage_pct)
+
+    def insert_backtest(self, transaction: Transaction) -> None:
+        transaction_id = transaction.symbol + ' ' + transaction.exit_time.strftime('%F %H:%M')
+        self._execute(
+            INSERT_BACKTEST_QUERY,
+            id=transaction_id,
+            symbol=transaction.symbol,
+            is_long=transaction.is_long,
+            processor=transaction.processor,
+            entry_price=transaction.entry_price,
+            exit_price=transaction.exit_price,
+            entry_time=transaction.entry_time.isoformat(),
+            exit_time=transaction.exit_time.isoformat(),
+            gl_pct=transaction.gl_pct)
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
     def _execute(self, query, **kwargs):

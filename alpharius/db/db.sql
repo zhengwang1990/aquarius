@@ -42,3 +42,18 @@ CREATE TABLE IF NOT EXISTS log (
 );
 
 CREATE INDEX IF NOT EXISTS log_date ON log (Date);
+
+CREATE TABLE IF NOT EXISTS backtest (
+    id varchar(25) PRIMARY KEY,
+    symbol varchar(10),
+    is_long boolean,
+    processor varchar(50),
+    entry_price real,
+    exit_price real,
+    entry_time timestamptz,
+    exit_time timestamptz,
+    gl_pct real
+);
+
+CREATE INDEX IF NOT EXISTS backtest_exit_time ON backtest (exit_time);
+CREATE INDEX IF NOT EXISTS backtest_processor ON backtest (processor);

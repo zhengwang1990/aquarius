@@ -1,3 +1,4 @@
+import datetime
 import os
 import threading
 import traceback
@@ -5,8 +6,9 @@ from concurrent import futures
 
 import flask
 from alpharius.db import Db
-from alpharius.trade import PROCESSOR_FACTORIES, Trading
+from alpharius.trade import PROCESSOR_FACTORIES, Backtesting, Trading
 from alpharius.notification.email_sender import EmailSender
+from alpharius.utils import get_latest_day
 from flask_apscheduler import APScheduler
 
 app = flask.Flask(__name__)
@@ -49,6 +51,19 @@ def _trade_impl():
         app.logger.warning('Cannot acquire trade lock')
 
 
+def _backtest_run():
+    latest_day = get_latest_day()
+    start_date = (latest_day - datetime.timedelta(days=1)).strftime('%F')
+    end_date = (latest_day + datetime.timedelta(days=1)).strftime('%F')
+    transactions = Backtesting(start_date=start_date,
+                               end_date=end_date,
+                               processor_factories=PROCESSOR_FACTORIES).run()
+    db_client = Db()
+    for transaction in transactions:
+        if transaction.exit_time.date() == latest_day:
+            db_client.insert_backtest(transaction)
+
+
 def get_job_status():
     global job_status
     return job_status
@@ -73,6 +88,20 @@ def backfill():
         app.logger.error('Fail in trading: %s', error_message)
         EmailSender().send_alert(error_message)
     app.logger.info('Finish backfilling')
+
+
+@scheduler.task('cron', id='backtest', day_of_week='mon-fri',
+                hour=16, minute=20, timezone='America/New_York')
+def backtest():
+    app.logger.info('Start backtesting')
+    try:
+        with futures.ProcessPoolExecutor(max_workers=1) as pool:
+            pool.submit(_backtest_run).result()
+    except Exception as e:
+        error_message = str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
+        app.logger.error('Fail in backtesting: %s', error_message)
+        EmailSender().send_alert(error_message)
+    app.logger.info('Finish backtesting')
 
 
 @bp.route('/trigger', methods=['POST'])

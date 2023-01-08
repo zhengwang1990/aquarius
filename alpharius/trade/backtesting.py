@@ -419,7 +419,7 @@ class Backtesting:
         if executed_closes:
             table_list = [[t.symbol, t.processor, t.entry_time.time(), t.exit_time.time(),
                            'long' if t.is_long else 'short', t.qty, t.entry_price,
-                           t.exit_price, t.gl_pct] for t in executed_closes]
+                           t.exit_price, f'{t.gl_pct * 100:+.2f}%'] for t in executed_closes]
             trade_info = tabulate.tabulate(table_list,
                                            headers=['Symbol', 'Processor', 'Entry Time', 'Exit Time', 'Side',
                                                     'Qty', 'Entry Price', 'Exit Price', 'Gain/Loss'],
