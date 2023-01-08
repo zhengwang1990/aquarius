@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  python: circleci/python@1.5.0
+  python: codecov/codecov@3
 
 jobs:
   build-and-test:
@@ -19,10 +19,8 @@ jobs:
           command: pip install pytest-cov
       - run:
           name: Run tests
-          command: pytest --cov-config=.coveragerc --cov=./ --cov-report=xml
-      - run:
-          name: Generate coverage report
-          command: codecov
+          command: pytest --cov-config=.coveragerc --cov=alpharius
+      - codecov/upload
 
 workflows:
   main:
