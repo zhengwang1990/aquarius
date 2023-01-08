@@ -1,7 +1,7 @@
 coverage:
   range:
     - 0.0
-    - 90.0
+    - 95.0
   status:
     patch: false
     project:
