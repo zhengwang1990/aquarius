@@ -19,9 +19,8 @@ from alpharius.utils import TIME_ZONE, compute_risks, compute_drawdown
 from .common import (
     Action, ActionType, Context, Position, Processor, ProcessorFactory, TimeInterval,
     TradingFrequency, Mode, BASE_DIR, DATETIME_TYPE, MARKET_OPEN, MARKET_CLOSE, OUTPUT_DIR,
-    DEFAULT_DATA_SOURCE, INTERDAY_LOOKBACK_LOAD, EPSILON, BID_ASK_SPREAD,
-    SHORT_RESERVE_RATIO, logging_config, timestamp_to_index, get_unique_actions, get_header,
-    get_processor_name)
+    DEFAULT_DATA_SOURCE, INTERDAY_LOOKBACK_LOAD, BID_ASK_SPREAD, SHORT_RESERVE_RATIO,
+    logging_config, timestamp_to_index, get_unique_actions, get_header, get_processor_name)
 from .data_loader import load_cached_daily_data, load_tradable_history
 
 _MAX_WORKERS = 20
@@ -356,7 +355,7 @@ class Backtesting:
             self._pop_current_position(symbol)
             qty = current_position.qty * action.percent
             new_qty = current_position.qty - qty
-            if abs(new_qty) > EPSILON:
+            if abs(new_qty) > 1E-7:
                 self._positions.append(Position(symbol, new_qty,
                                                 current_position.entry_price,
                                                 current_position.entry_time))
@@ -388,7 +387,7 @@ class Backtesting:
             symbol = action.symbol
             cash_to_trade = min(tradable_cash / len(actions),
                                 tradable_cash * action.percent)
-            if abs(cash_to_trade) < EPSILON:
+            if abs(cash_to_trade) < 1E-7:
                 cash_to_trade = 0
             qty = cash_to_trade / action.price
             if action.type == ActionType.SELL_TO_OPEN:

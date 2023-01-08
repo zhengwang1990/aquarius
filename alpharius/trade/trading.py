@@ -13,7 +13,6 @@ import retrying
 import sqlalchemy
 from alpharius.db import Db
 from alpharius.utils import get_transactions, get_today, TIME_ZONE
-from alpharius.notification.email_sender import EmailSender
 from .common import (
     Action, ActionType, ProcessorFactory, TradingFrequency, Context, Mode,
     TimeInterval, Position, MARKET_OPEN, DATETIME_TYPE, DEFAULT_DATA_SOURCE,

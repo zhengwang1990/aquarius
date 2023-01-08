@@ -1,7 +1,6 @@
 import collections
 import datetime
 import functools
-import inspect
 import logging
 import os
 import re
@@ -23,7 +22,6 @@ DAYS_IN_A_YEAR = 250
 MARKET_OPEN = datetime.time(9, 30)
 MARKET_CLOSE = datetime.time(16, 0)
 SHORT_RESERVE_RATIO = 1
-EPSILON = 1E-7
 INTERDAY_LOOKBACK_LOAD = CALENDAR_DAYS_IN_A_YEAR
 BID_ASK_SPREAD = 0.001
 

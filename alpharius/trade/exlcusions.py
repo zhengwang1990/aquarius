@@ -1,54 +1,3 @@
-# These stocks are de-listed
-DELISTED = ['AABA', 'ACETQ', 'AETI', 'AGC', 'AKP', 'ALDR', 'ALN', 'ALQA',
-            'AMBR', 'AMGP', 'AMID', 'AMMA', 'ANDV', 'ANDX', 'ANWWQ', 'AOI',
-            'APC', 'APF', 'APHB', 'APU', 'AQ', 'ARLZQ', 'ARRS', 'ARRY',
-            'ASCMQ', 'AST', 'ASV', 'ATTU', 'AVHI', 'BEL', 'BHBK', 'BID',
-            'BKS', 'BLH', 'BLMT', 'BMS', 'BNCL', 'BNGOU', 'BOJA', 'BOSXF',
-            'BPL', 'BRACU', 'BRSS', 'BRSWQ', 'BT', 'BVX', 'BXEFF', 'CADC',
-            'CASM', 'CAW', 'CBAK', 'CBK', 'CBLK', 'CCA', 'CCNI', 'CHAC',
-            'CHKE', 'CHSP', 'CIVI', 'CJ', 'CLNS', 'CMSS', 'CMSSU', 'CMTA',
-            'CRAY', 'CTRL', 'CTRV', 'CTWS', 'CUR', 'CVRS', 'CYTX', 'CZFC',
-            'DATA', 'DCUD', 'DDE', 'DDOC', 'DELT', 'DFBH', 'DFRG', 'DHCP',
-            'DHVW', 'DNB', 'DOVA', 'DRYS', 'DSW', 'DTRM', 'DTV', 'DWDP',
-            'EAGL', 'EAGLU', 'ECYT', 'EDGE', 'EDR', 'EFII', 'EHIC', 'EIV',
-            'ELLI', 'EMCI', 'EMES', 'EQGP', 'ESESD', 'ESL', 'EVJ', 'EVLV',
-            'EVO', 'EVP', 'FDC', 'FELP', 'FHY', 'FLF', 'FNSR', 'FNTEU',
-            'FRAC', 'FRSH', 'FSNN', 'GG', 'GGP', 'GHDX', 'GLAC', 'GLACU',
-            'GNBC', 'GOV', 'GPIC', 'GSHT', 'GTYHU', 'HAIR', 'HBK', 'HEB',
-            'HF', 'HFBC', 'HIFR', 'HIVE', 'HKRSQ', 'HLTH', 'HMTA', 'HPJ',
-            'HYGS', 'IDTI', 'IMDZ', 'IMI', 'IMMY', 'IPOA', 'ISCA', 'ISRL',
-            'ITG', 'ITUS', 'JONE', 'JSYNU', 'KAAC', 'KCAP', 'KED', 'KEYW',
-            'KONE', 'KOOL', 'KPFS', 'KYE', 'LABL', 'LEXEA', 'LION', 'LLL',
-            'LOGO', 'LOXO', 'LTXB', 'LXFT', 'MACQ', 'MAMS', 'MB', 'MBFI',
-            'MBNAA', 'MBNAB', 'MBTF', 'MDSO', 'MFCB', 'MMDM', 'MOC', 'MPAC',
-            'MRT', 'MSF', 'MSL', 'MTEC', 'MTECU', 'MTGE', 'MXWL', 'MYND',
-            'MZF', 'NANO', 'NAO', 'NAVG', 'NCI', 'NCOM', 'NDRO', 'NETS',
-            'NITE', 'NNC', 'NRCG', 'NRE', 'NSU', 'NTC', 'NTRI', 'NVMM',
-            'NXEO', 'NXEOU', 'NXTM', 'NYLD', 'NYNY', 'OAK', 'OHGI', 'OHRP',
-            'OMED', 'ONEW', 'OPHT', 'ORBK', 'ORM', 'ORPN', 'OSIR', 'OSPRU',
-            'P', 'PCMI', 'PERY', 'PETX', 'PGLC', 'PHIIQ', 'PHIKQ', 'PLLL',
-            'PNTR', 'PRAN', 'PTIE', 'PTXTQ', 'PYDS', 'QCP', 'QSII', 'QTNA',
-            'RDC', 'REN', 'RHT', 'RLM', 'RNN', 'ROX', 'RTEC', 'RVEN', 'RXII',
-            'SCAC', 'SCACU', 'SFLY', 'SFS', 'SGYPQ', 'SHLM', 'SHOS', 'SHPG',
-            'SIFI', 'SIR', 'SKIS', 'SLD', 'SMSH', 'SPA', 'SSFN', 'STLR',
-            'STNL', 'STNLU', 'SVU', 'SXCP', 'TAHO', 'TFCF', 'TFCFA', 'TIER',
-            'TISA', 'TLP', 'TMCX', 'TMCXU', 'TOWR', 'TPIV', 'TRCO', 'TRK',
-            'TRNC', 'TSS', 'TST', 'TYPE', 'UBNK', 'UBNT', 'UCBA', 'ULTI',
-            'UQM', 'USG', 'UWN', 'VEACU', 'VICL', 'VMAX', 'VSAR', 'VSM',
-            'WAGE', 'WGP', 'WP', 'XGTI', 'XRM', 'XSPL', 'ZDEO', 'ZF', 'ZJBR',
-            'CVON', 'FFKT', 'KLXI', 'HNTUF', 'EGLTQ', 'NEWM', 'HCLP', 'HDP',
-            'GSTCQ', 'DFBHU', 'ILG', 'MATR', 'RENX', 'VLP', 'TSRO', 'IMPV',
-            'XL', 'FNBG', 'WSCI', 'COTV', 'CVRR', 'RSYS', 'VCOYY', 'JMBA',
-            'FCB', 'ATAC', 'JHA', 'EEP', 'STBZ', 'GPT', 'APB', 'BPK', 'PRTHU',
-            'VVC', 'APTI', 'PF', 'ENLK', 'CWAY', 'BBOX', 'ABAX', 'JTPY',
-            'ARMO', 'ESIO', 'HQCL', 'ESND', 'EMJ', 'NYRT', 'AVDR', 'SNMX',
-            'SVA', 'DNJR', 'RLJE', 'CQH', 'TBLTU', 'ANCX', 'PNK', 'EGC',
-            'CHFN', 'DCT', 'XPLR', 'ESRX', 'EIO', 'DM', 'OCIP', 'STDY',
-            'ATHN', 'TBRGU', 'BJZ', 'SEND', 'MCRN', 'EIA', 'MMV', 'ALOG',
-            'DVMT', 'SYNT', 'EIP', 'XCRA', 'PAY', 'IPAS', 'COBZ', 'BRQS',
-            'MIW', 'CAVM', 'GBNK', 'EMI', 'DGSE', 'DDR', 'ZGYH', 'CCAC',
-            'ZGYHR', 'DTO', 'DRV', 'DMYT', 'DFPH', 'LSAC', 'GNRS', 'SCA']
-
 # These stocks are shorts
 SHORTS = ['BIS', 'CROC', 'DDG', 'DOG', 'DPK', 'DRIP', 'DUG', 'DUST', 'DXD',
           'EDZ', 'EEV', 'EFU', 'EFZ', 'ERY', 'EUM', 'EUO', 'EWV', 'FAZ',
@@ -64,9 +13,6 @@ SHORTS = ['BIS', 'CROC', 'DDG', 'DOG', 'DPK', 'DRIP', 'DUG', 'DUST', 'DXD',
           'XXVFF', 'YGRN', 'ZIV', 'BZQ', 'TVIX', 'UVXY', 'EPV', 'FTSD', 'VIXY',
           'UVXY', 'SKF', 'HDGE', 'VXX']
 
-HISTORY_NOT_FOUND = ['STSB', 'NBAC', 'OTTR', 'ANDAR', 'GRNVR', 'VTAQR', 'BRLIR',
-                     'BREZR', 'NBACR', 'ESSCR', 'AGBAR', 'ALACR', 'COMS']
-
 DUAL_LIST = ['GOOG']
 
-EXCLUSIONS = DELISTED + SHORTS + HISTORY_NOT_FOUND + DUAL_LIST
+EXCLUSIONS = SHORTS + DUAL_LIST
