@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  python: codecov/codecov@3.2.4
+  python: circleci/python@1.5.0
 
 jobs:
   build-and-test:
@@ -9,22 +9,22 @@ jobs:
       - image: cimg/python:3.10.2
     steps:
       - checkout
-      - run:
-          name: Install dependencies
-          command: make
-      - run:
-          name: Install codecov
-          command: pip install codecov
+      - python/install-packages:
+          pkg-manager: pip
       - run:
           name: Install pytest-cov
           command: pip install pytest-cov
       - run:
           name: Run tests
           command: pytest --cov-config=.coveragerc --cov=alpharius
-      - codecov/upload
+      - run:
+          name: Upload to codecov
+          command:
+            - curl -Os https://uploader.codecov.io/latest/linux/codecov
+            - chmod +x codecov
+            - ./codecov
 
 workflows:
-  version: 2.1
   main:
     jobs:
       - build-and-test
