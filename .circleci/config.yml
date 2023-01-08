@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  python: codecov/codecov@3
+  python: circleci/python@1.5.0
 
 jobs:
   build-and-test:
@@ -9,9 +9,8 @@ jobs:
       - image: cimg/python:3.10.2
     steps:
       - checkout
-      - run:
-          name: Install dependencies
-          command: make
+      - python/install-packages:
+          pkg-manager: pip
       - run:
           name: Install codecov
           command: pip install codecov
@@ -20,8 +19,10 @@ jobs:
           command: pip install pytest-cov
       - run:
           name: Run tests
-          command: pytest --cov=alpharius
-      - codecov/upload
+          command: pytest --cov=./ --cov-report=xml
+      - run:
+          name: Generate coverage report
+          command: codecov
 
 workflows:
   main:
