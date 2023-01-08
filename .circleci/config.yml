@@ -19,7 +19,7 @@ jobs:
           command: pip install pytest-cov
       - run:
           name: Run tests
-          command: pytest --cov=./ --cov-report=xml
+          command: pytest --cov-config=.coveragerc --cov=./ --cov-report=xml
       - run:
           name: Generate coverage report
           command: codecov
