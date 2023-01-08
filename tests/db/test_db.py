@@ -106,3 +106,9 @@ def test_get_logs(client, mock_engine):
     logs = client.get_logs('2022-11-03')
 
     assert logs == [('Logger', 'Content')]
+
+
+def test_insert_backtest(client, mock_engine):
+    client.insert_backtest(TEST_TRANSACTION)
+
+    mock_engine.conn.execute.assert_called_once()

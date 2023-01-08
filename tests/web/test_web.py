@@ -124,3 +124,7 @@ def test_charts(route, client):
 def test_charts_data(route, client, mock_alpaca):
     assert client.get(route).status_code == 200
     assert mock_alpaca.get_bars_call_count > 0
+
+
+def test_backtest(client):
+    assert client.get('/backtest').status_code == 200

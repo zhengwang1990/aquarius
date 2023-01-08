@@ -13,6 +13,14 @@ def test_trigger(client, mocker):
     thread.assert_called_once()
 
 
+def test_trade(client, mocker):
+    thread = mocker.patch.object(threading, 'Thread')
+
+    scheduler.trade()
+
+    thread.assert_called_once()
+
+
 def test_trade_impl(mocker):
     mock_submit = mocker.Mock()
     mock_pool = mocker.patch.object(futures, 'ProcessPoolExecutor')
@@ -30,7 +38,23 @@ def test_backfill(mock_engine):
 
 
 @pytest.mark.parametrize('job_name',
-                         ['trade', 'backfill'])
+                         ['trade', 'backfill', 'backtest'])
 def test_scheduler(job_name):
     job = scheduler.scheduler.get_job(job_name)
     assert job.next_run_time.timestamp() < time.time() + 86400 * 3
+
+
+def test_backtest(mocker):
+    mock_submit = mocker.Mock()
+    mock_pool = mocker.patch.object(futures, 'ProcessPoolExecutor')
+    mock_pool.return_value.__enter__.return_value.submit = mock_submit
+
+    scheduler.backtest()
+
+    mock_submit.assert_called_once()
+
+
+def test_backtest_run(mock_engine, mock_alpaca):
+    scheduler._backtest_run()
+
+    assert mock_alpaca.list_assets_call_count > 0
