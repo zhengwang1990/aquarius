@@ -15,7 +15,7 @@ import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
 import tabulate
-from alpharius.utils import TIME_ZONE, compute_risks, compute_drawdown
+from alpharius.utils import TIME_ZONE, Transaction, compute_risks, compute_drawdown
 from .common import (
     Action, ActionType, Context, Position, Processor, ProcessorFactory, TimeInterval,
     TradingFrequency, Mode, BASE_DIR, DATETIME_TYPE, MARKET_OPEN, MARKET_CLOSE, OUTPUT_DIR,
@@ -121,7 +121,7 @@ class Backtesting:
             with open(os.path.join(self._output_dir, 'diff.html'), 'w') as f:
                 f.write(template.format(header_width=header_width, html=html))
 
-    def run(self) -> None:
+    def run(self) -> List[Transaction]:
         self._run_start_time = time.time()
         self._record_diff()
         history_start = self._start_date - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
@@ -131,16 +131,18 @@ class Backtesting:
         self._init_processors(history_start)
         all_processor_c2c = np.all([processor.get_trading_frequency() == TradingFrequency.CLOSE_TO_CLOSE
                                     for processor in self._processors])
+        transactions = []
         for day in self._market_dates:
             if all_processor_c2c:
-                self._process_c2c(day)
+                executed_closes = self._process_c2c(day)
             else:
-                self._process(day)
+                executed_closes = self._process(day)
+            transactions.extend(executed_closes)
         self._close()
+        return transactions
 
     def _load_stock_universe(self,
-                             day: DATETIME_TYPE) -> Tuple[Dict[str, List[str]],
-                                                          Dict[TradingFrequency, Set[str]]]:
+                             day: DATETIME_TYPE) -> Tuple[Dict[str, List[str]], Dict[TradingFrequency, Set[str]]]:
         load_stock_universe_start = time.time()
         processor_stock_universes = dict()
         stock_universe = collections.defaultdict(set)
@@ -217,7 +219,7 @@ class Backtesting:
         self._intraday_load_time += time.time() - load_intraday_start
         return intraday_datas
 
-    def _process(self, day: DATETIME_TYPE) -> None:
+    def _process(self, day: DATETIME_TYPE) -> List[Transaction]:
         for processor in self._processors:
             processor.setup(self._positions, day)
 
@@ -284,8 +286,9 @@ class Backtesting:
             processor.teardown()
 
         self._log_day(day, executed_actions)
+        return executed_actions
 
-    def _process_c2c(self, day: DATETIME_TYPE) -> None:
+    def _process_c2c(self, day: DATETIME_TYPE) -> List[Transaction]:
         for processor in self._processors:
             processor.setup(self._positions, day)
 
@@ -313,6 +316,7 @@ class Backtesting:
             contexts, processor_stock_universes, self._processors)
         executed_closes = self._process_actions(market_close, actions)
         self._log_day(day, executed_closes)
+        return executed_closes
 
     def _process_actions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> List[List[Any]]:
         unique_actions = get_unique_actions(actions)
@@ -340,7 +344,7 @@ class Backtesting:
                 return position
         return None
 
-    def _close_positions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> List[List[Any]]:
+    def _close_positions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> List[Transaction]:
         executed_actions = []
         for action in actions:
             assert action.type in [ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]
@@ -370,11 +374,11 @@ class Backtesting:
                 self._num_win += 1
             else:
                 self._num_lose += 1
-            executed_actions.append([symbol, action.processor,
-                                     current_position.entry_time.time(), current_time.time(),
-                                     'long' if action.type == ActionType.SELL_TO_CLOSE else 'short',
-                                     qty, current_position.entry_price,
-                                     action.price, f'{profit * 100:+.2f}%'])
+            executed_actions.append(
+                Transaction(symbol, action.type == ActionType.SELL_TO_CLOSE, action.processor,
+                            current_position.entry_price, action.price, current_position.entry_time,
+                            current_time, qty, profit * qty * current_position.entry_price,
+                            profit, None, None))
         return executed_actions
 
     def _open_positions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> None:
@@ -410,11 +414,13 @@ class Backtesting:
 
     def _log_day(self,
                  day: DATETIME_TYPE,
-                 executed_closes: List[List[Any]]) -> None:
+                 executed_closes: List[Transaction]) -> None:
         outputs = [get_header(day.date())]
-
         if executed_closes:
-            trade_info = tabulate.tabulate(executed_closes,
+            table_list = [[t.symbol, t.processor, t.entry_time.time(), t.exit_time.time(),
+                           'long' if t.is_long else 'short', t.qty, t.entry_price,
+                           t.exit_price, t.gl_pct] for t in executed_closes]
+            trade_info = tabulate.tabulate(table_list,
                                            headers=['Symbol', 'Processor', 'Entry Time', 'Exit Time', 'Side',
                                                     'Qty', 'Entry Price', 'Exit Price', 'Gain/Loss'],
                                            tablefmt='grid')
