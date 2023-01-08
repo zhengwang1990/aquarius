@@ -1,0 +1,12 @@
+coverage:
+  range:
+    - 0.0
+    - 90.0
+  status:
+    patch: false
+    project:
+      default:
+        target: auto
+        threshold: 5.0
+fixes:
+  - "main/::"
