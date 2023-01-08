@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS backtest (
     exit_price real,
     entry_time timestamptz,
     exit_time timestamptz,
+    qty real,
     gl_pct real
 );
 

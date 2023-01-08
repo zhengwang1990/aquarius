@@ -128,11 +128,34 @@ WHERE date = :date;
 INSERT_BACKTEST_QUERY = sqlalchemy.text("""
 INSERT INTO backtest (
   id, symbol, is_long, processor, entry_price, exit_price,
-  entry_time, exit_time, gl_pct
+  entry_time, exit_time, qty, gl_pct
 )
 VALUES (
   :id, :symbol, :is_long, :processor, :entry_price, :exit_price,
-  :entry_time, :exit_time, :gl_pct
+  :entry_time, :exit_time, :qty, :gl_pct
+)
+""")
+
+SELECT_BACKTEST_QUERY = sqlalchemy.text("""
+SELECT 
+  symbol, is_long, processor, entry_price, exit_price,
+  entry_time, exit_time, qty, NULL, gl_pct, NULL, NULL
+FROM backtest
+WHERE
+  exit_time >= :start_time
+  AND exit_time < :end_time
+)
+""")
+
+SELECT_PROCESSOR_BACKTEST_QUERY = sqlalchemy.text("""
+SELECT 
+  symbol, is_long, processor, entry_price, exit_price,
+  entry_time, exit_time, qty, NULL, gl_pct, NULL, NULL
+FROM backtest
+WHERE
+  exit_time >= :start_time
+  AND exit_time < :end_time
+  AND processor = :processor
 )
 """)
 
@@ -185,6 +208,7 @@ class Db:
             exit_price=transaction.exit_price,
             entry_time=transaction.entry_time.isoformat(),
             exit_time=transaction.exit_time.isoformat(),
+            qty=transaction.qty,
             gl_pct=transaction.gl_pct)
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
@@ -277,6 +301,21 @@ class Db:
     def get_logs(self, date: str) -> List[Tuple[str, str]]:
         results = self._execute(SELECT_LOG_QUERY, date=date)
         return [(result[0], result[1]) for result in results]
+
+    def get_backtest(self,
+                     start_time,
+                     end_time,
+                     processor: Optional[str] = None) -> List[Transaction]:
+        if processor:
+            results = self._execute(SELECT_BACKTEST_QUERY,
+                                    start_time=start_time,
+                                    end_time=end_time)
+        else:
+            results = self._execute(SELECT_PROCESSOR_BACKTEST_QUERY,
+                                    start_time=start_time,
+                                    end_time=end_time,
+                                    processor=processor)
+        return [Transaction(*result) for result in results]
 
     def backfill(self, start_date: Optional[str] = None) -> None:
         """Backfills the database from start_date."""

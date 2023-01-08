@@ -112,3 +112,19 @@ def test_insert_backtest(client, mock_engine):
     client.insert_backtest(TEST_TRANSACTION)
 
     mock_engine.conn.execute.assert_called_once()
+
+
+@pytest.mark.parametrize('processor',
+                         [None, 'Processor'])
+def test_get_backtest(processor, client, mock_engine):
+    mock_engine.conn.execute.return_value = [
+        ('SYMA', True, 'Processor', 11.1, 12.3,
+         pd.to_datetime('2022-11-03T09:35:00-04:00'),
+         pd.to_datetime('2022-11-03T10:35:00-04:00'),
+         10, None, 0.01, None, None),
+    ]
+
+    trans = client.get_backtest(pd.to_datetime('2022-11-03'), pd.to_datetime('2022-11-04'), processor)
+
+    mock_engine.conn.execute.assert_called_once()
+    assert len(trans) == 1
