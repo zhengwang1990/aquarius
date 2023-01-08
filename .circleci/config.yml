@@ -9,8 +9,9 @@ jobs:
       - image: cimg/python:3.10.2
     steps:
       - checkout
-      - python/install-packages:
-          pkg-manager: pip
+      - run:
+          name: Install dependencies
+          command: make
       - run:
           name: Install codecov
           command: pip install codecov
