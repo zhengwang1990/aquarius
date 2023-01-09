@@ -45,35 +45,20 @@ WHERE
   exit_time >= :start_time AND exit_time < :end_time;
 """)
 
-SELECT_TRANSACTION_DETAIL_QUERY = sqlalchemy.text("""
+SELECT_TRANSACTION_DETAIL_QUERY = """
 SELECT
   symbol, is_long, processor, entry_price, exit_price,
   entry_time, exit_time, qty, gl, gl_pct, slippage, slippage_pct
 FROM transaction
+{condition}
 ORDER BY exit_time DESC
 LIMIT :limit
 OFFSET :offset;
-""")
+"""
 
-SELECT_PROCESSOR_TRANSACTION_DETAIL_QUERY = sqlalchemy.text("""
-SELECT
-  symbol, is_long, processor, entry_price, exit_price,
-  entry_time, exit_time, qty, gl, gl_pct, slippage, slippage_pct
-FROM transaction
-WHERE processor = :processor
-ORDER BY exit_time DESC
-LIMIT :limit
-OFFSET :offset;
-""")
-
-COUNT_TRANSACTION_QUERY = sqlalchemy.text("""
-SELECT COUNT(*) FROM transaction;
-""")
-
-COUNT_PROCESSOR_TRANSACTION_QUERY = sqlalchemy.text("""
-SELECT COUNT(*) FROM transaction
-WHERE processor = :processor;
-""")
+COUNT_TRANSACTION_QUERY = """
+SELECT COUNT(*) FROM transaction {condition};
+"""
 
 UPSERT_AGGREGATION_QUERY = sqlalchemy.text("""
 INSERT INTO aggregation (
@@ -136,28 +121,15 @@ VALUES (
 )
 """)
 
-SELECT_BACKTEST_QUERY = sqlalchemy.text("""
+SELECT_BACKTEST_QUERY = """
 SELECT 
   symbol, is_long, processor, entry_price, exit_price,
   entry_time, exit_time, qty, NULL, gl_pct, NULL, NULL
 FROM backtest
 WHERE
-  exit_time >= :start_time
-  AND exit_time < :end_time
-)
-""")
-
-SELECT_PROCESSOR_BACKTEST_QUERY = sqlalchemy.text("""
-SELECT 
-  symbol, is_long, processor, entry_price, exit_price,
-  entry_time, exit_time, qty, NULL, gl_pct, NULL, NULL
-FROM backtest
-WHERE
-  exit_time >= :start_time
-  AND exit_time < :end_time
-  AND processor = :processor
-)
-""")
+  exit_time >= :start_time AND exit_time < :end_time {condition}
+ORDER BY exit_time DESC;
+"""
 
 Aggregation = collections.namedtuple(
     'Aggregation',
@@ -274,20 +246,38 @@ class Db:
                         continue
                     self._execute(UPSERT_LOG_QUERY, date=date, logger=logger, content=content)
 
-    def list_transactions(self, limit: int, offset: int, processor: Optional[str] = None) -> List[Transaction]:
+    def list_transactions(self,
+                          limit: int,
+                          offset: int,
+                          start_time=None,
+                          end_time=None,
+                          processor: Optional[str] = None) -> List[Transaction]:
+        conditions = []
+        kwargs = {'limit': limit, 'offset': offset}
         if processor:
-            results = self._execute(SELECT_PROCESSOR_TRANSACTION_DETAIL_QUERY,
-                                    limit=limit, offset=offset, processor=processor)
-        else:
-            results = self._execute(SELECT_TRANSACTION_DETAIL_QUERY,
-                                    limit=limit, offset=offset)
+            conditions.append('processor = :processor')
+            kwargs['processor'] = processor
+        if start_time:
+            conditions.append('exit_time >= :start_time')
+            kwargs['start_time'] = start_time
+        if end_time:
+            conditions.append('exit_time < :end_time')
+            kwargs['end_time'] = end_time
+        condition = ''
+        if conditions:
+            condition = 'WHERE ' + ' AND '.join(conditions)
+        query = sqlalchemy.text(SELECT_TRANSACTION_DETAIL_QUERY.format(condition=condition))
+        results = self._execute(query, **kwargs)
         return [Transaction(*result) for result in results]
 
     def get_transaction_count(self, processor: Optional[str] = None) -> int:
+        kwargs = {}
+        condition = ''
         if processor:
-            results = self._execute(COUNT_PROCESSOR_TRANSACTION_QUERY, processor=processor)
-        else:
-            results = self._execute(COUNT_TRANSACTION_QUERY)
+            condition = 'WHERE processor = :processor'
+            kwargs['processor'] = processor
+        query = sqlalchemy.text(COUNT_TRANSACTION_QUERY.format(condition=condition))
+        results = self._execute(query, **kwargs)
         return int(next(results)[0])
 
     def list_aggregations(self) -> List[Aggregation]:
@@ -306,15 +296,14 @@ class Db:
                      start_time,
                      end_time,
                      processor: Optional[str] = None) -> List[Transaction]:
+        condition = ''
+        kwargs = {'start_time': start_time, 'end_time': end_time}
         if processor:
-            results = self._execute(SELECT_BACKTEST_QUERY,
-                                    start_time=start_time,
-                                    end_time=end_time)
-        else:
-            results = self._execute(SELECT_PROCESSOR_BACKTEST_QUERY,
-                                    start_time=start_time,
-                                    end_time=end_time,
-                                    processor=processor)
+            condition = 'AND processor = :processor'
+            kwargs['processor'] = processor
+        query = sqlalchemy.text(SELECT_BACKTEST_QUERY.format(condition=condition))
+        results = self._execute(query,
+                                **kwargs)
         return [Transaction(*result) for result in results]
 
     def backfill(self, start_date: Optional[str] = None) -> None:

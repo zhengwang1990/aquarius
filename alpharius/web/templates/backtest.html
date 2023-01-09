@@ -7,6 +7,62 @@
 {% endblock %}
 
 {% block content %}
+<div class="card">
+    <div class="card-header"><span class="card-title">Backtest Diff</span></div>
+    <div class="card-body">
+        <table class="table margin-table">
+            <tbody>
+            <tr>
+                <td>
+                    <span class="margin-span" style="color:#ed594e">MISS: {{miss}}</span>
+                    <span class="margin-span" style="color:#fab428">EXTRA: {{extra}}</span>
+                    <span class="margin-span" style="color:#04802f">COMMON: {{comm}}</span>
+                    <span style="color:#807f7d">MISMATCH RATE: {{rate}}</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        {% for table in tables %}
+        <table class="table table-bordered margin-table">
+            <thead>
+            <tr>
+                <th colspan="2" class="diff_center">{{ table['date'] }}</th>
+            </tr>
+            <tr>
+                <th class="diff_center">BACKTEST</th>
+                <th class="diff_center">TRADE</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                {% for t in ['backtest', 'trade'] %}
+                <td>
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th scope="col">
+                                <span class="xs-hidden">SYMBOL</span>
+                                <span class="xs-show">SYMB</span>
+                            </th>
+                            <th scope="col" class="xs-hidden">PROCESSOR</th>
+                            <th scope="col" class="lg-hidden">SIDE</th>
+                            <th scope="col">ENTRY TIME</th>
+                            <th scope="col">EXIT TIME</th>
+                            <th scope="col" class="lg-hidden">GAIN / LOSS</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {{ table[t] | safe }}
+                        </tbody>
+                    </table>
+                </td>
+                {% endfor %}
+            </tr>
+            </tbody>
+        </table>
+        {% endfor %}
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

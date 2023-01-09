@@ -1,7 +1,9 @@
 import collections
 import datetime
+import difflib
 import math
 import json
+import re
 from concurrent import futures
 from typing import List
 
@@ -17,6 +19,9 @@ from .alpaca_client import AlpacaClient
 from .scheduler import get_job_status
 
 bp = flask.Blueprint('web', __name__)
+
+# First time backtest is introduced
+FIRST_BACKTEST_DATE = '2023-01-06'
 
 
 def _get_dashboard_data():
@@ -71,7 +76,7 @@ def transactions():
     page = max(min(page, total_page), 1)
     offset = (page - 1) * items_per_page
     trans = []
-    time_fmt = f'<span class="med-hidden">%Y-%m-%d </span>%H:%M'
+    time_fmt = f'<span class="lg-hidden">%Y-%m-%d </span>%H:%M'
     for t in client.list_transactions(items_per_page, offset, active_processor):
         trans.append({
             'symbol': t.symbol,
@@ -393,9 +398,117 @@ def charts_data():
     return json.dumps(res)
 
 
+def _get_transaction_of_day(day, transaction_list, start_index):
+    res = []
+    ind = start_index
+    while ind < len(transaction_list):
+        if transaction_list[ind].exit_time.date() == day:
+            res.append(transaction_list[ind])
+            ind += 1
+        else:
+            break
+    return res, ind
+
+
+def _get_diff_table(a_transactions, b_transactions):
+    def _get_row(t, html_class=None):
+        template = ('<tr><td {cls}>{symbol}</td><td {cls_xs}>{processor}</td><td {cls_lg}>{side}</td>'
+                    '<td {cls}>{entry_time}</td><td {cls}>{exit_time}</td><td {cls_lg}>{gl}</td></td>')
+        cls = ''
+        cls_lg = 'class="lg-hidden"'
+        cls_xs = 'class="xs-hidden"'
+        if html_class:
+            cls = f'class="{html_class}"'
+            cls_lg = f'class="lg-hidden {html_class}"'
+            cls_xs = f'class="xs-hidden {html_class}"'
+        side = ('<span class="badge-shape ' +
+                ('badge-blue' if t.is_long else 'badge-purple') + '">' +
+                'long' if t.is_long else 'short' + '</span>')
+        return template.format(cls=cls,
+                               cls_xs=cls_xs,
+                               cls_lg=cls_lg,
+                               symbol=t.symbol,
+                               processor=t.processor,
+                               side=side,
+                               entry_time=t.entry_time.strftime('%H:%M'),
+                               exit_time=t.exit_time.strftime('%H:%M'),
+                               gl=get_signed_percentage(t.gl_pct))
+
+    strings = []
+    for trans in [a_transactions, b_transactions]:
+        trans.sort(key=lambda t: (t.exit_time, t.symbol))
+        strings.append(
+            [t.symbol + t.entry_time.strftime('%H:%M') + t.exit_time.strftime('%H:%M')
+             + str(t.is_long) + t.processor
+             for t in trans])
+    context_size = max(len(strings[0]), len(strings[1]))
+    diffs = [line for line in difflib.unified_diff(strings[0], strings[1], n=context_size)
+             if re.match('^[ +-][A-Z]+.*$', line)]
+    t = a_transactions[0] if a_transactions else b_transactions[0]
+    table = {'date': t.exit_time.strftime('%F'),
+             'backtest': '',
+             'trade': ''}
+    miss, extra, comm = 0, 0, 0
+    i, j = 0, 0
+    empty_row = ('<tr><td>&nbsp</td><td class="xs-hidden"></td><td class="lg-hidden"></td>'
+                 '<td></td><td></td><td class="lg-hidden"></td></tr>')
+    for d in diffs:
+        if d.startswith('-'):
+            miss += 1
+            table['backtest'] += _get_row(a_transactions[i], html_class='diff_sub')
+            table['trade'] += empty_row
+            i += 1
+        elif d.startswith('+'):
+            extra += 1
+            table['backtest'] += empty_row
+            table['trade'] += _get_row(b_transactions[j], html_class='diff_add')
+            j += 1
+        else:
+            comm += 1
+            table['backtest'] += _get_row(a_transactions[i])
+            table['trade'] += _get_row(b_transactions[j])
+            i += 1
+            j += 1
+    return table, miss, extra, comm
+
+
 @bp.route('/backtest')
 def backtest():
-    return flask.render_template('backtest.html')
+    today = get_today()
+    start_date = flask.request.args.get('start_date') or (today - datetime.timedelta(days=7)).strftime('%F')
+    start_date = max(start_date, FIRST_BACKTEST_DATE)
+    end_date = flask.request.args.get('end_date') or today.strftime('%F')
+    start_time = pd.to_datetime(start_date).tz_localize(TIME_ZONE)
+    end_time = pd.to_datetime(pd.to_datetime(end_date).strftime('%F 23:59:59')).tz_localize(TIME_ZONE)
+    processor = flask.request.args.get('processor')
+    client = Db()
+    backtest_transactions = client.get_backtest(start_time, end_time, processor)
+    actual_transactions = client.list_transactions(limit=len(backtest_transactions) * 2 + 1000,
+                                                   offset=0,
+                                                   start_time=start_time,
+                                                   end_time=end_time,
+                                                   processor=processor)
+    t = pd.to_datetime(end_date)
+    i, j = 0, 0
+    miss, extra, comm = 0, 0, 0
+    tables = []
+    while t >= pd.to_datetime(start_date):
+        a, i = _get_transaction_of_day(t.date(), backtest_transactions, i)
+        b, j = _get_transaction_of_day(t.date(), actual_transactions, j)
+        if a or b:
+            table, t_miss, t_extra, t_comm = _get_diff_table(a, b)
+            tables.append(table)
+            miss += t_miss
+            extra += t_extra
+            comm += t_comm
+        t -= datetime.timedelta(days=1)
+    rate = (miss + extra) / max(miss + extra + comm, 1)
+    return flask.render_template('backtest.html',
+                                 tables=tables,
+                                 miss=miss,
+                                 extra=extra,
+                                 comm=comm,
+                                 rate=f'{rate * 100:.2f}%')
 
 
 @bp.route('/job_status')

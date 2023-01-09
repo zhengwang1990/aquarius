@@ -173,7 +173,7 @@ def compute_risks(values: List[float],
 
     params:
       values: The values of the target.
-      market_values: The market value. Typically this is S&P 500 values.
+      market_values: The market value. Typically, this is S&P 500 values.
 
     returns:
       A tuple consists of alpha, beta and sharpe ratio, in order.

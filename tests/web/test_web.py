@@ -1,4 +1,5 @@
 import textwrap
+import time
 
 import pandas as pd
 import pytest
@@ -103,8 +104,6 @@ def test_get_risks():
                     'values': [[100 + i * 0.01 for i in range(len(dates))]] * 3}
     risks = web._get_risks(daily_prices)
 
-    print(risks)
-
     assert len(risks) == 6  # only show last 5 years + ALL
 
 
@@ -126,5 +125,30 @@ def test_charts_data(route, client, mock_alpaca):
     assert mock_alpaca.get_bars_call_count > 0
 
 
-def test_backtest(client):
+def test_backtest(client, mock_engine, mocker):
+    # Today is set to 2023-01-11
+    mocker.patch.object(time, 'time', return_value=1673450000)
+    mock_engine.conn.execute.side_effect = [
+        [
+            ('A', True, 'Processor', 11.1, 12.3,
+             pd.to_datetime('2023-01-11T09:35:00-04:00'),
+             pd.to_datetime('2023-01-11T10:35:00-04:00'),
+             10, None, 0.01, None, None),
+            ('B', True, 'Processor', 11.1, 12.3,
+             pd.to_datetime('2023-01-11T09:35:00-04:00'),
+             pd.to_datetime('2023-01-11T10:35:00-04:00'),
+             10, None, 0.01, None, None),
+        ],
+        [
+            ('A', True, 'Processor', 11.1, 12.3,
+             pd.to_datetime('2023-01-11T09:35:00-04:00'),
+             pd.to_datetime('2023-01-11T10:35:00-04:00'),
+             10, 1, 0.01, -1, -0.01),
+            ('C', True, 'Processor', 11.1, 12.3,
+             pd.to_datetime('2023-01-11T09:35:00-04:00'),
+             pd.to_datetime('2023-01-11T10:35:00-04:00'),
+             10, 1, 0.01, -1, -0.01),
+        ],
+    ]
+
     assert client.get('/backtest').status_code == 200

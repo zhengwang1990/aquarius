@@ -1,4 +1,4 @@
-.card .card-body .med-show {
+.card .card-body .lg-show {
     display: none;
 }
 
@@ -37,11 +37,11 @@ a:hover {
         font-size: 13px;
     }
 
-    .card .card-body .med-show {
+    .card .card-body .lg-show {
         display: inline;
     }
 
-    .card .card-body .med-hidden {
+    .card .card-body .lg-hidden {
         display: none;
     }
 }

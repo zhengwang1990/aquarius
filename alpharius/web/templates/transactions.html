@@ -63,12 +63,12 @@
                         <td>{{ transaction['entry_time'] | safe }}</td>
                         <td>{{ transaction['exit_time'] | safe }}</td>
                         <td>
-                            <span class="med-hidden">{{ transaction['gl'] | safe }}</span>
-                            <span class="med-show">{{ transaction['gl_pct'] | safe }}</span>
+                            <span class="lg-hidden">{{ transaction['gl'] | safe }}</span>
+                            <span class="lg-show">{{ transaction['gl_pct'] | safe }}</span>
                         </td>
                         <td>
-                            <span class="med-hidden">{{ transaction['slippage'] | safe }}</span>
-                            <span class="med-show">{{ transaction['slippage_pct'] | safe }}</span>
+                            <span class="lg-hidden">{{ transaction['slippage'] | safe }}</span>
+                            <span class="lg-show">{{ transaction['slippage_pct'] | safe }}</span>
                         </td>
                     </tr>
                 {% endfor %}

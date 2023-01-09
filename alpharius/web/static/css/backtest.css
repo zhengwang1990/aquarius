@@ -1,0 +1,43 @@
+.card .card-body .margin-table {
+    margin: 20px 0;
+}
+
+.card .card-body .margin-span {
+    margin-right: 15px;
+}
+
+.card table .diff_add {
+    background-color: #d2fcd2;
+}
+
+.card table .diff_sub {
+    background-color: #fad7d7
+}
+
+.card table .diff_center {
+    text-align: center;
+}
+
+.badge-shape {
+    font-size: 11px;
+}
+
+@media (max-width: 1500px) {
+    .card .card-body .lg-hidden {
+        display: none;
+    }
+
+    .card .card-body table {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 800px) {
+    .card .card-body .xs-hidden {
+        display: none;
+    }
+
+    .card .card-body table {
+        font-size: 10px;
+    }
+}
