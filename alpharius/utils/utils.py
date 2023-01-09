@@ -147,13 +147,18 @@ def get_signed_percentage(value: float, with_arrow: bool = False):
     return get_colored_value(f'{value * 100:+.2f}%', color, with_arrow)
 
 
-def get_today():
-    """Gets a datetime object of today at 00:00ET."""
+def get_current_time():
+    """Gets current time of NY time zone."""
     # Use time.time() instead of 'now' so that it can be mocked in test.
+    return pd.to_datetime(time.time(), utc=True, unit='s').tz_convert(TIME_ZONE)
+
+
+def get_today():
+    """Gets a datetime object of today at 00:00 NY time."""
+    # Mocking time.time() will change the behavior of the method.
     return pd.to_datetime(
-        pd.Timestamp.combine(
-            pd.to_datetime(time.time(), utc=True, unit='s').tz_convert(TIME_ZONE).date(),
-            datetime.time(0, 0))).tz_localize(TIME_ZONE)
+        pd.Timestamp.combine(get_current_time().date(),
+                             datetime.time(0, 0))).tz_localize(TIME_ZONE)
 
 
 def get_latest_day():

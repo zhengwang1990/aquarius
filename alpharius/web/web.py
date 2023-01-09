@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 from alpharius.db import Aggregation, Db
 from alpharius.utils import (
-    construct_charts_link, compute_drawdown, compute_risks,
-    get_signed_percentage, get_colored_value, get_today, TIME_ZONE,
+    construct_charts_link, compute_drawdown, compute_risks, get_today,
+    get_signed_percentage, get_colored_value, get_current_time, TIME_ZONE,
 )
 from .alpaca_client import AlpacaClient
 from .scheduler import get_job_status
@@ -22,6 +22,8 @@ bp = flask.Blueprint('web', __name__)
 
 # First time backtest is introduced
 FIRST_BACKTEST_DATE = '2023-01-06'
+# The time backtest cron job should finish.
+BACKTEST_FINISH_TIME = datetime.time(16, 30)
 
 
 def _get_dashboard_data():
@@ -477,10 +479,12 @@ def _get_diff_table(a_transactions, b_transactions):
 
 @bp.route('/backtest')
 def backtest():
-    today = get_today()
-    start_date = flask.request.args.get('start_date') or (today - datetime.timedelta(days=7)).strftime('%F')
+    current_time = get_current_time()
+    if current_time.time() < BACKTEST_FINISH_TIME:
+        current_time -= datetime.timedelta(days=1)
+    start_date = flask.request.args.get('start_date') or (current_time - datetime.timedelta(days=7)).strftime('%F')
     start_date = max(start_date, FIRST_BACKTEST_DATE)
-    end_date = flask.request.args.get('end_date') or today.strftime('%F')
+    end_date = flask.request.args.get('end_date') or current_time.strftime('%F')
     start_time = pd.to_datetime(start_date).tz_localize(TIME_ZONE)
     end_time = pd.to_datetime(pd.to_datetime(end_date).strftime('%F 23:59:59')).tz_localize(TIME_ZONE)
     processor = flask.request.args.get('processor')
