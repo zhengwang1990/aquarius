@@ -417,8 +417,9 @@ def _get_diff_table(a_transactions, b_transactions):
         return pd.to_datetime(dt).tz_convert(TIME_ZONE).strftime('%H:%M')
 
     def _get_row(t, html_class=None):
-        template = ('<tr><td {cls}>{symbol}</td><td {cls_xs}>{processor}</td><td {cls_lg}>{side}</td>'
-                    '<td {cls}>{entry_time}</td><td {cls}>{exit_time}</td><td {cls_lg}>{gl}</td></td>')
+        template = ('<tr><td {cls}><a href={link}>{symbol}</a></td><td {cls_xs}>{processor}</td>'
+                    '<td {cls_lg}>{side}</td><td {cls}>{entry_time}</td><td {cls}>{exit_time}</td>'
+                    '<td {cls_lg}>{gl}</td></td>')
         cls = ''
         cls_lg = 'class="lg-hidden"'
         cls_xs = 'class="xs-hidden"'
@@ -429,10 +430,13 @@ def _get_diff_table(a_transactions, b_transactions):
         side = ('<span class="badge-shape ' +
                 ('badge-blue' if t.is_long else 'badge-purple') + '">' +
                 ('long' if t.is_long else 'short') + '</span>')
+        link = construct_charts_link(t.symbol,
+                                     pd.to_datetime(t.exit_time).tz_convert(TIME_ZONE).strftime('%F'))
         return template.format(cls=cls,
                                cls_xs=cls_xs,
                                cls_lg=cls_lg,
                                symbol=t.symbol,
+                               link=link,
                                processor=t.processor,
                                side=side,
                                entry_time=_convert_time(t.entry_time),
