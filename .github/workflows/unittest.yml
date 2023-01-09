@@ -1,4 +1,4 @@
-name: Build and Test
+name: Unit Test
 
 on:
   push:
@@ -21,3 +21,6 @@ jobs:
         run: pytest --cov-config=.coveragerc --cov=alpharius
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
