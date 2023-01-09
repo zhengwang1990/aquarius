@@ -411,6 +411,9 @@ def _get_transaction_of_day(day, transaction_list, start_index):
 
 
 def _get_diff_table(a_transactions, b_transactions):
+    def _convert_time(dt):
+        return pd.to_datetime(dt).tz_convert(TIME_ZONE).strftime('%H:%M')
+
     def _get_row(t, html_class=None):
         template = ('<tr><td {cls}>{symbol}</td><td {cls_xs}>{processor}</td><td {cls_lg}>{side}</td>'
                     '<td {cls}>{entry_time}</td><td {cls}>{exit_time}</td><td {cls_lg}>{gl}</td></td>')
@@ -430,8 +433,8 @@ def _get_diff_table(a_transactions, b_transactions):
                                symbol=t.symbol,
                                processor=t.processor,
                                side=side,
-                               entry_time=t.entry_time.strftime('%H:%M'),
-                               exit_time=t.exit_time.strftime('%H:%M'),
+                               entry_time=_convert_time(t.entry_time),
+                               exit_time=_convert_time(t.exit_time),
                                gl=get_signed_percentage(t.gl_pct))
 
     strings = []
