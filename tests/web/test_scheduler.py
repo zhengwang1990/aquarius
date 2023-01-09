@@ -9,6 +9,7 @@ from concurrent import futures
 import git
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
+import pandas as pd
 import pytest
 from alpharius.web import scheduler
 
@@ -79,6 +80,7 @@ def test_backtest_run(mocker, mock_engine, mock_alpaca):
     mocker.patch.object(os.path, 'isfile', return_value=False)
     mocker.patch.object(os, 'makedirs')
     mocker.patch.object(git, 'Repo', return_value=mocker.MagicMock())
+    mocker.patch.object(pd.DataFrame, 'to_csv')
 
     scheduler._backtest_run()
 
