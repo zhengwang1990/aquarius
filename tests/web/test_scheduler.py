@@ -6,7 +6,6 @@ import time
 import threading
 from concurrent import futures
 
-import git
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -79,12 +78,12 @@ def test_backtest_run(mocker, mock_engine, mock_alpaca):
     mocker.patch('builtins.open', mocker.mock_open(read_data='data'))
     mocker.patch.object(os.path, 'isfile', return_value=False)
     mocker.patch.object(os, 'makedirs')
-    mocker.patch.object(git, 'Repo', return_value=mocker.MagicMock())
     mocker.patch.object(pd.DataFrame, 'to_csv')
 
     scheduler._backtest_run()
 
     assert mock_alpaca.list_assets_call_count > 0
+    # This relies on overnight processor generating non-empty transactions
     assert mock_engine.conn.execute.call_count > 0
 
 

@@ -124,7 +124,11 @@ class Backtesting:
 
     def run(self) -> List[Transaction]:
         self._run_start_time = time.time()
-        self._record_diff()
+        try:
+            self._record_diff()
+        except (git.GitError, ValueError) as e:
+            # Git doesn't work in some circumstances
+            self._summary_log.warning('Diff can not be generated: %s', e)
         history_start = self._start_date - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
         self._interday_data = load_tradable_history(
             history_start, self._end_date, DEFAULT_DATA_SOURCE)

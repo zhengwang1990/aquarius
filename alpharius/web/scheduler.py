@@ -103,7 +103,7 @@ def backfill():
 
 
 @scheduler.task('cron', id='backtest', day_of_week='mon-fri',
-                hour=16, minute=20, timezone='America/New_York')
+                hour=16, minute=40, timezone='America/New_York')
 def backtest():
     app.logger.info('Start backtesting')
     with futures.ProcessPoolExecutor(max_workers=1) as pool:
