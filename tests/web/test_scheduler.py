@@ -83,17 +83,20 @@ def test_backtest_run(mocker, mock_engine, mock_alpaca):
     scheduler._backtest_run()
 
     assert mock_alpaca.list_assets_call_count > 0
+    assert mock_engine.conn.execute.call_count > 0
 
 
 @pytest.mark.parametrize('method_name',
-                         ['_backtest_run', '_trade_run'])
-def test_email_send(mocker, method_name, mock_smtp, mock_alpaca):
+                         ['_backtest_run', '_trade_run', 'backfill'])
+def test_email_send(mocker, method_name, mock_smtp, mock_alpaca, mock_engine):
     mocker.patch.object(image, 'MIMEImage', autospec=True)
     mocker.patch.object(multipart.MIMEMultipart, 'as_string', return_value='')
     mocker.patch.dict(os.environ, {'EMAIL_USERNAME': 'fake_user',
                                    'EMAIL_PASSWORD': 'fake_password',
                                    'EMAIL_RECEIVER': 'fake_receiver'})
     mocker.patch.object(mock_alpaca, 'get_calendar', side_effect=Exception())
+    mocker.patch.object(mock_engine.conn, 'execute', side_effect=Exception())
+    mocker.patch.object(time, 'sleep')
 
     getattr(scheduler, method_name)()
 
