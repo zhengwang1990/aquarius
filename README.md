@@ -1,6 +1,6 @@
 # Alpharius
 
-[![Build and Test](https://github.com/zhengwang1990/alpharius/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/zhengwang1990/alpharius/actions/workflows/build-and-test.yml)
+[![Unit Test](https://github.com/zhengwang1990/alpharius/actions/workflows/unittest.yml/badge.svg)](https://github.com/zhengwang1990/alpharius/actions/workflows/unittest.yml)
 [![codecov](https://codecov.io/gh/zhengwang1990/alpharius/branch/main/graph/badge.svg?token=R8RUFJJ1CV)](https://codecov.io/gh/zhengwang1990/alpharius)
 
 ## Install
