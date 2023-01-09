@@ -449,6 +449,8 @@ def _get_diff_table(a_transactions, b_transactions):
     context_size = max(len(strings[0]), len(strings[1]))
     diffs = [line for line in difflib.unified_diff(strings[0], strings[1], n=context_size)
              if re.match('^[ +-][A-Z]+.*$', line)]
+    if not diffs:
+        diffs = [' ' for _ in strings[0]]
     t = a_transactions[0] if a_transactions else b_transactions[0]
     table = {'date': t.exit_time.strftime('%F'),
              'backtest': '',
@@ -489,7 +491,7 @@ def backtest():
     end_time = pd.to_datetime(pd.to_datetime(end_date).strftime('%F 23:59:59')).tz_localize(TIME_ZONE)
     processor = flask.request.args.get('processor')
     client = Db()
-    backtest_transactions = [t for t in client.get_backtest(start_time, end_time, processor) if t.qty > 0]
+    backtest_transactions = [t for t in client.get_backtest(start_time, end_time, processor) if t.qty != 0]
     actual_transactions = client.list_transactions(limit=len(backtest_transactions) * 2 + 1000,
                                                    offset=0,
                                                    start_time=start_time,
