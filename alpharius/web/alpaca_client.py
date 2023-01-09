@@ -1,6 +1,5 @@
 import copy
 import datetime
-import functools
 import math
 import os
 import re
@@ -58,12 +57,12 @@ class AlpacaClient:
     def __init__(self):
         self._alpaca = tradeapi.REST()
 
-    @functools.lru_cache(maxsize=5)
-    def get_calendar(self, last_day: str):
+    def get_calendar(self):
+        latest_day = get_latest_day()
         calendar = self._alpaca.get_calendar(
-            start=max((pd.to_datetime(last_day) - relativedelta(years=5)).strftime('%F'),
+            start=max((latest_day - relativedelta(years=5)).strftime('%F'),
                       START_DATE),
-            end=last_day)
+            end=latest_day.strftime('%F'))
         return calendar
 
     @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
@@ -71,7 +70,7 @@ class AlpacaClient:
         start = time.time()
         result = dict()
         latest_day = get_latest_day()
-        calendar = self.get_calendar(latest_day.strftime('%F'))
+        calendar = self.get_calendar()
         result['market_close'] = calendar[-1].close.strftime('%H:%M')
         market_dates = [c.date for c in calendar]
         tasks = dict()
@@ -224,8 +223,7 @@ class AlpacaClient:
     def get_orders(self, calendar_index: int, time_fmt_with_year: bool):
         start = time.time()
         result = []
-        latest_day = get_latest_day()
-        calendar = self.get_calendar(latest_day.strftime('%F'))
+        calendar = self.get_calendar()
         orders = self._alpaca.list_orders(status='closed',
                                           after=calendar[calendar_index - 1].date.strftime('%F'),
                                           direction='desc')
@@ -275,7 +273,7 @@ class AlpacaClient:
     def get_current_positions(self):
         start = time.time()
         result = []
-        calendar = self.get_calendar(get_latest_day().strftime('%F'))
+        calendar = self.get_calendar()
         last_trading_day = calendar[-1].date.strftime('%F')
         positions = self._alpaca.list_positions()
         infos = self.get_info_today([p.symbol for p in positions])
@@ -308,8 +306,7 @@ class AlpacaClient:
         if not symbols:
             return dict()
         result = dict()
-        latest_day = get_latest_day()
-        calendar = self.get_calendar(latest_day.strftime('%F'))
+        calendar = self.get_calendar()
         trades = self._alpaca.get_latest_trades(symbols)
         current_prices = {symbol: trade.p for symbol, trade in trades.items()}
         prev_day = calendar[-2].date.strftime('%F')
@@ -345,8 +342,7 @@ class AlpacaClient:
     @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
     def get_daily_prices(self):
         start = time.time()
-        latest_day = get_latest_day()
-        calendar = self.get_calendar(latest_day.strftime('%F'))
+        calendar = self.get_calendar()
         end_date = calendar[-1].date.strftime('%F')
         with futures.ThreadPoolExecutor(max_workers=4) as pool:
             portfolio_task = pool.submit(self._alpaca.get_portfolio_history,

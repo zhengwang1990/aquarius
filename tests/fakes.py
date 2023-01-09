@@ -34,7 +34,7 @@ Future = collections.namedtuple('Future', ['result'])
 def _to_timestamp(t) -> int:
     time_obj = pd.to_datetime(t)
     if not time_obj.tzinfo:
-        time_obj.tz_localize(TIME_ZONE)
+        time_obj = time_obj.tz_localize(TIME_ZONE)
     return int(time_obj.timestamp())
 
 
@@ -121,7 +121,7 @@ class FakeAlpaca:
         start_time -= start_time % time_interval
         end_time = _to_timestamp(date_end) + time_interval
         timestamps = [t for t in range(start_time, end_time, time_interval)
-                      if pd.to_datetime(t, unit='s', utc=True).isoweekday() < 6]
+                      if pd.to_datetime(t, unit='s', utc=True).tz_convert(TIME_ZONE).isoweekday() < 6]
         if len(timestamps) > 10:
             equity = [0] * 10 + [i * (-1) ** i + len(timestamps) + 1 for i in range(len(timestamps) - 10)]
         else:
@@ -144,7 +144,7 @@ class FakeAlpaca:
         return [Bar(pd.to_datetime(t, unit='s', utc=True),
                     42, 50, 35, next(self._value_cycle), 40.123, 10)
                 for t in range(start_timestamp, end_timestamp, time_interval)
-                if pd.to_datetime(t, unit='s', utc=True).isoweekday() < 6]
+                if pd.to_datetime(t, unit='s', utc=True).tz_convert(TIME_ZONE).isoweekday() < 6]
 
     def get_calendar(self, start, end, *args, **kwargs):
         self.get_calendar_call_count += 1
@@ -191,7 +191,7 @@ class FakePolygon:
                 for t in range(start_timestamp,
                                int(end.timestamp()) + time_interval,
                                time_interval)
-                if pd.to_datetime(t, unit='s', utc=True).isoweekday() < 6]
+                if pd.to_datetime(t, unit='s', utc=True).tz_convert(TIME_ZONE).isoweekday() < 6]
 
     def get_last_trade(self, symbol, *args, **kwargs):
         self.get_last_trade_call_count += 1

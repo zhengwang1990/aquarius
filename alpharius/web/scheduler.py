@@ -11,6 +11,7 @@ from alpharius.trade import PROCESSOR_FACTORIES, Backtesting, Trading
 from alpharius.notification.email_sender import EmailSender
 from alpharius.utils import get_latest_day
 from flask_apscheduler import APScheduler
+from .alpaca_client import AlpacaClient
 
 app = flask.Flask(__name__)
 bp = flask.Blueprint('scheduler', __name__)
@@ -25,6 +26,7 @@ job_status = 'idle'
 
 def email_on_exception(func):
     """Decorator that sends exceptions via email."""
+
     @functools.wraps(func)
     def wrap(*args, **kwargs):
         try:
@@ -32,11 +34,12 @@ def email_on_exception(func):
         except Exception as e:
             error_message = str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
             EmailSender().send_alert(error_message)
+
     return wrap
 
 
 @email_on_exception
-def _trading_run():
+def _trade_run():
     Trading(processor_factories=PROCESSOR_FACTORIES).run()
 
 
@@ -52,7 +55,7 @@ def _trade_impl():
         # Therefore, here it spawns a child process to run trading. The memory will
         # be returned to the OS after child process is shutdown.
         with futures.ProcessPoolExecutor(max_workers=1) as pool:
-            pool.submit(_trading_run).result()
+            pool.submit(_trade_run).result()
         job_status = 'idle'
         app.logger.info('Finish trading')
         lock.release()
@@ -63,7 +66,10 @@ def _trade_impl():
 @email_on_exception
 def _backtest_run():
     latest_day = get_latest_day()
-    start_date = (latest_day - datetime.timedelta(days=1)).strftime('%F')
+    calendar = AlpacaClient().get_calendar()
+    if len(calendar) < 2 or calendar[-1].date.strftime('%F') != latest_day.strftime('%F'):
+        return
+    start_date = calendar[-2].date.strftime('%F')
     end_date = (latest_day + datetime.timedelta(days=1)).strftime('%F')
     transactions = Backtesting(start_date=start_date,
                                end_date=end_date,
