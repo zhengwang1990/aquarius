@@ -95,14 +95,10 @@ def trade():
 
 @scheduler.task('cron', id='backfill', day_of_week='mon-fri',
                 hour='16,17,22', minute=15, timezone='America/New_York')
+@email_on_exception
 def backfill():
     app.logger.info('Start backfilling')
-    try:
-        Db().backfill()
-    except Exception as e:
-        error_message = str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
-        app.logger.error('Fail in trading: %s', error_message)
-        EmailSender().send_alert(error_message)
+    Db().backfill()
     app.logger.info('Finish backfilling')
 
 
