@@ -482,7 +482,7 @@ def backtest():
     end_time = pd.to_datetime(pd.to_datetime(end_date).strftime('%F 23:59:59')).tz_localize(TIME_ZONE)
     processor = flask.request.args.get('processor')
     client = Db()
-    backtest_transactions = client.get_backtest(start_time, end_time, processor)
+    backtest_transactions = [t for t in client.get_backtest(start_time, end_time, processor) if t.qty > 0]
     actual_transactions = client.list_transactions(limit=len(backtest_transactions) * 2 + 1000,
                                                    offset=0,
                                                    start_time=start_time,
