@@ -428,7 +428,7 @@ def _get_diff_table(a_transactions, b_transactions):
             cls_xs = f'class="xs-hidden {html_class}"'
         side = ('<span class="badge-shape ' +
                 ('badge-blue' if t.is_long else 'badge-purple') + '">' +
-                'long' if t.is_long else 'short' + '</span>')
+                ('long' if t.is_long else 'short') + '</span>')
         return template.format(cls=cls,
                                cls_xs=cls_xs,
                                cls_lg=cls_lg,

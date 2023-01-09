@@ -128,7 +128,7 @@ class Backtesting:
             self._record_diff()
         except (git.GitError, ValueError) as e:
             # Git doesn't work in some circumstances
-            self._summary_log.warning('Diff can not be generated: %s', e)
+            self._summary_log.warning(f'Diff can not be generated: {e}')
         history_start = self._start_date - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
         self._interday_data = load_tradable_history(
             history_start, self._end_date, DEFAULT_DATA_SOURCE)
