@@ -57,6 +57,13 @@ def dashboard_data():
     return json.dumps(data)
 
 
+def _list_processors(db_client: Db) -> List[str]:
+    aggs = db_client.list_aggregations()
+    processors = sorted(list(set([agg.processor for agg in aggs
+                                  if agg.processor != 'UNKNOWN'])))
+    return processors
+
+
 @bp.route('/transactions')
 def transactions():
     items_per_page = 20
@@ -66,9 +73,7 @@ def transactions():
     else:
         page = 1
     client = Db()
-    aggs = client.list_aggregations()
-    processors = sorted(list(set([agg.processor for agg in aggs
-                                  if agg.processor != 'UNKNOWN'])))
+    processors = _list_processors(client)
     active_processor = flask.request.args.get('processor')
     if active_processor not in processors:
         active_processor = None
@@ -488,26 +493,32 @@ def backtest():
     current_time = get_current_time()
     if current_time.time() < BACKTEST_FINISH_TIME:
         current_time -= datetime.timedelta(days=1)
-    start_date = flask.request.args.get('start_date') or (current_time - datetime.timedelta(days=7)).strftime('%F')
-    start_date = max(start_date, FIRST_BACKTEST_DATE)
-    end_date = flask.request.args.get('end_date') or current_time.strftime('%F')
-    start_time = pd.to_datetime(start_date).tz_localize(TIME_ZONE)
-    end_time = pd.to_datetime(pd.to_datetime(end_date).strftime('%F 23:59:59')).tz_localize(TIME_ZONE)
-    processor = flask.request.args.get('processor')
+    ndays = flask.request.args.get('ndays')
+    ndays = int(ndays) if ndays and ndays.isdigit() else 7
+    start_time = pd.to_datetime(current_time.strftime('%F')) - datetime.timedelta(days=ndays)
+    start_time = max(start_time, pd.to_datetime(FIRST_BACKTEST_DATE))
+    start_time = start_time.tz_localize(TIME_ZONE)
+    end_time = pd.to_datetime(pd.to_datetime(current_time).strftime('%F 23:59:59')).tz_localize(TIME_ZONE)
     client = Db()
-    backtest_transactions = [t for t in client.get_backtest(start_time, end_time, processor) if t.qty != 0]
+    processors = _list_processors(client)
+    active_processor = flask.request.args.get('processor')
+    if active_processor not in processors:
+        active_processor = None
+    processors = ['ALL PROCESSORS'] + processors
+
+    backtest_transactions = [t for t in client.get_backtest(start_time, end_time, active_processor) if t.qty != 0]
     actual_transactions = client.list_transactions(limit=len(backtest_transactions) * 2 + 1000,
                                                    offset=0,
                                                    start_time=start_time,
                                                    end_time=end_time,
-                                                   processor=processor)
-    t = pd.to_datetime(end_date)
+                                                   processor=active_processor)
+    t = end_time.date()
     i, j = 0, 0
     miss, extra, comm = 0, 0, 0
     tables = []
-    while t >= pd.to_datetime(start_date):
-        a, i = _get_transaction_of_day(t.date(), backtest_transactions, i)
-        b, j = _get_transaction_of_day(t.date(), actual_transactions, j)
+    while t >= start_time.date():
+        a, i = _get_transaction_of_day(t, backtest_transactions, i)
+        b, j = _get_transaction_of_day(t, actual_transactions, j)
         if a or b:
             table, t_miss, t_extra, t_comm = _get_diff_table(a, b)
             tables.append(table)
@@ -521,7 +532,10 @@ def backtest():
                                  miss=miss,
                                  extra=extra,
                                  comm=comm,
-                                 rate=f'{rate * 100:.2f}%')
+                                 rate=f'{rate * 100:.2f}%',
+                                 active_processor=active_processor,
+                                 processors=processors,
+                                 ndays=ndays)
 
 
 @bp.route('/job_status')

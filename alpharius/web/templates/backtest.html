@@ -2,13 +2,35 @@
 
 {% block header %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/backtest.css') }}">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/css/datepicker.min.css">
-<script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/js/datepicker-full.min.js"></script>
 {% endblock %}
 
 {% block content %}
 <div class="card">
     <div class="card-header"><span class="card-title">Backtest Diff</span></div>
+     <div id="select-container">
+         <span class="inline-span">
+             <div class="input-group">
+                 <label class="input-group-text"><i class="uil uil-processor"></i></label>
+                 <select class="form-select" id="processor-select">
+                     {% for processor in processors %}
+                         <option value="{{ processor }}" {% if active_processor == processor or (active_processor not in processors and loop.index0 == 0) %} selected {% endif %}>
+                             {{ processor }}
+                         </option>
+                     {% endfor %}
+                 </select>
+             </div>
+         </span><span style="padding-left:20px"></span><span class="inline-span">
+             <div class="input-group">
+                 <label class="input-group-text"><i class="uil uil-calendar-alt"></i></label>
+                 <select class="form-select" id="ndays-select">
+                     <option value="7" {% if ndays == 7 %} selected {% endif %}>Last Week</option>
+                     <option value="30" {% if ndays == 30 %} selected {% endif %}>Last Month</option>
+                     <option value="365" {% if ndays == 365 %} selected {% endif %}>Last Year</option>
+                 </select>
+             </div>
+         </span>
+    </div>
+
     <div class="card-body">
         <table class="table margin-table">
             <tbody>
@@ -67,7 +89,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-</script>
 <script src="{{ url_for('static', filename='js/backtest.js') }}"></script>
 {% endblock %}
