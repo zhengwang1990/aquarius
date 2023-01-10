@@ -129,6 +129,10 @@ def test_backtest(client, mock_engine, mocker):
     # Today is set to 2023-01-11
     mocker.patch.object(time, 'time', return_value=1673450000)
     mock_engine.conn.execute.side_effect = [
+        # Aggregation
+        [(pd.to_datetime('2022-11-02').date(), 'Processor1',
+          100, 0.01, 0, 0, 3, 2, 1, 0, 1000)],
+        # Backtest transactions
         [
             ('A', True, 'Processor', 11.1, 12.3,
              pd.to_datetime('2023-01-10T09:35:00-04:00'),
@@ -139,6 +143,7 @@ def test_backtest(client, mock_engine, mocker):
              pd.to_datetime('2023-01-10T10:35:00-04:00'),
              10, None, 0.01, None, None),
         ],
+        # Transactions
         [
             ('A', True, 'Processor', 11.1, 12.3,
              pd.to_datetime('2023-01-10T09:35:00-04:00'),
