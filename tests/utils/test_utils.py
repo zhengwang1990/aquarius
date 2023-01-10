@@ -1,7 +1,7 @@
 import datetime
 
 import pandas as pd
-from alpharius.utils import get_transactions, get_latest_day
+from alpharius.utils import get_transactions, get_latest_day, compute_drawdown
 from tests.fakes import Order
 
 
@@ -31,3 +31,13 @@ def test_get_latest_day_returns_previous_day(mocker):
     latest_day = get_latest_day()
 
     assert latest_day == datetime.date(2022, 11, 12)
+
+
+def test_compute_drawdown():
+    values = [1, 2, 3, 4, 5, 2, 2, 1, 1, 3, 6]
+
+    d, hi, li = compute_drawdown(values)
+
+    assert abs(d + 0.8) < 1E7
+    assert hi == 4
+    assert li == 8

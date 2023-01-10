@@ -530,11 +530,15 @@ class Backtesting:
         market_values = self._interday_data[market_symbol]['Close'][
                         market_first_day_index - 1:market_last_day_index + 1]
         my_alpha, my_beta, my_sharpe_ratio = compute_risks(self._daily_equity, market_values)
-        my_drawdown = compute_drawdown(self._daily_equity)
+        my_drawdown, my_hi, my_li = compute_drawdown(self._daily_equity)
+        my_drawdown_start = market_dates[max(my_hi - 1, 0)]
+        my_drawdown_end = market_dates[max(my_li - 1, 0)]
         alpha_row = ['Alpha', f'{my_alpha * 100:.2f}%']
         beta_row = ['Beta', f'{my_beta:.2f}']
         sharpe_ratio_row = ['Sharpe Ratio', f'{my_sharpe_ratio:.2f}']
         drawdown_row = ['Drawdown', f'{my_drawdown * 100:+.2f}%']
+        drawdown_start_row = ['Drawdown Start', my_drawdown_start.strftime('%F')]
+        drawdown_end_row = ['Drawdown End', my_drawdown_end.strftime('%F')]
         for symbol in print_symbols:
             first_day_index = timestamp_to_index(
                 self._interday_data[symbol].index, market_dates[0])
@@ -551,13 +555,19 @@ class Backtesting:
             beta_row.append(
                 f'{symbol_beta:.2f}' if symbol_beta is not None else None)
             sharpe_ratio_row.append(f'{symbol_sharpe_ratio:.2f}')
-            symbol_drawdown = compute_drawdown(symbol_values)
+            symbol_drawdown, symbol_hi, symbol_li = compute_drawdown(symbol_values)
+            symbol_drawdown_start = market_dates[max(symbol_hi - 1, 0)]
+            symbol_drawdown_end = market_dates[max(symbol_li - 1, 0)]
             drawdown_row.append(f'{symbol_drawdown * 100:+.2f}%')
+            drawdown_start_row.append(symbol_drawdown_start.strftime('%F'))
+            drawdown_end_row.append(symbol_drawdown_end.strftime('%F'))
         stats.append(total_profit)
         stats.append(alpha_row)
         stats.append(beta_row)
         stats.append(sharpe_ratio_row)
         stats.append(drawdown_row)
+        stats.append(drawdown_start_row)
+        stats.append(drawdown_end_row)
         outputs.append(tabulate.tabulate(stats, tablefmt='grid'))
         self._summary_log.info('\n'.join(outputs))
 

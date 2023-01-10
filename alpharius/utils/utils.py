@@ -199,14 +199,22 @@ def compute_risks(values: List[float],
     return a, b, s
 
 
-def compute_drawdown(values: List[float]) -> float:
+def compute_drawdown(values: List[float]) -> Tuple[float, int, int]:
     """Computes drawdown of the target."""
     h = values[0]
+    ci = 0
     d = 0
-    for v in values:
-        d = min(v / h - 1, d)
-        h = max(h, v)
-    return d
+    hi, li = 0, 0
+    for i, v in enumerate(values):
+        new_d = v / h - 1
+        if new_d <= d:
+            d = new_d
+            hi = ci
+            li = i
+        elif v > h:
+            h = v
+            ci = i
+    return d, hi, li
 
 
 def construct_charts_link(symbol: str, date: str):

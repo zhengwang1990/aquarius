@@ -26,6 +26,13 @@ def mock_smtp(mocker):
     return mocker.patch.object(smtplib, 'SMTP', autospec=True)
 
 
+@pytest.fixture(autouse=True)
+def mock_os(mocker):
+    mocker.patch('builtins.open', mocker.mock_open(read_data='data'))
+    mocker.patch.object(os.path, 'isfile', return_value=False)
+    mocker.patch.object(os, 'makedirs')
+
+
 def test_trigger(client, mocker):
     thread = mocker.patch.object(threading, 'Thread')
 
@@ -75,9 +82,6 @@ def test_backtest(mocker):
 
 
 def test_backtest_run(mocker, mock_engine, mock_alpaca):
-    mocker.patch('builtins.open', mocker.mock_open(read_data='data'))
-    mocker.patch.object(os.path, 'isfile', return_value=False)
-    mocker.patch.object(os, 'makedirs')
     mocker.patch.object(pd.DataFrame, 'to_csv')
 
     scheduler._backtest_run()
