@@ -38,6 +38,6 @@ def test_compute_drawdown():
 
     d, hi, li = compute_drawdown(values)
 
-    assert abs(d + 0.8) < 1E7
+    assert abs(d + 0.8) < 1E-7
     assert hi == 4
     assert li == 8

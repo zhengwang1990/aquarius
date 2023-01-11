@@ -9,6 +9,7 @@ from concurrent import futures
 from typing import List, Tuple
 
 import alpaca_trade_api as tradeapi
+import numpy as np
 import pandas as pd
 import retrying
 from alpharius.utils import (
@@ -140,8 +141,14 @@ class AlpacaClient:
                 with_arrow=True)
             result['color_' + time_period] = 'green' if change >= 0 else 'red'
         i = 0
+        month_max = month_min = 0
         for j in range(len(result['time_5y'])):
-            if j % 3 == 0 or j == len(result['time_5y']) - 1:
+            if j % 30 == 0:
+                month_max = np.max(result['equity_5y'][j:j + 30])
+                month_min = np.min(result['equity_5y'][j:j + 30])
+            equity = result['equity_5y'][j]
+            if (j % 3 == 0 or j == len(result['time_5y']) - 1 or
+                    equity == month_max or equity == month_min):
                 result['time_5y'][i] = result['time_5y'][j]
                 result['equity_5y'][i] = result['equity_5y'][j]
                 i += 1
