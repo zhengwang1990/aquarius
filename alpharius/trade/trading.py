@@ -211,6 +211,7 @@ class Trading:
             for symbol, t in tasks.items():
                 self._intraday_data[symbol] = t.result()
         latest_trades = data_loader.get_last_trades(all_symbols)
+        self._logger.info('Latest trades:\n%s', latest_trades)
         for symbol, price in latest_trades.items():
             intraday_lookback = self._intraday_data[symbol]
             if len(intraday_lookback) == 0:

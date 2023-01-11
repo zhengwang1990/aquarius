@@ -60,11 +60,11 @@ class ZScoreProcessor(Processor):
         if direction == 'up':
             threshold = 2.5
             is_trade = z_price > threshold and z_volume > 6
-            is_logging = z_price > threshold - 0.8 and z_volume > 3
+            is_logging = z_price > threshold - 1 and z_volume > 3
         else:
             threshold = 2.5 if t < datetime.time(11, 0) else 3.5
             is_trade = z_price > threshold and z_volume < 6
-            is_logging = z_price > threshold - 0.8
+            is_logging = z_price > threshold - 1
         if is_trade or (context.mode == Mode.TRADE and is_logging):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Price z-score: {z_price:.2f}. Volume z-score: {z_volume:.2f}. '
