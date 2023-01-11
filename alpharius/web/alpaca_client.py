@@ -150,7 +150,7 @@ class AlpacaClient:
             if (j % 3 == 0 or j == len(result['time_5y']) - 1 or
                     equity == month_max or equity == month_min):
                 result['time_5y'][i] = result['time_5y'][j]
-                result['equity_5y'][i] = result['equity_5y'][j]
+                result['equity_5y'][i] = equity
                 i += 1
         result['time_5y'] = result['time_5y'][:i]
         result['equity_5y'] = result['equity_5y'][:i]
