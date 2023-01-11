@@ -92,15 +92,17 @@ class AlpacaClient:
             histories['5Min'].timestamp,
             '%H:%M',
             cash_reserve)
-        current_equity = result['equity_1d'][-1]
-        result['current_equity'] = f'{current_equity:,.2f}'
         result['time_5y'], result['equity_5y'] = get_time_vs_equity(
             histories['1D'].equity,
             histories['1D'].timestamp,
             '%F',
             cash_reserve)
         time_points = copy.copy(result['time_5y'])
+        # Current equity value is wrong from get_portfolio_history
+        current_equity = float(self._alpaca.get_account().equity) - cash_reserve
+        result['current_equity'] = f'{current_equity:,.2f}'
         result['equity_5y'][-1] = current_equity
+        result['equity_1d'][-1] = current_equity
         result['prev_close'] = (result['equity_5y'][-2]
                                 if len(result['equity_5y']) > 2 else math.nan)
         for time_period, time_delta in [('1w', relativedelta(weeks=1)),
@@ -371,6 +373,8 @@ class AlpacaClient:
                                for t in portfolio_result.timestamp]
             cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
             portfolio_values = [e - cash_reserve for e in portfolio_result.equity]
+            # Current equity value is wrong from get_portfolio_history
+            portfolio_values[-1] = float(self._alpaca.get_account().equity) - cash_reserve
             start_index = 0
             while start_index < len(portfolio_values) and portfolio_values[start_index] == 0:
                 start_index += 1
