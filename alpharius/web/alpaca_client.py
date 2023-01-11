@@ -99,7 +99,7 @@ class AlpacaClient:
             cash_reserve)
         time_points = copy.copy(result['time_5y'])
         # Current equity value is wrong from get_portfolio_history
-        current_equity = float(self._alpaca.get_account().equity) - cash_reserve
+        current_equity = max(float(self._alpaca.get_account().equity) - cash_reserve, 0)
         result['current_equity'] = f'{current_equity:,.2f}'
         result['equity_5y'][-1] = current_equity
         result['equity_1d'][-1] = current_equity
@@ -372,9 +372,9 @@ class AlpacaClient:
             portfolio_dates = [pd.to_datetime(t, utc=True, unit='s').tz_convert(TIME_ZONE).strftime('%F')
                                for t in portfolio_result.timestamp]
             cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
-            portfolio_values = [e - cash_reserve for e in portfolio_result.equity]
+            portfolio_values = [max(e - cash_reserve, 0) for e in portfolio_result.equity]
             # Current equity value is wrong from get_portfolio_history
-            portfolio_values[-1] = float(self._alpaca.get_account().equity) - cash_reserve
+            portfolio_values[-1] = max(float(self._alpaca.get_account().equity) - cash_reserve, 0)
             start_index = 0
             while start_index < len(portfolio_values) and portfolio_values[start_index] == 0:
                 start_index += 1
