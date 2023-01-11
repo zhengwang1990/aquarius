@@ -87,6 +87,11 @@ class H2lFiveMinProcessor(Processor):
         if position['status'] != 'active':
             return
         intraday_closes = context.intraday_lookback['Close']
+        if context.current_time == position['entry_time'] + datetime.timedelta(minutes=10):
+            current_loss = context.current_price / intraday_closes[-3] - 1
+            _, upper_threshold = self._get_thresholds(context)
+            if current_loss < 2 * upper_threshold:
+                return
         take_profit = len(intraday_closes) >= 2 and context.current_price > intraday_closes[-2]
         is_close = (take_profit or
                     context.current_time >= position['entry_time'] + datetime.timedelta(minutes=10) or
