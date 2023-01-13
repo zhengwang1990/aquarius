@@ -90,7 +90,8 @@ class H2lOneHourProcessor(Processor):
         if len(intraday_closes) >= abs(index):
             current_loss = context.current_price / intraday_closes[index] - 1
             lower_threshold, _ = self._get_thresholds(context)
-            stop_loss = current_loss < lower_threshold
+            stop_loss = (current_loss < lower_threshold and
+                         context.current_time >= position['entry_time'] + datetime.timedelta(minutes=15))
         if (stop_loss or
                 context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
                 context.current_time.time() >= EXIT_TIME):
