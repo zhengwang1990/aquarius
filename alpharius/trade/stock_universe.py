@@ -99,7 +99,7 @@ class TopVolumeUniverse(StockUniverse):
             if prev_day_ind < DAYS_IN_A_MONTH:
                 continue
             prev_close = hist['Close'][prev_day_ind]
-            if prev_close < 10:
+            if prev_close < 5:
                 continue
             dollar_volumes.append((symbol, self._get_dollar_volume(symbol, prev_day_ind)))
         dollar_volumes.sort(key=lambda s: s[1], reverse=True)
