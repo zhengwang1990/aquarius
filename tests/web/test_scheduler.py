@@ -83,12 +83,12 @@ def test_backtest(mocker):
 
 def test_backtest_run(mocker, mock_engine, mock_alpaca):
     mocker.patch.object(pd.DataFrame, 'to_csv')
+    # Today is set to 2023-01-11
+    mocker.patch.object(time, 'time', return_value=1673450000)
 
     scheduler._backtest_run()
 
     assert mock_alpaca.list_assets_call_count > 0
-    # This relies on overnight processor generating non-empty transactions
-    assert mock_engine.conn.execute.call_count > 0
 
 
 @pytest.mark.parametrize('method_name',

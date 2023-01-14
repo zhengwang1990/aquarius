@@ -166,7 +166,7 @@ def get_latest_day():
 
     If the time is before pre-market open it returns previous day.
     """
-    latest_day = pd.to_datetime('now', utc=True).tz_convert(TIME_ZONE)
+    latest_day = get_current_time()
     if latest_day.time() < datetime.time(4, 0):
         latest_day -= datetime.timedelta(days=1)
     return latest_day.date()
