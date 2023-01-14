@@ -389,8 +389,7 @@ class Backtesting:
         if executed_closes:
             table_list = [[t.symbol, t.processor, t.entry_time.time(), t.exit_time.time(),
                            'long' if t.is_long else 'short', t.qty, t.entry_price, t.exit_price,
-                           f'{t.gl_pct * 100:+.2f}%' if t.gl_pct < 10 else f'{t.gl_pct:.4g}']
-                          for t in executed_closes]
+                           f'{t.gl_pct * 100:+.2f}%'] for t in executed_closes]
             trade_info = tabulate.tabulate(table_list,
                                            headers=['Symbol', 'Processor', 'Entry Time', 'Exit Time', 'Side',
                                                     'Qty', 'Entry Price', 'Exit Price', 'Gain/Loss'],
@@ -426,11 +425,12 @@ class Backtesting:
             interday_data = self._interday_data[position.symbol]
             close_price = interday_data.loc[day]['Close'] if day in interday_data.index else position.entry_price
             equity += position.qty * close_price
-        profit_pct = (equity / self._daily_equity[-1] - 1) * 100 if self._daily_equity[-1] else 0
+        profit_pct = equity / self._daily_equity[-1] - 1 if self._daily_equity[-1] else 0
         self._daily_equity.append(equity)
-        total_profit_pct = ((equity / self._daily_equity[0] - 1) * 100)
+        total_profit_pct = equity / self._daily_equity[0] - 1
         stats = [['Total Gain/Loss',
-                  f'{total_profit_pct:+.2f}%', 'Daily Gain/Loss', f'{profit_pct:+.2f}%']]
+                  f'{total_profit_pct * 100:+.2f}%' if total_profit_pct < 10 else f'{total_profit_pct:+.4g}',
+                  'Daily Gain/Loss', f'{profit_pct * 100:+.2f}%']]
 
         outputs.append('[ Stats ]')
         outputs.append(tabulate.tabulate(stats, tablefmt='grid'))
@@ -441,7 +441,7 @@ class Backtesting:
 
     def _print_summary(self) -> None:
         def _profit_to_str(profit_num: float) -> str:
-            return f'{profit_num * 100:+.2f}%' if profit_num < 10 else f'{profit_num:.4g}'
+            return f'{profit_num * 100:+.2f}%' if profit_num < 10 else f'{profit_num:+.4g}'
 
         outputs = [get_header('Summary')]
         n_trades = self._num_win + self._num_lose
