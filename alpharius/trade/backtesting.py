@@ -134,14 +134,9 @@ class Backtesting:
             history_start, self._end_date, DEFAULT_DATA_SOURCE)
         self._interday_load_time += time.time() - self._run_start_time
         self._init_processors(history_start)
-        all_processor_c2c = np.all([processor.get_trading_frequency() == TradingFrequency.CLOSE_TO_CLOSE
-                                    for processor in self._processors])
         transactions = []
         for day in self._market_dates:
-            if all_processor_c2c:
-                executed_closes = self._process_c2c(day)
-            else:
-                executed_closes = self._process(day)
+            executed_closes = self._process(day)
             transactions.extend(executed_closes)
         self._close()
         return transactions
@@ -292,36 +287,6 @@ class Backtesting:
 
         self._log_day(day, executed_actions)
         return executed_actions
-
-    def _process_c2c(self, day: DATETIME_TYPE) -> List[Transaction]:
-        for processor in self._processors:
-            processor.setup(self._positions, day)
-
-        processor_stock_universes, stock_universe = self._load_stock_universe(
-            day)
-        market_close = pd.to_datetime(pd.Timestamp.combine(
-            day.date(), MARKET_CLOSE)).tz_localize(TIME_ZONE)
-
-        prep_context_start = time.time()
-        contexts = {}
-        for symbol in stock_universe[TradingFrequency.CLOSE_TO_CLOSE]:
-            interday_lookback = self._prepare_interday_lookback(day, symbol)
-            if interday_lookback is None:
-                continue
-            current_price = self._interday_data[symbol].loc[day]['Close']
-            context = Context(symbol=symbol,
-                              current_time=market_close,
-                              current_price=current_price,
-                              interday_lookback=interday_lookback,
-                              intraday_lookback=None)
-            contexts[symbol] = context
-        self._context_prep_time += time.time() - prep_context_start
-
-        actions = self._process_data(
-            contexts, processor_stock_universes, self._processors)
-        executed_closes = self._process_actions(market_close, actions)
-        self._log_day(day, executed_closes)
-        return executed_closes
 
     def _process_actions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> List[List[Any]]:
         unique_actions = get_unique_actions(actions)
@@ -474,6 +439,9 @@ class Backtesting:
         self._details_log.info('\n'.join(outputs))
 
     def _print_summary(self) -> None:
+        def _profit_to_str(profit_num: float) -> str:
+            return f'{profit_num * 100:+.2f}%' if profit_num < 10 else f'{profit_num:.4g}'
+
         outputs = [get_header('Summary')]
         n_trades = self._num_win + self._num_lose
         success_rate = self._num_win / n_trades if n_trades > 0 else 0
@@ -498,9 +466,8 @@ class Backtesting:
                 self._interday_data[market_symbol].index, date)
             year_market_values = self._interday_data[market_symbol]['Close'][
                                  year_market_last_day_index - (i - current_start) - 1:year_market_last_day_index + 1]
-            profit_pct = (self._daily_equity[i + 1] / self._daily_equity[current_start] - 1) * 100
-            year_profit = [f'{current_year} Gain/Loss',
-                           f'{profit_pct:+.2f}%']
+            year_profit_number = self._daily_equity[i + 1] / self._daily_equity[current_start] - 1
+            year_profit = [f'{current_year} Gain/Loss', _profit_to_str(year_profit_number)]
             _, _, year_sharpe_ratio = compute_risks(
                 self._daily_equity[current_start: i + 2], year_market_values)
             year_sharpe = [f'{current_year} Sharpe Ratio',
@@ -521,8 +488,8 @@ class Backtesting:
             stats.append(year_sharpe)
             current_start = i
             current_year += 1
-        total_profit_pct = (self._daily_equity[-1] / self._daily_equity[0] - 1) * 100
-        total_profit = ['Total Gain/Loss', f'{total_profit_pct:+.2f}%']
+        total_profit_number = self._daily_equity[-1] / self._daily_equity[0] - 1
+        total_profit = ['Total Gain/Loss', _profit_to_str(total_profit_number)]
         market_first_day_index = timestamp_to_index(
             self._interday_data[market_symbol].index, market_dates[0])
         market_last_day_index = timestamp_to_index(
@@ -591,6 +558,7 @@ class Backtesting:
             plt.plot(dates, values,
                      label=f'My Portfolio ({profit_pct:+.2f}%)',
                      color='#28b4c8')
+            yscale = 'linear'
             for symbol in plot_symbols:
                 if symbol not in self._interday_data:
                     continue
@@ -600,8 +568,11 @@ class Backtesting:
                                      last_day_index + 1 - len(dates):last_day_index + 1])
                 for j in range(len(symbol_values) - 1, -1, -1):
                     symbol_values[j] /= symbol_values[0]
-                if symbol == 'TQQQ' and abs(symbol_values[-1] - 1) > 2 * abs(values[-1] - 1):
-                    continue
+                if symbol == 'TQQQ':
+                    if abs(symbol_values[-1] - 1) > 2 * abs(values[-1] - 1):
+                        continue
+                    elif abs(values[-1] - 1) > 5 * abs(symbol_values[-1] - 1):
+                        yscale = 'log'
                 plt.plot(dates, symbol_values,
                          label=f'{symbol} ({(symbol_values[-1] - 1) * 100:+.2f}%)',
                          color=color_map[symbol])
@@ -616,6 +587,7 @@ class Backtesting:
             ax.spines['right'].set_color('none')
             ax.spines['top'].set_color('none')
             ax.xaxis.set_major_formatter(formatter)
+            plt.yscale(yscale)
             plt.tight_layout()
             plt.savefig(os.path.join(self._output_dir, f'{current_year}.png'))
             plt.close()
