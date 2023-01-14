@@ -26,6 +26,10 @@ from .data_loader import load_cached_daily_data, load_tradable_history
 _MAX_WORKERS = 20
 
 
+def _profit_to_str(profit_num: float) -> str:
+    return f'{profit_num * 100:+.2f}%' if profit_num < 10 else f'{profit_num:.4g}'
+
+
 class Backtesting:
 
     def __init__(self,
@@ -389,7 +393,7 @@ class Backtesting:
         if executed_closes:
             table_list = [[t.symbol, t.processor, t.entry_time.time(), t.exit_time.time(),
                            'long' if t.is_long else 'short', t.qty, t.entry_price,
-                           t.exit_price, f'{t.gl_pct * 100:+.2f}%'] for t in executed_closes]
+                           t.exit_price, _profit_to_str(t.gl_pct)] for t in executed_closes]
             trade_info = tabulate.tabulate(table_list,
                                            headers=['Symbol', 'Processor', 'Entry Time', 'Exit Time', 'Side',
                                                     'Qty', 'Entry Price', 'Exit Price', 'Gain/Loss'],
@@ -439,9 +443,6 @@ class Backtesting:
         self._details_log.info('\n'.join(outputs))
 
     def _print_summary(self) -> None:
-        def _profit_to_str(profit_num: float) -> str:
-            return f'{profit_num * 100:+.2f}%' if profit_num < 10 else f'{profit_num:.4g}'
-
         outputs = [get_header('Summary')]
         n_trades = self._num_win + self._num_lose
         success_rate = self._num_win / n_trades if n_trades > 0 else 0
