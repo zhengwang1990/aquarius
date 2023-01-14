@@ -2,6 +2,7 @@ import collections
 import datetime
 import difflib
 import functools
+import math
 import os
 import signal
 import time
@@ -388,12 +389,13 @@ class Backtesting:
         outputs = [get_header(day.date())]
         if executed_closes:
             table_list = [[t.symbol, t.processor, t.entry_time.time(), t.exit_time.time(),
-                           'long' if t.is_long else 'short', t.qty, t.entry_price, t.exit_price,
+                           'long' if t.is_long else 'short', f'{t.qty:.2g}', t.entry_price, t.exit_price,
                            f'{t.gl_pct * 100:+.2f}%'] for t in executed_closes]
             trade_info = tabulate.tabulate(table_list,
                                            headers=['Symbol', 'Processor', 'Entry Time', 'Exit Time', 'Side',
                                                     'Qty', 'Entry Price', 'Exit Price', 'Gain/Loss'],
-                                           tablefmt='grid')
+                                           tablefmt='grid',
+                                           disable_numparse=True)
             outputs.append('[ Trades ]')
             outputs.append(trade_info)
 
@@ -409,16 +411,17 @@ class Backtesting:
                         daily_change = (close_price / interday_data['Close'][interday_ind - 1] - 1) * 100
                 change = (close_price / position.entry_price - 1) * 100 if close_price is not None else None
                 value = close_price * position.qty if close_price is not None else None
-                position_info.append([position.symbol, position.qty, position.entry_price,
+                position_info.append([position.symbol, f'{position.qty:.2g}', position.entry_price,
                                       close_price,
-                                      value,
+                                      f'{value:.2g}',
                                       f'{daily_change:+.2f}%' if daily_change is not None else None,
                                       f'{change:+.2f}%' if change is not None else None])
             outputs.append('[ Positions ]')
             outputs.append(tabulate.tabulate(position_info,
                                              headers=['Symbol', 'Qty', 'Entry Price', 'Current Price',
                                                       'Current Value', 'Daily Change', 'Change'],
-                                             tablefmt='grid'))
+                                             tablefmt='grid',
+                                             disable_numparse=True))
 
         equity = self._cash
         for position in self._positions:
@@ -433,7 +436,7 @@ class Backtesting:
                   'Daily Gain/Loss', f'{profit_pct * 100:+.2f}%']]
 
         outputs.append('[ Stats ]')
-        outputs.append(tabulate.tabulate(stats, tablefmt='grid'))
+        outputs.append(tabulate.tabulate(stats, tablefmt='grid', disable_numparse=True))
 
         if not executed_closes and not self._positions:
             return
@@ -472,7 +475,7 @@ class Backtesting:
             _, _, year_sharpe_ratio = compute_risks(
                 self._daily_equity[current_start: i + 2], year_market_values)
             year_sharpe = [f'{current_year} Sharpe Ratio',
-                           f'{year_sharpe_ratio:.2f}']
+                           f'{year_sharpe_ratio:.2f}' if not math.isnan(year_sharpe_ratio) else 'N/A']
             for symbol in print_symbols:
                 if symbol not in self._interday_data:
                     continue
@@ -484,7 +487,7 @@ class Backtesting:
                 _, _, symbol_sharpe = compute_risks(
                     symbol_values, year_market_values)
                 year_profit.append(f'{symbol_profit_pct:+.2f}%')
-                year_sharpe.append(f'{symbol_sharpe:.2f}')
+                year_sharpe.append(f'{symbol_sharpe:.2f}' if not math.isnan(symbol_sharpe) else 'N/A')
             stats.append(year_profit)
             stats.append(year_sharpe)
             current_start = i
@@ -501,9 +504,10 @@ class Backtesting:
         my_drawdown, my_hi, my_li = compute_drawdown(self._daily_equity)
         my_drawdown_start = market_dates[max(my_hi - 1, 0)]
         my_drawdown_end = market_dates[max(my_li - 1, 0)]
-        alpha_row = ['Alpha', f'{my_alpha * 100:.2f}%']
-        beta_row = ['Beta', f'{my_beta:.2f}']
-        sharpe_ratio_row = ['Sharpe Ratio', f'{my_sharpe_ratio:.2f}']
+        alpha_row = ['Alpha', f'{my_alpha * 100:.2f}%' if not math.isnan(my_alpha) else 'N/A']
+        beta_row = ['Beta', f'{my_beta:.2f}' if not math.isnan(my_beta) else 'N/A']
+        sharpe_ratio_row = ['Sharpe Ratio',
+                            f'{my_sharpe_ratio:.2f}' if not math.isnan(my_sharpe_ratio) else 'N/A']
         drawdown_row = ['Drawdown', f'{my_drawdown * 100:+.2f}%']
         drawdown_start_row = ['Drawdown Start', my_drawdown_start.strftime('%F')]
         drawdown_end_row = ['Drawdown End', my_drawdown_end.strftime('%F')]
@@ -519,10 +523,11 @@ class Backtesting:
             symbol_alpha, symbol_beta, symbol_sharpe_ratio = compute_risks(
                 symbol_values, market_values)
             alpha_row.append(
-                f'{symbol_alpha * 100:.2f}%' if symbol_alpha is not None else None)
+                f'{symbol_alpha * 100:.2f}%' if not math.isnan(symbol_alpha) else 'N/A')
             beta_row.append(
-                f'{symbol_beta:.2f}' if symbol_beta is not None else None)
-            sharpe_ratio_row.append(f'{symbol_sharpe_ratio:.2f}')
+                f'{symbol_beta:.2f}' if not math.isnan(symbol_beta) else 'N/A')
+            sharpe_ratio_row.append(f'{symbol_sharpe_ratio:.2f}'
+                                    if not math.isnan(symbol_sharpe_ratio) else 'N/A')
             symbol_drawdown, symbol_hi, symbol_li = compute_drawdown(symbol_values)
             symbol_drawdown_start = market_dates[max(symbol_hi - 1, 0)]
             symbol_drawdown_end = market_dates[max(symbol_li - 1, 0)]
@@ -536,7 +541,7 @@ class Backtesting:
         stats.append(drawdown_row)
         stats.append(drawdown_start_row)
         stats.append(drawdown_end_row)
-        outputs.append(tabulate.tabulate(stats, tablefmt='grid'))
+        outputs.append(tabulate.tabulate(stats, tablefmt='grid', disable_numparse=True))
         self._summary_log.info('\n'.join(outputs))
 
     def _plot_summary(self) -> None:
