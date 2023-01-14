@@ -572,7 +572,7 @@ class Backtesting:
                 if symbol == 'TQQQ':
                     if abs(symbol_values[-1] - 1) > 2 * abs(values[-1] - 1):
                         continue
-                    elif abs(values[-1] - 1) > 5 * abs(symbol_values[-1] - 1):
+                    elif abs(values[-1] - 1) > 3 * abs(symbol_values[-1] - 1):
                         yscale = 'log'
                 plt.plot(dates, symbol_values,
                          label=f'{symbol} ({(symbol_values[-1] - 1) * 100:+.2f}%)',
