@@ -81,7 +81,7 @@ def test_backtest(mocker):
     mock_submit.assert_called_once()
 
 
-def test_backtest_run(mocker, mock_engine, mock_alpaca):
+def test_backtest_run(mocker, mock_alpaca):
     mocker.patch.object(pd.DataFrame, 'to_csv')
     # Today is set to 2023-01-11
     mocker.patch.object(time, 'time', return_value=1673450000)
