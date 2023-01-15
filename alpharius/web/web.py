@@ -506,7 +506,8 @@ def backtest():
         active_processor = None
     processors = ['ALL PROCESSORS'] + processors
 
-    backtest_transactions = [t for t in client.get_backtest(start_time, end_time, active_processor) if t.qty != 0]
+    backtest_transactions = [t for t in client.get_backtest(start_time, end_time, active_processor)
+                             if abs(t.qty) > 1E-7]
     actual_transactions = client.list_transactions(limit=len(backtest_transactions) * 2 + 1000,
                                                    offset=0,
                                                    start_time=start_time,
