@@ -166,19 +166,6 @@ class Context:
         return self.interday_lookback['Close'][-1]
 
     @property
-    def vwap(self) -> List[float]:
-        res = []
-        vwaps = self.intraday_lookback['VWAP']
-        volumes = self.intraday_lookback['Volume']
-        total_dolloar = 0
-        total_volume = 0
-        for i in range(len(self.intraday_lookback)):
-            total_dolloar += vwaps[i] * volumes[i]
-            total_volume += volumes[i]
-            res.append(total_dolloar / (total_volume + 1E-7))
-        return res
-
-    @property
     def market_open_index(self) -> Optional[int]:
         for i in range(len(self.intraday_lookback)):
             if self.intraday_lookback.index[i].time() >= MARKET_OPEN:
