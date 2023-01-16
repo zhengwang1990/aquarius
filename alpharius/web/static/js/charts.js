@@ -20,13 +20,15 @@ var daily_chart_data = null;
 var intraday_chart = null;
 var daily_chart = null;
 var symbol_tree = {symbols: [], children: {}}
-var intraday_symbol_input = document.getElementById("intraday-symbol-input");
-var daily_symbol_input = document.getElementById("daily-symbol-input");
 const symbol_set = new Set(ALL_SYMBOLS)
 const intraday_alert = document.getElementById("intraday-alert");
+const intraday_symbol_input = document.getElementById("intraday-symbol-input");
 const intraday_chart_container = document.getElementById("intraday-chart-container");
+const intraday_chart_name = document.getElementById("intraday-chart-name");
 const daily_alert = document.getElementById("daily-alert");
+const daily_symbol_input = document.getElementById("daily-symbol-input");
 const daily_chart_container = document.getElementById("daily-chart-container");
+const daily_chart_name = document.getElementById("daily-chart-name");
 
 if (window.innerWidth <= 800) {
     chart_mode = "compact";
@@ -110,15 +112,18 @@ const crosshair = {
 };
 
 function displayAlert(type, message, timeframe) {
-    var chart_container, alert;
+    var chart_container, chart_name, alert;
     if (timeframe === "intraday") {
         chart_container = intraday_chart_container;
+        chart_name = intraday_chart_name;
         alert = intraday_alert;
     } else {
         chart_container = daily_chart_container;
+        chart_name = daily_chart_name;
         alert = daily_alert;
     }
     chart_container.style.display = "none";
+    chart_name.style.display = "none";
     for (c of alert.classList.values()) {
         if (c != "alert") {
             alert.classList.remove(c);
@@ -147,6 +152,7 @@ function get_chart_data(dates, symbol, timeframe) {
             labels: [],
             prices: [],
             volumes: [],
+            name: intraday_chart_data['name'],
             prev_close: intraday_chart_data["prev_close"]
         }
         for (var i = 0; i < intraday_chart_data["labels"].length; i++) {
@@ -211,6 +217,10 @@ function update_chart(timeframe) {
         current_data = daily_chart_data;
     }
     var prices = current_data["prices"];
+    if (prices.length === 0) {
+        displayAlert("secondary", "No data found", timeframe);
+        return;
+    }
     var price_max = prices.reduce((res, elem) => Math.max(res, elem.h), -Infinity);
     var price_min = prices.reduce((res, elem) => Math.min(res, elem.l), Infinity);
     if (timeframe === "intraday") {
@@ -363,18 +373,22 @@ function update_chart(timeframe) {
         },
         plugins: [candlestick, barPosition, crosshair]
     };
-    var alert, chart_container, chart;
+    var alert, chart_container, chart, chart_name;
     if (timeframe === "intraday") {
         alert = intraday_alert;
         chart_container = intraday_chart_container;
         chart = intraday_chart;
+        chart_name = intraday_chart_name;
     } else {
         alert = daily_alert;
         chart_container = daily_chart_container;
         chart = daily_chart;
+        chart_name = daily_chart_name;
     }
     alert.style.display = "none";
     chart_container.style.removeProperty("display");
+    chart_name.style.removeProperty("display");
+    chart_name.innerHTML = current_data["name"];
     if (chart === null) {
         if (timeframe === "intraday") {
             intraday_chart = new Chart(document.getElementById("graph-intraday-chart"), chart_config);

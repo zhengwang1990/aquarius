@@ -49,6 +49,11 @@
     padding-left: 20px;
 }
 
+.dash-content .card .chart-name {
+    padding: 10px 0 10px 15px;
+    font-weight: 500;
+}
+
 * { box-sizing: border-box; }
 body {
     font: 16px Arial;
@@ -195,5 +200,9 @@ input[type=submit] {
 
     .dash-content #daily-card .autocomplete-items {
         left: 1.32rem;
+    }
+
+    .dash-content .card .chart-name {
+        font-size: 12px;
     }
 }

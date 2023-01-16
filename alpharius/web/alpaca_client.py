@@ -409,6 +409,7 @@ class AlpacaClient:
                                              start=(start_time - datetime.timedelta(days=7)).strftime('%F'),
                                              end=(start_time - datetime.timedelta(days=1)).strftime('%F'),
                                              adjustment='split')[-1]
+        name = self._alpaca.get_asset(symbol).name
         labels = []
         prices = []
         volumes = []
@@ -427,7 +428,7 @@ class AlpacaClient:
             volume = {'x': label, 's': bar.v, 'g': int(bar.c >= bar.o)}
             volumes.append(volume)
         return {'labels': labels, 'prices': prices, 'volumes': volumes,
-                'prev_close': prev_day_bar.c}
+                'prev_close': prev_day_bar.c, 'name': name}
 
     @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
     def get_all_symbols(self):

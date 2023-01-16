@@ -11,7 +11,7 @@ from alpharius.utils import TIME_ZONE
 
 Clock = collections.namedtuple('Clock', ['next_open', 'next_close'])
 ClockTimestamp = collections.namedtuple('ClockTimestamp', ['timestamp'])
-Asset = collections.namedtuple('Asset', ['symbol', 'tradable', 'marginable',
+Asset = collections.namedtuple('Asset', ['symbol', 'name', 'tradable', 'marginable',
                                          'shortable', 'easy_to_borrow', 'fractionable'])
 Account = collections.namedtuple('Account', ['equity', 'cash'])
 Position = collections.namedtuple('Position', ['symbol', 'qty', 'current_price',
@@ -43,6 +43,7 @@ class FakeAlpaca:
     def __init__(self):
         self.get_account_call_count = 0
         self.list_assets_call_count = 0
+        self.get_asset_call_count = 0
         self.get_clock_call_count = 0
         self.list_orders_call_count = 0
         self.list_positions_call_count = 0
@@ -61,8 +62,12 @@ class FakeAlpaca:
 
     def list_assets(self):
         self.list_assets_call_count += 1
-        return [Asset(symbol, True, True, True, True, True)
+        return [Asset(symbol, symbol, True, True, True, True, True)
                 for symbol in ['QQQ', 'SPY', 'DIA', 'TQQQ', 'GOOG', 'AAPL', 'MSFT']]
+
+    def get_asset(self, symbol):
+        self.get_asset_call_count += 1
+        return Asset(symbol, symbol, True, True, True, True, True)
 
     def list_positions(self):
         self.list_positions_call_count += 1
