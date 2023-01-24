@@ -84,7 +84,7 @@ def transactions():
     offset = (page - 1) * items_per_page
     trans = []
     time_fmt = f'<span class="lg-hidden">%Y-%m-%d </span>%H:%M'
-    for t in client.list_transactions(items_per_page, offset, active_processor):
+    for t in client.list_transactions(limit=items_per_page, offset=offset, processor=active_processor):
         trans.append({
             'symbol': t.symbol,
             'side': 'long' if t.is_long else 'short',

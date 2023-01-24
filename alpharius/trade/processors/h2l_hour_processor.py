@@ -9,9 +9,10 @@ from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
 EXIT_TIME = datetime.time(16, 0)
+PARAMS = [(13, 1), (25, 1.75)]
 
 
-class H2lOneHourProcessor(Processor):
+class H2lHourProcessor(Processor):
 
     def __init__(self,
                  lookback_start_date: DATETIME_TYPE,
@@ -45,14 +46,14 @@ class H2lOneHourProcessor(Processor):
             return self._open_position(context)
 
     @staticmethod
-    def _get_thresholds(context: Context) -> Tuple[float, float]:
+    def _get_thresholds(context: Context, z: float) -> Tuple[float, float]:
         interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
         interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
         h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
         h2l_avg = np.average(h2l_losses)
         h2l_std = np.std(h2l_losses)
         lower_threshold = max(h2l_avg - 3 * h2l_std, -0.5)
-        upper_threshold = h2l_avg - 1 * h2l_std
+        upper_threshold = h2l_avg - z * h2l_std
         return lower_threshold, upper_threshold
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
@@ -61,35 +62,36 @@ class H2lOneHourProcessor(Processor):
             return
         market_open_index = context.market_open_index
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
-        if len(intraday_closes) < 13:
-            return
         if context.current_price > np.min(intraday_closes):
             return
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
             return
-        current_loss = context.current_price / intraday_closes[-13] - 1
-        lower_threshold, upper_threshold = self._get_thresholds(context)
-        is_trade = lower_threshold < current_loss < upper_threshold
-        if is_trade or (context.mode == Mode.TRADE and current_loss < upper_threshold * 0.8):
-            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                               f'Current loss: {current_loss * 100:.2f}%. '
-                               f'Threshold: {lower_threshold * 100:.2f}% ~ {upper_threshold * 100:.2f}%. '
-                               f'Current price {context.current_price}.')
-        if is_trade:
-            self._positions[context.symbol] = {'entry_time': context.current_time,
-                                               'status': 'active'}
-            return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
+        for n, z in PARAMS:
+            if len(intraday_closes) < n:
+                continue
+            current_loss = context.current_price / intraday_closes[-n] - 1
+            lower_threshold, upper_threshold = self._get_thresholds(context, z)
+            is_trade = lower_threshold < current_loss < upper_threshold
+            if is_trade or (context.mode == Mode.TRADE and current_loss < upper_threshold * 0.8):
+                self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                                   f'Current loss: {current_loss * 100:.2f}%. N: {n}. '
+                                   f'Threshold: {lower_threshold * 100:.2f}% ~ {upper_threshold * 100:.2f}%. '
+                                   f'Current price {context.current_price}.')
+            if is_trade:
+                self._positions[context.symbol] = {'entry_time': context.current_time,
+                                                   'status': 'active', 'n': n, 'z': z}
+                return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
         if position['status'] != 'active':
             return
         intraday_closes = context.intraday_lookback['Close']
-        index = -13 - (context.current_time - position['entry_time']).seconds // 300
+        index = -position['n'] - (context.current_time - position['entry_time']).seconds // 300
         stop_loss = False
         if len(intraday_closes) >= abs(index):
             current_loss = context.current_price / intraday_closes[index] - 1
-            lower_threshold, _ = self._get_thresholds(context)
+            lower_threshold, _ = self._get_thresholds(context, position['z'])
             stop_loss = current_loss < lower_threshold
         if (stop_loss or
                 context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
@@ -100,7 +102,7 @@ class H2lOneHourProcessor(Processor):
             return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
 
 
-class H2lOneHourProcessorFactory(ProcessorFactory):
+class H2lHourProcessorFactory(ProcessorFactory):
 
     def __init__(self):
         super().__init__()
@@ -110,5 +112,5 @@ class H2lOneHourProcessorFactory(ProcessorFactory):
                lookback_end_date: DATETIME_TYPE,
                data_source: DataSource,
                output_dir: str,
-               *args, **kwargs) -> H2lOneHourProcessor:
-        return H2lOneHourProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
+               *args, **kwargs) -> H2lHourProcessor:
+        return H2lHourProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
