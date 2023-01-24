@@ -442,7 +442,7 @@ def _get_diff_table(a_transactions, b_transactions):
                                cls_lg=cls_lg,
                                symbol=t.symbol,
                                link=link,
-                               processor=t.processor,
+                               processor=t.processor or 'UNKNOWN',
                                side=side,
                                entry_time=_convert_time(t.entry_time),
                                exit_time=_convert_time(t.exit_time),
