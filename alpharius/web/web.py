@@ -453,7 +453,7 @@ def _get_diff_table(a_transactions, b_transactions):
         trans.sort(key=lambda t: (t.exit_time, t.symbol))
         strings.append(
             [t.symbol + t.entry_time.strftime('%H:%M') + t.exit_time.strftime('%H:%M')
-             + str(t.is_long) + t.processor
+             + str(t.is_long) + str(t.processor)
              for t in trans])
     context_size = max(len(strings[0]), len(strings[1]))
     diffs = [line for line in difflib.unified_diff(strings[0], strings[1], n=context_size)
