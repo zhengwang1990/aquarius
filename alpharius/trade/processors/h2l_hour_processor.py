@@ -104,7 +104,7 @@ class H2lHourProcessor(Processor):
             lower_threshold, _, _ = self._get_h2l_stats(context)
             stop_loss = current_loss < lower_threshold
         if (stop_loss or
-                context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
+                context.current_time >= position['entry_time'] + datetime.timedelta(minutes=35) or
                 context.current_time.time() >= EXIT_TIME):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Closing position. Current price {context.current_price}.')
