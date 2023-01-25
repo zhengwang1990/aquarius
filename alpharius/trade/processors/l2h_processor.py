@@ -26,6 +26,7 @@ class L2hProcessor(Processor):
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._shortable_symbols = set(get_shortable_symbols())
+        self._memo = dict()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -35,6 +36,7 @@ class L2hProcessor(Processor):
                      if position['status'] != 'active']
         for symbol in to_remove:
             self._positions.pop(symbol)
+        self._memo = dict()
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
@@ -46,13 +48,16 @@ class L2hProcessor(Processor):
         else:
             return self._open_position(context)
 
-    @staticmethod
-    def _get_thresholds(context: Context) -> float:
+    def _get_thresholds(self, context: Context) -> float:
+        key = context.symbol + context.current_time.strftime('%F')
+        if key in self._memo:
+            return self._memo[key]
         interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
         interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
         l2h_gains = [h / l - 1 for h, l in zip(interday_highs, interday_lows)]
         l2h_avg = np.average(l2h_gains)
         threshold = l2h_avg * 0.75
+        self._memo[key] = threshold
         return threshold
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:

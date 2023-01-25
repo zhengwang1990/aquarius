@@ -26,6 +26,7 @@ class O2hProcessor(Processor):
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._positions = dict()
         self._shortable_symbols = set(get_shortable_symbols())
+        self._memo = dict()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -35,6 +36,7 @@ class O2hProcessor(Processor):
                      if position['status'] != 'active']
         for symbol in to_remove:
             self._positions.pop(symbol)
+        self._memo = dict()
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
@@ -54,11 +56,16 @@ class O2hProcessor(Processor):
         if (context.current_price < 0.8 * interday_closes[-DAYS_IN_A_MONTH] or
                 context.current_price > 1.5 * interday_closes[-DAYS_IN_A_MONTH]):
             return
-        interday_opens = context.interday_lookback['Open'][-DAYS_IN_A_MONTH:]
-        interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
-        o2h_gains = [h / o - 1 for o, h in zip(interday_opens, interday_highs)]
-        o2h_avg = np.average(o2h_gains)
-        o2h_std = np.std(o2h_gains)
+        key = context.symbol + context.current_time.strftime('%F')
+        if key in self._memo:
+            o2h_avg, o2h_std = self._memo[key]
+        else:
+            interday_opens = context.interday_lookback['Open'][-DAYS_IN_A_MONTH:]
+            interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
+            o2h_gains = [h / o - 1 for o, h in zip(interday_opens, interday_highs)]
+            o2h_avg = np.average(o2h_gains)
+            o2h_std = np.std(o2h_gains)
+            self._memo[key] = (o2h_avg, o2h_std)
         market_open_price = context.today_open
         current_gain = context.current_price / market_open_price - 1
         z_score = (current_gain - o2h_avg) / (o2h_std + 1E-7)

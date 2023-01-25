@@ -10,7 +10,7 @@ from ..stock_universe import IntradayVolatilityStockUniverse
 NUM_UNIVERSE_SYMBOLS = 20
 EXIT_TIME = datetime.time(16, 0)
 # 3 hours only works if 1 hour and 2 hours are not triggered
-PARAMS = [(13, 1), (25, 1.75), (37, 2.25)]
+PARAMS = [(10, 1), (13, 1), (25, 1.75), (37, 2.25)]
 
 
 class H2lHourProcessor(Processor):
@@ -26,6 +26,7 @@ class H2lHourProcessor(Processor):
                                                                lookback_end_date,
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
+        self._memo = dict()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -35,6 +36,7 @@ class H2lHourProcessor(Processor):
                      if position['status'] != 'active']
         for symbol in to_remove:
             self._positions.pop(symbol)
+        self._memo = dict()
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
@@ -46,15 +48,19 @@ class H2lHourProcessor(Processor):
         else:
             return self._open_position(context)
 
-    @staticmethod
-    def _get_h2l_stats(context: Context) -> Tuple[float, float, float]:
+    def _get_h2l_stats(self, context: Context) -> Tuple[float, float, float]:
+        key = context.symbol + context.current_time.strftime('%F')
+        if key in self._memo:
+            return self._memo[key]
         interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
         interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
         h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
         h2l_avg = float(np.average(h2l_losses))
         h2l_std = float(np.std(h2l_losses))
         lower_threshold = max(h2l_avg - 3 * h2l_std, -0.5)
-        return lower_threshold, h2l_avg, h2l_std
+        res = (lower_threshold, h2l_avg, h2l_std)
+        self._memo[key] = res
+        return res
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()

@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 from ..common import (
@@ -25,6 +25,7 @@ class O2lProcessor(Processor):
                                                         lookback_end_date,
                                                         data_source,
                                                         num_stocks=NUM_UNIVERSE_SYMBOLS)
+        self._memo = dict()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -34,6 +35,7 @@ class O2lProcessor(Processor):
                      if position['status'] != 'active']
         for symbol in to_remove:
             self._positions.pop(symbol)
+        self._memo = dict()
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
@@ -45,8 +47,10 @@ class O2lProcessor(Processor):
         else:
             return self._open_position(context)
 
-    @staticmethod
-    def _get_thresholds(context):
+    def _get_thresholds(self, context: Context) -> Tuple[float, float]:
+        key = context.symbol + context.current_time.strftime('%F')
+        if key in self._memo:
+            return self._memo[key]
         interday_opens = context.interday_lookback['Open'][-DAYS_IN_A_MONTH:]
         interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
         o2l_losses = [l / o - 1 for o, l in zip(interday_opens, interday_lows)]
@@ -54,7 +58,9 @@ class O2lProcessor(Processor):
         o2l_std = np.std(o2l_losses)
         upper_threshold = o2l_avg - 4 * o2l_std
         lower_threshold = max(o2l_avg - 6 * o2l_std, -0.4)
-        return lower_threshold, upper_threshold
+        res = (lower_threshold, upper_threshold)
+        self._memo[key] = res
+        return res
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
