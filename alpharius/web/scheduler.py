@@ -94,7 +94,7 @@ def trade():
 
 
 @scheduler.task('cron', id='backfill', day_of_week='mon-fri',
-                hour='16,17,22', minute=15, timezone='America/New_York')
+                hour='16,17,22', minute=10, timezone='America/New_York')
 @email_on_exception
 def backfill():
     app.logger.info('Start backfilling')
@@ -103,7 +103,7 @@ def backfill():
 
 
 @scheduler.task('cron', id='backtest', day_of_week='mon-fri',
-                hour=16, minute=20, timezone='America/New_York')
+                hour=16, minute=15, timezone='America/New_York')
 def backtest():
     app.logger.info('Start backtesting')
     with futures.ProcessPoolExecutor(max_workers=1) as pool:
