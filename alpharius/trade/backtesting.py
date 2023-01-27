@@ -224,8 +224,7 @@ class Backtesting:
         for processor in self._processors:
             processor.setup(self._positions, day)
 
-        processor_stock_universes, stock_universe = self._load_stock_universe(
-            day)
+        processor_stock_universes, stock_universe = self._load_stock_universe(day)
 
         intraday_datas = self._load_intraday_data(day, stock_universe)
 
@@ -276,8 +275,7 @@ class Backtesting:
             for processor in self._processors:
                 if processor.get_trading_frequency() in frequency_to_process:
                     processors.append(processor)
-            actions = self._process_data(
-                contexts, processor_stock_universes, processors)
+            actions = self._process_data(contexts, processor_stock_universes, processors)
             current_executed_actions = self._process_actions(current_time, actions)
             executed_actions.extend(current_executed_actions)
 
