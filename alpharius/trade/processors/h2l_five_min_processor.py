@@ -55,6 +55,7 @@ class H2lFiveMinProcessor(Processor):
             interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
             h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
             h2l_avg = np.average(h2l_losses)
+            self._memo[key] = h2l_avg
         lower_threshold = h2l_avg
         factor = 0.375
         if context.current_time.time() >= datetime.time(11, 0):
