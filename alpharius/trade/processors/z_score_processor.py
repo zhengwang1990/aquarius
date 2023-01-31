@@ -57,13 +57,19 @@ class ZScoreProcessor(Processor):
         z_price = (price_changes[-1] - np.mean(price_changes)) / (np.std(price_changes) + 1E-7)
         z_volume = (intraday_volumes[-1] - np.mean(intraday_volumes)) / (np.std(intraday_volumes) + 1E-7)
         direction = 'up' if intraday_closes[-1] > intraday_closes[-2] else 'down'
+        # In trade mode, the volume is slightly lower
+        volume_threshold = 5.75 if context.mode == Mode.TRADE else 6
         if direction == 'up':
             threshold = 2.5
-            is_trade = z_price > threshold and z_volume > 6
+            is_trade = z_price > threshold and z_volume > volume_threshold
             is_logging = z_price > threshold - 1 and z_volume > 3
+            if is_trade:
+                z1_price = (price_changes[-2] - np.mean(price_changes)) / (np.std(price_changes) + 1E-7)
+                z1_volume = (intraday_volumes[-2] - np.mean(intraday_volumes)) / (np.std(intraday_volumes) + 1E-7)
+                is_trade = not (z1_price > threshold and z1_volume > 6)
         else:
             threshold = 2.5 if t < datetime.time(11, 0) else 3.5
-            is_trade = z_price > threshold and z_volume < 6
+            is_trade = z_price > threshold and z_volume < volume_threshold
             is_logging = z_price > threshold - 1
         if is_trade or (context.mode == Mode.TRADE and is_logging):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
