@@ -82,7 +82,7 @@ def test_backtest(mocker):
 
 
 def test_backtest_run(mocker, mock_alpaca):
-    mocker.patch.object(pd.DataFrame, 'to_csv')
+    mocker.patch.object(pd.DataFrame, 'to_pickle')
     # Today is set to 2023-01-11
     mocker.patch.object(time, 'time', return_value=1673450000)
 

@@ -26,7 +26,7 @@ def mock_polygon(mocker):
 
 @pytest.fixture(autouse=True)
 def mock_pandas(mocker):
-    mocker.patch.object(pd.DataFrame, 'to_csv')
+    mocker.patch.object(pd.DataFrame, 'to_pickle')
 
 
 @pytest.fixture(autouse=True)

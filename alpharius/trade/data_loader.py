@@ -215,12 +215,12 @@ def _load_cached_symbol_history(symbol: str,
     cache_file = os.path.join(CACHE_DIR, str(TimeInterval.DAY),
                               start_time.strftime('%F'),
                               end_time.strftime('%F'),
-                              f'history_{symbol}.csv')
+                              f'history_{symbol}.pickle')
     if os.path.isfile(cache_file):
-        hist = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+        hist = pd.read_pickle(cache_file)
     else:
         hist = data_loader.load_data_list(symbol, start_time, end_time)
-        hist.to_csv(cache_file)
+        hist.to_pickle(cache_file)
     return hist
 
 
@@ -252,17 +252,17 @@ def load_cached_daily_data(symbol: str,
                            data_source: DataSource) -> pd.DataFrame:
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
-    def read_csv(file):
-        return pd.read_csv(file, index_col=0, parse_dates=True)
+    def read_pickle(file):
+        return pd.read_pickle(file)
 
     assert time_interval in [TimeInterval.FIVE_MIN, TimeInterval.HOUR]
     cache_dir = os.path.join(CACHE_DIR, str(time_interval), day.strftime('%F'))
     os.makedirs(cache_dir, exist_ok=True)
-    cache_file = os.path.join(cache_dir, f'history_{symbol}.csv')
+    cache_file = os.path.join(cache_dir, f'history_{symbol}.pickle')
     if os.path.isfile(cache_file):
-        hist = read_csv(cache_file)
+        hist = read_pickle(cache_file)
     else:
         data_loader = DataLoader(time_interval, data_source)
         hist = data_loader.load_daily_data(symbol, day)
-        hist.to_csv(cache_file)
+        hist.to_pickle(cache_file)
     return hist
