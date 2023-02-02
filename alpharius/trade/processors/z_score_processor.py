@@ -64,8 +64,10 @@ class ZScoreProcessor(Processor):
             is_trade = z_price > threshold and z_volume > volume_threshold
             is_logging = z_price > threshold - 1 and z_volume > 3
             if is_trade:
-                z1_price = (price_changes[-2] - np.mean(price_changes)) / (np.std(price_changes) + 1E-7)
-                z1_volume = (intraday_volumes[-2] - np.mean(intraday_volumes)) / (np.std(intraday_volumes) + 1E-7)
+                p1 = price_changes[:-1]
+                v1 = intraday_volumes[:-1]
+                z1_price = (p1[-1] - np.mean(p1)) / (np.std(p1) + 1E-7)
+                z1_volume = (v1[-1] - np.mean(v1)) / (np.std(v1) + 1E-7)
                 is_trade = not (z1_price > threshold and z1_volume > 6)
         else:
             threshold = 2.5 if t < datetime.time(11, 0) else 3.5
