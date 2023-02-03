@@ -60,6 +60,8 @@ class H2lFiveMinProcessor(Processor):
         factor = 0.375
         if context.current_time.time() >= datetime.time(11, 0):
             factor = 0.35
+        if context.current_time.time() >= datetime.time(14, 0):
+            factor = 0.275
         upper_threshold = h2l_avg * factor
         return lower_threshold, upper_threshold
 
