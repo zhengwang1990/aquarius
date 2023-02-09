@@ -66,6 +66,10 @@ class H2lHourProcessor(Processor):
         t = context.current_time.time()
         if t >= EXIT_TIME:
             return
+        interday_closes = context.interday_lookback['Close']
+        # Avoid short squeeze caused by retail trader
+        if max(interday_closes[-1], context.current_price) / interday_closes[-5] > 4:
+            return
         market_open_index = context.market_open_index
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         if context.current_price > np.min(intraday_closes):
