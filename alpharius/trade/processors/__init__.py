@@ -7,3 +7,4 @@ from .h2l_hour_processor import H2lHourProcessorFactory
 from .h2l_five_min_processor import H2lFiveMinProcessorFactory
 from .l2h_processor import L2hProcessorFactory
 from .cross_close_processor import CrossCloseProcessorFactory
+from .tqqq_processor import TqqqProcessorFactory
