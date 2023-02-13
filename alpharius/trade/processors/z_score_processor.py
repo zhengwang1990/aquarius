@@ -71,6 +71,9 @@ class ZScoreProcessor(Processor):
         price_changes = [abs(intraday_closes[i] - intraday_closes[i - 1])
                          for i in range(1, len(intraday_closes))]
         z_price = (price_changes[-1] - np.mean(price_changes)) / (np.std(price_changes) + 1E-7)
+        # Performance optimization. Skip unnecessary volume computation
+        if z_price < 1.5:
+            return
         z_volume = (intraday_volumes[-1] - np.mean(intraday_volumes)) / (np.std(intraday_volumes) + 1E-7)
         direction = 'up' if intraday_closes[-1] > intraday_closes[-2] else 'down'
         # In trade mode, the volume is slightly lower
