@@ -55,14 +55,14 @@ class OvernightProcessor(Processor):
                 actions.append(ProcessorAction(position.symbol, action_type, 1))
             return actions
 
-        contexts_selected = [
-            context for context in contexts if context.symbol in self._universe_symbols]
+        contexts_selected = [context for context in contexts
+                             if context.symbol in self._universe_symbols]
         performances = []
         for context in contexts_selected:
             performances.append((context.symbol, self._get_performance(context)))
         performances.sort(key=lambda s: s[1], reverse=True)
-        long_symbols = [s[0]
-                        for s in performances[:NUM_DIRECTIONAL_SYMBOLS] if s[1] > 0]
+        long_symbols = [s[0] for s in performances[:NUM_DIRECTIONAL_SYMBOLS]
+                        if s[1] > 0]
 
         self._logging(performances, current_prices, current_time)
 

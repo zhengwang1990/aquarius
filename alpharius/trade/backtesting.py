@@ -76,7 +76,7 @@ class Backtesting:
         self._intraday_load_time = 0
         self._stock_universe_load_time = 0
         self._context_prep_time = 0
-        self._data_process_time = 0
+        self._processor_time = collections.defaultdict(int)
 
     def _safe_exit(self, signum, frame) -> None:
         self._close()
@@ -160,10 +160,9 @@ class Backtesting:
                       contexts: Dict[str, Context],
                       stock_universes: Dict[str, List[str]],
                       processors: List[Processor]) -> List[Action]:
-        data_process_start = time.time()
-
         actions = []
         for processor in processors:
+            data_process_start = time.time()
             processor_name = get_processor_name(processor)
             processor_stock_universe = stock_universes[processor_name]
             processor_contexts = []
@@ -176,8 +175,7 @@ class Backtesting:
                                    contexts[pa.symbol].current_price,
                                    processor_name)
                             for pa in processor_actions])
-
-        self._data_process_time += time.time() - data_process_start
+            self._processor_time[processor_name] += time.time() - data_process_start
         return actions
 
     @functools.lru_cache()
@@ -605,8 +603,9 @@ class Backtesting:
             return
         txt_output = os.path.join(self._output_dir, 'profile.txt')
         total_time = max(time.time() - self._run_start_time, 1E-7)
+        data_process_time = max(float(np.sum(list(self._processor_time.values()))), 1E-7)
         outputs = [get_header('Profile')]
-        profile = [
+        stage_profile = [
             ['Stage', 'Time Cost (s)', 'Percentage'],
             ['Total', f'{total_time:.0f}', '100%'],
             ['Interday Data Load', f'{self._interday_load_time:.0f}',
@@ -617,9 +616,16 @@ class Backtesting:
              f'{self._stock_universe_load_time / total_time * 100:.0f}%'],
             ['Context Prepare', f'{self._context_prep_time:.0f}',
              f'{self._context_prep_time / total_time * 100:.0f}%'],
-            ['Data Process', f'{self._data_process_time:.0f}',
-             f'{self._data_process_time / total_time * 100:.0f}%'],
+            ['Data Process', f'{data_process_time:.0f}',
+             f'{data_process_time / total_time * 100:.0f}%'],
         ]
-        outputs.append(tabulate.tabulate(profile, tablefmt='grid'))
+        outputs.append(tabulate.tabulate(stage_profile, tablefmt='grid'))
+        processor_profile = [
+            ['Processor', 'Time Cost (s)', 'Percentage'],
+            ['Total', f'{data_process_time:.0f}', '100%'], ]
+        for processor_name, processor_time in self._processor_time.items():
+            processor_profile.append([processor_name, f'{processor_time:.0f}',
+                                      f'{processor_time / data_process_time * 100:.0f}%'])
+        outputs.append(tabulate.tabulate(processor_profile, tablefmt='grid'))
         with open(txt_output, 'w') as f:
             f.write('\n'.join(outputs))
