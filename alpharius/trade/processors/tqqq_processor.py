@@ -55,11 +55,49 @@ class TqqqProcessor(Processor):
         return l2h_avg
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
-        action = self._last_hour_strategy(context)
+        action = self._last_hour_momentum(context)
+        if action:
+            return action
+        action = self._mean_reversion(context)
         if action:
             return action
 
-    def _last_hour_strategy(self, context: Context) -> Optional[ProcessorAction]:
+    def _mean_reversion(self, context: Context) -> Optional[ProcessorAction]:
+        t = context.current_time.time()
+        if t <= datetime.time(11, 15) or t >= datetime.time(15, 0):
+            return
+        interday_closes = context.interday_lookback['Close']
+        market_open_index = context.market_open_index
+        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        # short
+        l2h = self._get_l2h(context)
+        short_t = 26
+        if (interday_closes[-1] < np.max(interday_closes[-DAYS_IN_A_MONTH:]) * 0.9
+                and len(intraday_closes) >= short_t):
+            change = intraday_closes[-1] / intraday_closes[-short_t] - 1
+            if change > 0.8 * l2h:
+                self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                                   f'Side: short. Change: {change * 100:.2f}%. Threshold: {l2h * 100:.2f}%.')
+            if change > l2h:
+                self._positions[context.symbol] = {'side': 'short',
+                                                   'strategy': 'mean_reversion',
+                                                   'entry_time': context.current_time}
+                return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
+        # long
+        h2l = self._get_h2l(context)
+        long_t = 19
+        if len(intraday_closes) >= long_t:
+            change = intraday_closes[-1] / intraday_closes[-long_t] - 1
+            if change < 0.8 * h2l:
+                self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                                   f'Side: long. Change: {change * 100:.2f}%. Threshold: {h2l * 100:.2f}%.')
+            if change < h2l:
+                self._positions[context.symbol] = {'side': 'long',
+                                                   'strategy': 'mean_reversion',
+                                                   'entry_time': context.current_time}
+                return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
+
+    def _last_hour_momentum(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
         if t <= datetime.time(15, 0) or t >= datetime.time(15, 30):
             return
@@ -78,7 +116,7 @@ class TqqqProcessor(Processor):
                 f'(Threshold: {2 * h2l * 100:.2f}%).')
         if change_from_open < 0.7 * h2l or change_from_close < 2 * h2l:
             self._positions[context.symbol] = {'side': 'short',
-                                               'strategy': 'last_hour',
+                                               'strategy': 'last_hour_momentum',
                                                'entry_time': context.current_time}
             return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
         l2h = self._get_l2h(context)
@@ -90,7 +128,7 @@ class TqqqProcessor(Processor):
             else:
                 self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Continuous up trend.')
                 self._positions[context.symbol] = {'side': 'long',
-                                                   'strategy': 'last_hour',
+                                                   'strategy': 'last_hour_momentum',
                                                    'entry_time': context.current_time}
                 return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
         if change_from_open > 0.5 * l2h or change_from_close > 1 * l2h:
@@ -100,21 +138,26 @@ class TqqqProcessor(Processor):
                 f'(Threshold: {1.5 * l2h * 100:.2f}%).')
         if change_from_open > 0.7 * l2h or change_from_close > 1.5 * l2h:
             self._positions[context.symbol] = {'side': 'long',
-                                               'strategy': 'last_hour',
+                                               'strategy': 'last_hour_momentum',
                                                'entry_time': context.current_time}
             return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
+        def exit_position():
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                               f'Closing position. Current price {context.current_price}.')
+            self._positions.pop(context.symbol)
+            return action
         position = self._positions[context.symbol]
         action_type = ActionType.SELL_TO_CLOSE if position['side'] == 'long' else ActionType.BUY_TO_CLOSE
         action = ProcessorAction(context.symbol, action_type, 1)
         strategy = position['strategy']
-        if strategy == 'last_hour':
+        if strategy == 'last_hour_momentum':
             if context.current_time.time() == datetime.time(16, 0):
-                self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                                   f'Closing position. Current price {context.current_price}.')
-                self._positions.pop(context.symbol)
-                return action
+                return exit_position()
+        if strategy == 'mean_reversion':
+            if context.current_time >= position['entry_time'] + datetime.timedelta(minutes=60):
+                return exit_position()
 
 
 class TqqqProcessorFactory(ProcessorFactory):
