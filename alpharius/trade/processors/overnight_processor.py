@@ -5,12 +5,12 @@ import numpy as np
 import tabulate
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, DATETIME_TYPE, DAYS_IN_A_YEAR, DAYS_IN_A_QUARTER,
-    DAYS_IN_A_WEEK, get_header)
+    Position, ProcessorAction, DATETIME_TYPE, DAYS_IN_A_QUARTER, DAYS_IN_A_WEEK, get_header)
 from ..stock_universe import TopVolumeUniverse
 
 NUM_UNIVERSE_SYMBOLS = 200
 NUM_DIRECTIONAL_SYMBOLS = 5
+LOOKBACK_DAYS = 225
 
 
 class OvernightProcessor(Processor):
@@ -85,9 +85,9 @@ class OvernightProcessor(Processor):
     @staticmethod
     def _get_performance(context: Context) -> float:
         interday_lookback = context.interday_lookback
-        if len(interday_lookback) < DAYS_IN_A_YEAR:
+        if len(interday_lookback) < LOOKBACK_DAYS:
             return 0
-        closes = interday_lookback['Close'][-DAYS_IN_A_YEAR:]
+        closes = interday_lookback['Close'][-LOOKBACK_DAYS:]
         values = np.append(closes, context.current_price)
         profits = [np.log(values[k + 1] / values[k])
                    for k in range(len(values) - 1)]
@@ -97,7 +97,7 @@ class OvernightProcessor(Processor):
             return 0
         today_open = context.today_open
         opens = np.append(
-            interday_lookback['Open'][-DAYS_IN_A_YEAR + 1:], today_open)
+            interday_lookback['Open'][-LOOKBACK_DAYS + 1:], today_open)
         overnight_returns = []
         for close_price, open_price in zip(closes, opens):
             overnight_returns.append(np.log(open_price / close_price))
