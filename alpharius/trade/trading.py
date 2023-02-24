@@ -349,8 +349,7 @@ class Trading:
         if not orders:
             self._logger.info('All orders are filled')
         else:
-            open_symbols = ', '.join([order.symbol for order in orders])
-            self._logger.warning('[%d] orders not filled: %s', len(orders), open_symbols)
+            self._logger.warning('[%d] orders not filled: %s', len(orders), orders)
 
     def _update_db(self, executed_closes: List[Action]) -> None:
         current_time = time.time()
