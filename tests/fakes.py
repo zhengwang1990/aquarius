@@ -20,7 +20,7 @@ Position = collections.namedtuple('Position', ['symbol', 'qty', 'current_price',
                                                'unrealized_plpc'])
 Order = collections.namedtuple('Order', ['id', 'symbol', 'side', 'qty', 'notional',
                                          'filled_qty', 'filled_at', 'filled_avg_price',
-                                         'submitted_at'])
+                                         'submitted_at', 'status'])
 Bar = collections.namedtuple('Bar', ['t', 'o', 'h', 'l', 'c', 'vw', 'v'])
 History = collections.namedtuple('History', ['equity', 'timestamp'])
 Calendar = collections.namedtuple('Calendar', ['date', 'open', 'close'])
@@ -53,6 +53,7 @@ class FakeAlpaca:
         self.get_bars_call_count = 0
         self.get_calendar_call_count = 0
         self.get_latest_trades_call_count = 0
+        self.get_order_call_count = 0
         self._value_cycle = itertools.cycle([42, 40, 41, 43, 42, 41.5, 40,
                                              41, 42, 38, 41, 42])
 
@@ -80,34 +81,45 @@ class FakeAlpaca:
         next_close = ClockTimestamp(lambda: 1616011200)
         return Clock(next_open, next_close)
 
+    def get_order(self, order_id):
+        self.get_order_call_count += 1
+        filled_at = pd.to_datetime('2021-03-17T10:14:57.0Z')
+        status = 'filled'
+        if self.get_order_call_count % 3 == 0:
+            filled_at = None
+            status = 'accepted'
+        return Order(order_id, 'QQQ', 'sell', '14', None, '0', filled_at,
+                     '12', pd.to_datetime('2021-03-17T10:14:57.0Z'), status)
+
     def list_orders(self, status=None, direction=None, *args, **kwargs):
         self.list_orders_call_count += 1
-        if self.list_orders_call_count % 3 == 0 and status != 'closed':
-            return []
+        status = 'filled' if status == 'closed' else 'accepted'
         orders = [Order('ORDER122', 'DIA', 'sell', '14', None, '0',
                         pd.to_datetime('2021-03-17T10:14:57.0Z'), '12',
-                        pd.to_datetime('2021-03-17T10:14:57.0Z')),
+                        pd.to_datetime('2021-03-17T10:14:57.0Z'), status),
                   Order('ORDER124', 'SPY', 'buy', '12', None, '1',
                         pd.to_datetime('2021-03-17T10:20:00.0Z'), '13',
-                        pd.to_datetime('2021-03-17T10:20:00.0Z')),
+                        pd.to_datetime('2021-03-17T10:20:00.0Z'), status),
                   Order('ORDER123', 'DIA', 'buy', '14', None, '0',
                         pd.to_datetime('2021-03-17T10:15:57.0Z'), '9',
-                        pd.to_datetime('2021-03-17T10:15:57.0Z')),
+                        pd.to_datetime('2021-03-17T10:15:57.0Z'), status),
                   Order('ORDER125', 'QQQ', 'buy', None, '100.1', '10',
                         pd.to_datetime(time.time() - 3, utc=True, unit='s'), '9.1',
-                        pd.to_datetime(time.time() - 4, utc=True, unit='s')),
+                        pd.to_datetime(time.time() - 4, utc=True, unit='s'), status),
                   Order('ORDER126', 'QQQ', 'sell', None, '100.1', '10',
                         pd.to_datetime(time.time() - 1, utc=True, unit='s'), '9.2',
-                        pd.to_datetime(time.time() - 2, utc=True, unit='s')),
+                        pd.to_datetime(time.time() - 2, utc=True, unit='s'), status),
                   Order('ORDER127', 'QQQ', 'buy', None, '100.1', '10',
                         pd.to_datetime(time.time(), utc=True, unit='s'), '9.1',
-                        pd.to_datetime(time.time(), utc=True, unit='s'))]
+                        pd.to_datetime(time.time(), utc=True, unit='s'), status)]
         if direction == 'desc':
             orders = orders[::-1]
         return orders
 
-    def submit_order(self, *args, **kwargs):
+    def submit_order(self, symbol, side, *args, **kwargs):
         self.submit_order_call_count += 1
+        return Order('ORDER123', symbol, side, None, '100.1', '10', None, '21',
+                     pd.to_datetime('2021-03-17T10:20:00.0Z'), 'accepted')
 
     def cancel_order(self, *args, **kwargs):
         self.cancel_order_call_count += 1

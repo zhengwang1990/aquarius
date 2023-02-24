@@ -251,6 +251,7 @@ class Trading:
         """Closes positions instructed by input actions."""
         self._update_positions()
         executed_closes = []
+        order_ids = []
         for action in actions:
             assert action.type in [ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]
             symbol = action.symbol
@@ -266,10 +267,12 @@ class Trading:
                 continue
             qty = abs(current_position.qty) * action.percent
             side = 'buy' if action.type == ActionType.BUY_TO_CLOSE else 'sell'
-            self._place_order(symbol, side, qty=qty)
+            order_id = self._place_order(symbol, side, qty=qty)
+            if order_id:
+                order_ids.append(order_id)
             executed_closes.append(action)
 
-        self._wait_for_order_to_fill()
+        self._wait_for_order_to_fill(order_ids)
         return executed_closes
 
     def _open_positions(self, actions: List[Action]) -> None:
@@ -277,6 +280,7 @@ class Trading:
         self._update_account()
         self._update_positions()
         tradable_cash = self._cash - self._cash_reserve
+        order_ids = []
         for position in self._positions:
             if position.qty < 0:
                 tradable_cash += position.entry_price * position.qty * (1 + SHORT_RESERVE_RATIO)
@@ -297,31 +301,42 @@ class Trading:
                 side = 'sell'
                 qty = int(cash_to_trade / action.price)
                 notional = None
-            self._place_order(symbol, side, qty=qty, notional=notional)
+            order_id = self._place_order(symbol, side, qty=qty, notional=notional)
+            if order_id:
+                order_ids.append(order_id)
 
-        self._wait_for_order_to_fill()
+        self._wait_for_order_to_fill(order_ids)
 
     @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
     def _place_order(self, symbol: str, side: str,
                      qty: Optional[float] = None,
                      notional: Optional[float] = None,
-                     limit_price: Optional[float] = None) -> None:
+                     limit_price: Optional[float] = None) -> Optional[str]:
         order_type = 'market' if limit_price is None else 'limit'
         self._logger.info('Placing order for [%s]: side [%s]; qty [%s]; notional [%s]; type [%s].',
                           symbol, side, qty, notional, order_type)
         try:
-            self._alpaca.submit_order(symbol=symbol, qty=qty, side=side,
-                                      type=order_type,
-                                      time_in_force='day',
-                                      notional=notional,
-                                      limit_price=limit_price)
+            order = self._alpaca.submit_order(symbol=symbol, qty=qty, side=side,
+                                              type=order_type,
+                                              time_in_force='day',
+                                              notional=notional,
+                                              limit_price=limit_price)
+            return order.id
         except tradeapi.rest.APIError as e:
             self._logger.error('Failed to placer [%s] order for [%s]: %s', side, symbol, e)
 
     @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
-    def _wait_for_order_to_fill(self, timeout: int = 10) -> None:
-        orders = self._alpaca.list_orders(status='open')
+    def _wait_for_order_to_fill(self, order_ids: List[str], timeout: int = 10) -> None:
+        def _update_open_orders(open_orders):
+            remaining = []
+            for order_id in open_orders:
+                order = self._alpaca.get_order(order_id)
+                if order.status != 'filled':
+                    remaining.append(order_id)
+            return remaining
+        orders = _update_open_orders(order_ids)
         if not orders:
+            self._logger.info('[%s] orders filled', len(order_ids))
             return
         wait_time = 0
         while orders:
@@ -330,7 +345,7 @@ class Trading:
             wait_time += 2
             if wait_time >= timeout:
                 break
-            orders = self._alpaca.list_orders(status='open')
+            orders = _update_open_orders(orders)
         if not orders:
             self._logger.info('All orders are filled')
         else:

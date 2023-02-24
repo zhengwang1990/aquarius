@@ -40,7 +40,7 @@ def test_run_success(mock_alpaca, trading_frequency):
 
     trading.run()
 
-    assert mock_alpaca.list_orders_call_count > 0
+    assert mock_alpaca.get_order_call_count > 0
     assert mock_alpaca.list_positions_call_count > 0
     assert mock_alpaca.submit_order_call_count > 0
     assert mock_alpaca.get_account_call_count > 0
