@@ -71,7 +71,8 @@ for (var entry of CASH_FLOWS) {
     }
 }
 const color_pool = ["#4890e8", "#4fdba8", "#915bde", "#fabe57", "#1bd1cf", "#eb624d",
-                    "#8f8f7f", "#eb57cd", "#eb57cd", "#d1ce6d", "#8097b0"];
+                    "#8f8f7f", "#eb57cd", "#eb57cd", "#d1ce6d", "#8097b0", "#2d41f7",
+                    "#ed2f72", "#146e10"];
 const color_assignments = {};
 for (var i = 0; i < pie_chart_processors.length; i++) {
     color_assignments[pie_chart_processors[i]] = color_pool[i];
