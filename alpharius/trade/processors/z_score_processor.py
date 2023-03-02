@@ -77,7 +77,7 @@ class ZScoreProcessor(Processor):
         z_volume = (intraday_volumes[-1] - np.mean(intraday_volumes)) / (np.std(intraday_volumes) + 1E-7)
         direction = 'up' if intraday_closes[-1] > intraday_closes[-2] else 'down'
         # In trade mode, the volume is slightly lower
-        volume_threshold = 5.7 if context.mode == Mode.TRADE else 6
+        volume_threshold = 5.5 if context.mode == Mode.TRADE else 6
         if direction == 'up':
             threshold = 2.5
             is_trade = z_price > threshold and z_volume > volume_threshold
