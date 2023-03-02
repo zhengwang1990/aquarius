@@ -47,6 +47,7 @@ class Trading:
         self._interday_data = dict()
         self._intraday_data = dict()
         self._latest_trades = dict()
+        self._db_thread = None
         clock = self._alpaca.get_clock()
         self._market_open = clock.next_open.timestamp()
         self._market_close = clock.next_close.timestamp()
@@ -133,6 +134,8 @@ class Trading:
             time.sleep(1)
 
         self._upload_log()
+        if self._db_thread:
+            self._db_thread.join(timeout=100)
 
     def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
         self._logger.info('Process starts for [%s]', checkpoint_time.time())
@@ -189,9 +192,9 @@ class Trading:
         self._logger.info('Got [%d] actions to process.', len(actions))
 
         executed_closes = self._trade(actions)
-        db_thread = threading.Thread(target=self._update_db,
+        self._db_thread = threading.Thread(target=self._update_db,
                                      args=(executed_closes,))
-        db_thread.start()
+        self._db_thread.start()
 
     def _update_intraday_data(self, frequency_to_process: List[TradingFrequency]) -> None:
         update_start = time.time()
