@@ -193,7 +193,7 @@ class Trading:
 
         executed_closes = self._trade(actions)
         self._db_thread = threading.Thread(target=self._update_db,
-                                     args=(executed_closes,))
+                                           args=(executed_closes,))
         self._db_thread.start()
 
     def _update_intraday_data(self, frequency_to_process: List[TradingFrequency]) -> None:
