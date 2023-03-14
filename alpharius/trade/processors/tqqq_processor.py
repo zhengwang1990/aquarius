@@ -105,6 +105,8 @@ class TqqqProcessor(Processor):
         if interday_closes[-1] > np.max(interday_closes[-DAYS_IN_A_MONTH:]) * 0.9:
             return
         market_open_index = context.market_open_index
+        if market_open_index is None:
+            return
         intraday_opens = context.intraday_lookback['Open'][market_open_index:]
         change_from_open = context.current_price / intraday_opens[0] - 1
         change_from_close = context.current_price / context.prev_day_close - 1

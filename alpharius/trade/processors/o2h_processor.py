@@ -67,6 +67,8 @@ class O2hProcessor(Processor):
             o2h_std = np.std(o2h_gains)
             self._memo[key] = (o2h_avg, o2h_std)
         market_open_price = context.today_open
+        if market_open_price is None:
+            return
         current_gain = context.current_price / market_open_price - 1
         z_score = (current_gain - o2h_avg) / (o2h_std + 1E-7)
         is_trade = 3 > z_score > 2

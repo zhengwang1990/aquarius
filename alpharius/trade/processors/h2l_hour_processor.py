@@ -71,6 +71,8 @@ class H2lHourProcessor(Processor):
         if max(interday_closes[-1], context.current_price) / interday_closes[-5] > 4:
             return
         market_open_index = context.market_open_index
+        if market_open_index is None:
+            return
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         if context.current_price > np.min(intraday_closes):
             return

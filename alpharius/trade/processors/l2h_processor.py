@@ -72,6 +72,8 @@ class L2hProcessor(Processor):
                 context.current_price > interday_closes[-DAYS_IN_A_YEAR] * 3):
             return
         market_open_index = context.market_open_index
+        if market_open_index is None:
+            return
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         if len(intraday_closes) < 10:
             return
