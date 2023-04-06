@@ -10,7 +10,7 @@ from ..stock_universe import IntradayVolatilityStockUniverse
 NUM_UNIVERSE_SYMBOLS = 20
 EXIT_TIME = datetime.time(16, 0)
 # 3 hours only works if 1 hour and 2 hours are not triggered
-PARAMS = [(10, 1), (13, 1), (25, 1.75), (37, 2.25)]
+PARAMS = [(10, 1), (13, 1), (25, 1.75), (30, 2.25), (37, 2.25)]
 
 
 class H2lHourProcessor(Processor):
