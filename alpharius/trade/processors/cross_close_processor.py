@@ -55,7 +55,7 @@ class CrossCloseProcessor(Processor):
         interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
         h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
         h2l_avg = np.average(h2l_losses)
-        threshold = h2l_avg * 0.5
+        threshold = h2l_avg * 0.45
         self._memo[key] = threshold
         return threshold
 
@@ -68,17 +68,19 @@ class CrossCloseProcessor(Processor):
             return
         intraday_opens = context.intraday_lookback['Open'][market_open_index:]
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
-        if len(intraday_closes) < 2:
+        if len(intraday_closes) < 3:
             return
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
             return
-        current_loss = context.current_price / intraday_closes[-2] - 1
+        if context.current_price > intraday_closes[-2]:
+            return
+        prev_loss = intraday_closes[-2] / intraday_closes[-3] - 1
         threshold = self._get_threshold(context)
-        is_cross = intraday_opens[-1] > context.prev_day_close > intraday_closes[-1]
-        is_trade = current_loss < threshold and is_cross
-        if is_trade or (context.mode == Mode.TRADE and current_loss < threshold * 0.8 and is_cross):
+        is_cross = intraday_opens[-2] > context.prev_day_close > intraday_closes[-1]
+        is_trade = prev_loss < threshold and is_cross
+        if is_trade or (context.mode == Mode.TRADE and prev_loss < threshold * 0.8 and is_cross):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                               f'Current loss: {current_loss * 100:.2f}%. '
+                               f'Prev loss: {prev_loss * 100:.2f}%. '
                                f'Threshold: {threshold * 100:.2f}%. '
                                f'Current price {context.current_price}.')
         if is_trade:
@@ -91,10 +93,10 @@ class CrossCloseProcessor(Processor):
         if position['status'] != 'active':
             return
         intraday_closes = context.intraday_lookback['Close']
-        take_profit = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=10)
-                       and context.current_price < intraday_closes[-3])
+        take_profit = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=5)
+                       and context.current_price < intraday_closes[-2])
         is_close = (take_profit or
-                    context.current_time >= position['entry_time'] + datetime.timedelta(minutes=15) or
+                    context.current_time >= position['entry_time'] + datetime.timedelta(minutes=10) or
                     context.current_time.time() >= EXIT_TIME)
         if is_close:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
