@@ -68,6 +68,8 @@ class TqqqProcessor(Processor):
             return
         interday_closes = context.interday_lookback['Close']
         market_open_index = context.market_open_index
+        if market_open_index is None:
+            return
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         # short
         l2h = self._get_l2h(context)
@@ -98,6 +100,12 @@ class TqqqProcessor(Processor):
                 return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _last_hour_momentum(self, context: Context) -> Optional[ProcessorAction]:
+        def _open_position(side: str) -> ProcessorAction:
+            self._positions[context.symbol] = {'side': side,
+                                               'strategy': 'last_hour_momentum',
+                                               'entry_time': context.current_time}
+            action_type = ActionType.SELL_TO_OPEN if side == 'short' else ActionType.BUY_TO_OPEN
+            return ProcessorAction(context.symbol, action_type, 1)
         t = context.current_time.time()
         if t <= datetime.time(15, 0) or t >= datetime.time(15, 30):
             return
@@ -111,38 +119,30 @@ class TqqqProcessor(Processor):
         change_from_open = context.current_price / intraday_opens[0] - 1
         change_from_close = context.current_price / context.prev_day_close - 1
         h2l = self._get_h2l(context)
-        if change_from_open < 0.5 * h2l or change_from_close < 1.5 * h2l:
-            self._logger.debug(
-                f'[{context.current_time.strftime("%F %H:%M")}] Change from open: {change_from_open * 100:.2f}% '
-                f'(Threshold: {0.7 * h2l * 100:.2f}%). Change from prev close: {change_from_close * 100 :.2f}% '
-                f'(Threshold: {2 * h2l * 100:.2f}%).')
         if change_from_open < 0.7 * h2l or change_from_close < 2 * h2l:
-            self._positions[context.symbol] = {'side': 'short',
-                                               'strategy': 'last_hour_momentum',
-                                               'entry_time': context.current_time}
-            return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
+            return _open_position('short')
         l2h = self._get_l2h(context)
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        change_from_min = context.current_price / np.min(intraday_closes) - 1
+        if change_from_min > 1.2 * l2h and intraday_closes[-1] < intraday_closes[-2]:
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Change from min '
+                               f'[{change_from_min * 100:.2f}%] exceeds threshold [{1.2 * l2h * 100:.2f}%]')
+            return _open_position('long')
         if intraday_opens[0] < context.prev_day_close:
             for i in range(-25, -len(intraday_closes), -24):
                 if intraday_closes[i + 24] / intraday_closes[i] - 1 < l2h * 0.15:
                     break
             else:
                 self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Continuous up trend.')
-                self._positions[context.symbol] = {'side': 'long',
-                                                   'strategy': 'last_hour_momentum',
-                                                   'entry_time': context.current_time}
-                return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
-        if change_from_open > 0.5 * l2h or change_from_close > 1 * l2h:
-            self._logger.debug(
-                f'[{context.current_time.strftime("%F %H:%M")}] Change from open: {change_from_open * 100:.2f}% '
-                f'(Threshold: {0.7 * l2h * 100:.2f}%). Change from prev close: {change_from_close * 100 :.2f}% '
-                f'(Threshold: {1.5 * l2h * 100:.2f}%).')
-        if change_from_open > 0.7 * l2h or change_from_close > 1.5 * l2h:
-            self._positions[context.symbol] = {'side': 'long',
-                                               'strategy': 'last_hour_momentum',
-                                               'entry_time': context.current_time}
-            return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
+                return _open_position('long')
+        if change_from_open > 0.7 * l2h:
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Change from open '
+                               f'[{change_from_open * 100:.2f}%] exceeds threshold [{0.7 * l2h * 100:.2f}%]')
+            return _open_position('long')
+        if change_from_close > 1.5 * l2h:
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Change from close '
+                               f'[{change_from_close * 100:.2f}%] exceeds threshold [{1.5 * l2h * 100:.2f}%]')
+            return _open_position('long')
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         def exit_position():
