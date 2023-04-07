@@ -10,14 +10,14 @@ from alpharius.utils import get_latest_day
 matplotlib.use('agg')
 
 PROCESSOR_FACTORIES = [
-    processors.OvernightProcessorFactory(),
-    processors.O2lProcessorFactory(),
-    processors.O2hProcessorFactory(),
     processors.BearMomentumProcessorFactory(),
-    processors.H2lHourProcessorFactory(),
-    processors.H2lFiveMinProcessorFactory(),
-    processors.L2hProcessorFactory(),
     processors.CrossCloseProcessorFactory(),
+    processors.H2lFiveMinProcessorFactory(),
+    processors.H2lHourProcessorFactory(),
+    processors.L2hProcessorFactory(),
+    processors.O2hProcessorFactory(),
+    processors.O2lProcessorFactory(),
+    processors.OvernightProcessorFactory(),
     processors.TqqqProcessorFactory(),
 ]
 
