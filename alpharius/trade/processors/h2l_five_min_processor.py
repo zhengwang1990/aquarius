@@ -7,8 +7,9 @@ from ..common import (
     Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DATETIME_TYPE)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
-NUM_UNIVERSE_SYMBOLS = 20
-EXIT_TIME = datetime.time(16, 0)
+NUM_UNIVERSE_SYMBOLS = 40
+ENTRY_TIME = datetime.time(10, 0)
+EXIT_TIME = datetime.time(10, 30)
 
 
 class H2lFiveMinProcessor(Processor):
@@ -57,17 +58,12 @@ class H2lFiveMinProcessor(Processor):
             h2l_avg = np.average(h2l_losses)
             self._memo[key] = h2l_avg
         lower_threshold = h2l_avg
-        factor = 0.375
-        if context.current_time.time() >= datetime.time(11, 0):
-            factor = 0.35
-        if context.current_time.time() >= datetime.time(14, 0):
-            factor = 0.275
-        upper_threshold = h2l_avg * factor
+        upper_threshold = h2l_avg * 0.5
         return lower_threshold, upper_threshold
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
-        if t >= EXIT_TIME:
+        if t < ENTRY_TIME or t >= EXIT_TIME:
             return
         market_open_index = context.market_open_index
         if market_open_index is None:
@@ -80,11 +76,12 @@ class H2lFiveMinProcessor(Processor):
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
             return
         intraday_opens = context.intraday_lookback['Open'][market_open_index:]
-        if intraday_opens[-1] > context.prev_day_close > intraday_closes[-1]:
+        if intraday_opens[-2] > context.prev_day_close > intraday_closes[-1]:
             return
+        prev_loss = intraday_closes[-2] / intraday_opens[-2] - 1
         current_loss = context.current_price / intraday_closes[-2] - 1
         lower_threshold, upper_threshold = self._get_thresholds(context)
-        is_trade = lower_threshold < current_loss < upper_threshold
+        is_trade = lower_threshold < prev_loss < upper_threshold and prev_loss < current_loss < 0
         if is_trade or (context.mode == Mode.TRADE and current_loss < upper_threshold * 0.8):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Current loss: {current_loss * 100:.2f}%. '
@@ -100,15 +97,9 @@ class H2lFiveMinProcessor(Processor):
         if position['status'] != 'active':
             return
         intraday_closes = context.intraday_lookback['Close']
-        if context.current_time == position['entry_time'] + datetime.timedelta(minutes=10):
-            current_loss = context.current_price / intraday_closes[-3] - 1
-            _, upper_threshold = self._get_thresholds(context)
-            if current_loss < 2 * upper_threshold:
-                return
         take_profit = len(intraday_closes) >= 2 and context.current_price > intraday_closes[-2]
         is_close = (take_profit or
-                    context.current_time >= position['entry_time'] + datetime.timedelta(minutes=10) or
-                    context.current_time.time() >= EXIT_TIME)
+                    context.current_time >= position['entry_time'] + datetime.timedelta(minutes=10))
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'Closing position: {is_close}. Current price {context.current_price}.')
         if is_close:
