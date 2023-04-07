@@ -11,7 +11,6 @@ matplotlib.use('agg')
 
 PROCESSOR_FACTORIES = [
     processors.OvernightProcessorFactory(),
-    processors.ZScoreProcessorFactory(),
     processors.O2lProcessorFactory(),
     processors.O2hProcessorFactory(),
     processors.BearMomentumProcessorFactory(),
