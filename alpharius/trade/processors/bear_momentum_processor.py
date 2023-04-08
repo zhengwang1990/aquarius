@@ -4,26 +4,38 @@ from typing import List, Optional
 import numpy as np
 from ..common import (
     ProcessorAction, ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
-    DATETIME_TYPE, DAYS_IN_A_MONTH)
+    DataSource, DATETIME_TYPE, DAYS_IN_A_MONTH)
+from ..stock_universe import IntradayVolatilityStockUniverse
 
 ENTRY_TIME = datetime.time(10, 0)
 EXIT_TIME = datetime.time(14, 0)
+NUM_STOCKS = 15
 CONFIG = {'TQQQ': 8, 'UCO': 9, 'FAS': 9, 'NUGT': 9}
+OTHER_N = 11
 
 
 class BearMomentumProcessor(Processor):
     """Momentum strategy that works in a bear market."""
 
     def __init__(self,
+                 lookback_start_date: DATETIME_TYPE,
+                 lookback_end_date: DATETIME_TYPE,
+                 data_source: DataSource,
                  output_dir: str) -> None:
         super().__init__(output_dir)
         self._positions = dict()
+        self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
+                                                               lookback_end_date,
+                                                               data_source,
+                                                               num_stocks=NUM_STOCKS)
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
-        return list(CONFIG.keys())
+        return list(set(self._stock_universe.get_stock_universe(view_time) +
+                        list(CONFIG.keys()) +
+                        list(self._positions.keys())))
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
         if context.symbol in self._positions:
@@ -39,7 +51,7 @@ class BearMomentumProcessor(Processor):
         if market_open_index is None:
             return
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
-        n = CONFIG[context.symbol]
+        n = CONFIG.get(context.symbol, OTHER_N)
         if len(intraday_closes) < n + 1:
             return
         interday_closes = context.interday_lookback['Close'][-DAYS_IN_A_MONTH * 2:]
@@ -71,7 +83,8 @@ class BearMomentumProcessor(Processor):
         position = self._positions[context.symbol]
         action_type = ActionType.SELL_TO_CLOSE if position['side'] == 'long' else ActionType.BUY_TO_CLOSE
         action = ProcessorAction(context.symbol, action_type, 1)
-        if context.current_time < position['entry_time'] + datetime.timedelta(minutes=60):
+        wait_minutes = 60 if context.symbol in CONFIG else 90
+        if context.current_time < position['entry_time'] + datetime.timedelta(minutes=wait_minutes):
             return
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'Closing position. Current price {context.current_price}.')
@@ -85,6 +98,9 @@ class BearMomentumProcessorFactory(ProcessorFactory):
         super().__init__()
 
     def create(self,
+               lookback_start_date: DATETIME_TYPE,
+               lookback_end_date: DATETIME_TYPE,
+               data_source: DataSource,
                output_dir: str,
                *args, **kwargs) -> BearMomentumProcessor:
-        return BearMomentumProcessor(output_dir)
+        return BearMomentumProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
