@@ -89,9 +89,7 @@ class Trading:
             processor_stock_universe = processor.get_stock_universe(self._today)
             self._processor_stock_universes[processor_name] = processor_stock_universe
             self._stock_universe[processor.get_trading_frequency()].update(processor_stock_universe)
-        self._logger.info('Stock universe of the day:\n%s',
-                          '\n'.join([f'{frequency}\n{universe}'
-                                     for frequency, universe in self._stock_universe.items()]))
+        self._logger.info('FIVE_MIN stock universe:\n%s', self._stock_universe.get(TradingFrequency.FIVE_MIN))
 
     def run(self) -> None:
         # Check if today is a trading day
@@ -214,7 +212,6 @@ class Trading:
             for symbol, t in tasks.items():
                 self._intraday_data[symbol] = t.result()
         latest_trades = data_loader.get_last_trades(all_symbols)
-        self._logger.info('Latest trades:\n%s', latest_trades)
         for symbol, price in latest_trades.items():
             intraday_lookback = self._intraday_data[symbol]
             if len(intraday_lookback) == 0:

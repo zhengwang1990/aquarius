@@ -69,7 +69,8 @@ class BearMomentumProcessor(Processor):
                 up += 1
         if up >= n - 2 or down >= n - 2:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                               f'Up count [{up} / {n}]. Down count [{down} / {n}].')
+                               f'Up count [{up} / {n}]. Down count [{down} / {n}]. '
+                               f'Current price {context.current_price}.')
         if down == n and context.current_price < context.prev_day_close:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'side': 'short'}
@@ -80,16 +81,25 @@ class BearMomentumProcessor(Processor):
             return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
+        def _exit_action():
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                               f'Closing position. Current price {context.current_price}.')
+            self._positions.pop(context.symbol)
+            return action
+
         position = self._positions[context.symbol]
         action_type = ActionType.SELL_TO_CLOSE if position['side'] == 'long' else ActionType.BUY_TO_CLOSE
         action = ProcessorAction(context.symbol, action_type, 1)
         wait_minutes = 60 if context.symbol in CONFIG else 90
-        if context.current_time < position['entry_time'] + datetime.timedelta(minutes=wait_minutes):
-            return
-        self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                           f'Closing position. Current price {context.current_price}.')
-        self._positions.pop(context.symbol)
-        return action
+        if context.current_time >= position['entry_time'] + datetime.timedelta(minutes=wait_minutes):
+            return _exit_action()
+        intrayday_closes = context.intraday_lookback['Close']
+        if (context.symbol not in CONFIG and
+                position['side'] == 'long' and
+                len(intrayday_closes) >= 2 and
+                intrayday_closes[-2] < context.prev_day_close and
+                context.current_price < context.prev_day_close):
+            return _exit_action()
 
 
 class BearMomentumProcessorFactory(ProcessorFactory):
