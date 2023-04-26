@@ -88,7 +88,7 @@ class H2lFiveMinProcessor(Processor):
                                f'Current loss: {current_loss * 100:.2f}%. '
                                f'Threshold: {lower_threshold * 100:.2f}% ~ {upper_threshold * 100:.2f}%. '
                                f'Current price: {context.current_price}. '
-                               f'Prev close price: {intraday_closes[-2]}.')
+                               f'Prev open/close price: {intraday_opens[-2]}/{intraday_closes[-2]}.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'status': 'active'}
