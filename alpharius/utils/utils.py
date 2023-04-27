@@ -18,7 +18,7 @@ Transaction = recordclass.recordclass(
      'qty', 'gl', 'gl_pct', 'slippage', 'slippage_pct'])
 
 
-def get_transactions(start_date: Optional[str]):
+def get_transactions(start_date: Optional[str]) -> List[Transaction]:
     """Gets transactions from start date until today.
 
     params:
@@ -119,7 +119,7 @@ def get_transactions(start_date: Optional[str]):
     return transactions
 
 
-def get_colored_value(value: str, color: str, with_arrow: bool = False):
+def get_colored_value(value: str, color: str, with_arrow: bool = False) -> str:
     """Returns HTML of a value with color annotations.
 
     params:
@@ -136,7 +136,7 @@ def get_colored_value(value: str, color: str, with_arrow: bool = False):
     return f'<span style="color:{color};">{arrow}{value}</span>'
 
 
-def get_signed_percentage(value: float, with_arrow: bool = False):
+def get_signed_percentage(value: float, with_arrow: bool = False) -> str:
     """Returns HTML of a percentage value with sign and color annotations.
 
     params:
@@ -147,13 +147,13 @@ def get_signed_percentage(value: float, with_arrow: bool = False):
     return get_colored_value(f'{value * 100:+.2f}%', color, with_arrow)
 
 
-def get_current_time():
+def get_current_time() -> pd.Timestamp:
     """Gets current time of NY time zone."""
     # Use time.time() instead of 'now' so that it can be mocked in test.
     return pd.to_datetime(time.time(), utc=True, unit='s').tz_convert(TIME_ZONE)
 
 
-def get_today():
+def get_today() -> pd.Timestamp:
     """Gets a datetime object of today at 00:00 NY time."""
     # Mocking time.time() will change the behavior of the method.
     return pd.to_datetime(
