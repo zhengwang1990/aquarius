@@ -9,6 +9,7 @@ from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
 EXIT_TIME = datetime.time(10, 0)
+N_LONG = 6
 
 
 class CrossCloseProcessor(Processor):
@@ -45,7 +46,10 @@ class CrossCloseProcessor(Processor):
         if context.symbol in self._positions:
             return self._close_position(context)
         else:
-            return self._open_position(context)
+            action = self._open_short_position(context)
+            if not action:
+                action = self._open_long_position(context)
+            return action
 
     def _get_threshold(self, context: Context) -> float:
         key = context.symbol + context.current_time.strftime('%F')
@@ -59,7 +63,7 @@ class CrossCloseProcessor(Processor):
         self._memo[key] = threshold
         return threshold
 
-    def _open_position(self, context: Context) -> Optional[ProcessorAction]:
+    def _open_short_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
         if t >= EXIT_TIME:
             return
@@ -82,27 +86,64 @@ class CrossCloseProcessor(Processor):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Prev loss: {prev_loss * 100:.2f}%. '
                                f'Threshold: {threshold * 100:.2f}%. '
-                               f'Current price {context.current_price}.')
+                               f'Current price {context.current_price}. '
+                               'Side: short')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
-                                               'status': 'active'}
+                                               'status': 'active',
+                                               'side': 'short'}
             return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
+
+    def _open_long_position(self, context: Context) -> Optional[ProcessorAction]:
+        market_open_index = context.market_open_index
+        if market_open_index is None:
+            return
+        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        if len(intraday_closes) < N_LONG + 1:
+            return
+        if not intraday_closes[-2] < context.prev_day_close < intraday_closes[-1]:
+            return
+        for i in range(-N_LONG, 0):
+            if intraday_closes[i] < intraday_closes[i - 1]:
+                return
+        if context.current_price != np.max(intraday_closes):
+            return
+        if intraday_closes[-N_LONG] > 0.6 * np.max(intraday_closes) + 0.4 * np.min(intraday_closes):
+            return
+        intraday_opens = context.intraday_lookback['Open'][market_open_index:]
+        for i in range(len(intraday_closes) - N_LONG):
+            if intraday_opens[i] < context.prev_day_close < intraday_closes[i]:
+                break
+        else:
+            return
+        self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                           f'Current price {context.current_price}. Side: long.')
+        self._positions[context.symbol] = {'entry_time': context.current_time,
+                                           'status': 'active',
+                                           'side': 'long'}
+        return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
         if position['status'] != 'active':
             return
-        intraday_closes = context.intraday_lookback['Close']
-        take_profit = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=5)
-                       and context.current_price < intraday_closes[-2])
-        is_close = (take_profit or
-                    context.current_time >= position['entry_time'] + datetime.timedelta(minutes=10) or
-                    context.current_time.time() >= EXIT_TIME)
+        side = position['side']
+        if side == 'short':
+            intraday_closes = context.intraday_lookback['Close']
+            take_profit = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=5)
+                           and context.current_price < intraday_closes[-2])
+            is_close = (take_profit or
+                        context.current_time >= position['entry_time'] + datetime.timedelta(minutes=10) or
+                        context.current_time.time() >= EXIT_TIME)
+        else:
+            is_close = (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=60)
+                        or context.current_time.time() == datetime.time(16, 0))
         if is_close:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Closing position. Current price {context.current_price}.')
             position['status'] = 'inactive'
-            return ProcessorAction(context.symbol, ActionType.BUY_TO_CLOSE, 1)
+            action_type = ActionType.BUY_TO_CLOSE if side == 'short' else ActionType.SELL_TO_CLOSE
+            return ProcessorAction(context.symbol, action_type, 1)
 
 
 class CrossCloseProcessorFactory(ProcessorFactory):
