@@ -8,3 +8,4 @@ from .h2l_five_min_processor import H2lFiveMinProcessorFactory
 from .l2h_processor import L2hProcessorFactory
 from .cross_close_processor import CrossCloseProcessorFactory
 from .tqqq_processor import TqqqProcessorFactory
+from .h2l_five_min2_processor import H2lFiveMin2ProcessorFactory

@@ -13,6 +13,7 @@ PROCESSOR_FACTORIES = [
     processors.BearMomentumProcessorFactory(),
     processors.CrossCloseProcessorFactory(),
     processors.H2lFiveMinProcessorFactory(),
+    processors.H2lFiveMin2ProcessorFactory(),
     processors.H2lHourProcessorFactory(),
     processors.L2hProcessorFactory(),
     processors.O2hProcessorFactory(),
