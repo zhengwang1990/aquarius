@@ -11,7 +11,7 @@ NUM_UNIVERSE_SYMBOLS = 20
 N = 4
 
 
-class H2lFiveMin2Processor(Processor):
+class DownFourProcessor(Processor):
 
     def __init__(self,
                  lookback_start_date: DATETIME_TYPE,
@@ -101,7 +101,7 @@ class H2lFiveMin2Processor(Processor):
             return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
 
 
-class H2lFiveMin2ProcessorFactory(ProcessorFactory):
+class DownFourProcessorFactory(ProcessorFactory):
 
     def __init__(self):
         super().__init__()
@@ -111,5 +111,5 @@ class H2lFiveMin2ProcessorFactory(ProcessorFactory):
                lookback_end_date: DATETIME_TYPE,
                data_source: DataSource,
                output_dir: str,
-               *args, **kwargs) -> H2lFiveMin2Processor:
-        return H2lFiveMin2Processor(lookback_start_date, lookback_end_date, data_source, output_dir)
+               *args, **kwargs) -> DownFourProcessor:
+        return DownFourProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
