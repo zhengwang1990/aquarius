@@ -8,8 +8,6 @@ from ..common import (
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 40
-ENTRY_TIME = datetime.time(10, 0)
-EXIT_TIME = datetime.time(10, 30)
 
 
 class H2lFiveMinProcessor(Processor):
@@ -63,7 +61,8 @@ class H2lFiveMinProcessor(Processor):
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
-        if t < ENTRY_TIME or t >= EXIT_TIME:
+        if not (datetime.time(10, 0) <= t < datetime.time(10, 30) or
+                datetime.time(15, 0) <= t < datetime.time(15, 30)):
             return
         market_open_index = context.market_open_index
         if market_open_index is None:
