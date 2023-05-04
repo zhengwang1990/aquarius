@@ -8,7 +8,6 @@ from ..common import (
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
-EXIT_TIME = datetime.time(10, 0)
 N_LONG = 6
 
 
@@ -65,7 +64,8 @@ class CrossCloseProcessor(Processor):
 
     def _open_short_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
-        if t >= EXIT_TIME:
+        if not (t < datetime.time(10, 0) or
+                datetime.time(10, 30) <= t < datetime.time(11, 0)):
             return
         market_open_index = context.market_open_index
         if market_open_index is None:
@@ -134,10 +134,10 @@ class CrossCloseProcessor(Processor):
                            and context.current_price < intraday_closes[-2])
             is_close = (take_profit or
                         context.current_time >= position['entry_time'] + datetime.timedelta(minutes=10) or
-                        context.current_time.time() >= EXIT_TIME)
+                        context.current_time.time() >= datetime.time(16, 0))
         else:
             is_close = (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=60)
-                        or context.current_time.time() == datetime.time(16, 0))
+                        or context.current_time.time() >= datetime.time(16, 0))
         if is_close:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Closing position. Current price {context.current_price}.')
