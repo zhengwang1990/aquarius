@@ -8,7 +8,7 @@ from typing import List
 import alpaca_trade_api as tradeapi
 import numpy as np
 import pandas as pd
-from .common import (DataSource, DATETIME_TYPE,
+from .common import (DataSource, DATETIME_TYPE, DAYS_IN_A_QUARTER,
                      DAYS_IN_A_MONTH, CACHE_DIR, timestamp_to_index)
 from .constants import COMPANY_SYMBOLS
 from .data_loader import load_tradable_history
@@ -147,6 +147,9 @@ class IntradayVolatilityStockUniverse(StockUniverse):
                 continue
             prev_day_ind = timestamp_to_index(hist.index, prev_day)
             if prev_day_ind < DAYS_IN_A_MONTH:
+                continue
+            prev_close = hist['Close'][prev_day_ind]
+            if prev_close < 0.4 * np.max(hist['Close'][-DAYS_IN_A_QUARTER:]):
                 continue
             intraday_volatility = self._get_intraday_range(
                 symbol, prev_day_ind)
