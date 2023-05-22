@@ -11,6 +11,11 @@ NUM_UNIVERSE_SYMBOLS = 20
 N_LONG = 6
 
 
+def _round_num(num: float):
+    magnitude = 10 ** (np.round(np.log10(num)) - 1)
+    return np.round(num / magnitude) * magnitude
+
+
 class CrossCloseProcessor(Processor):
     """Strategy acting on 5-min bar crossing previous day close."""
 
@@ -101,7 +106,12 @@ class CrossCloseProcessor(Processor):
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         if len(intraday_closes) < N_LONG + 1:
             return
-        if not intraday_closes[-2] < context.prev_day_close < intraday_closes[-1]:
+        level = None
+        if intraday_closes[-2] < context.prev_day_close < intraday_closes[-1]:
+            level = context.prev_day_close
+        elif intraday_closes[-2] < _round_num(context.current_price) < intraday_closes[-1]:
+            level = _round_num(context.current_price)
+        if level is None:
             return
         for i in range(-N_LONG, 0):
             if intraday_closes[i] < intraday_closes[i - 1]:
@@ -112,12 +122,13 @@ class CrossCloseProcessor(Processor):
             return
         intraday_opens = context.intraday_lookback['Open'][market_open_index:]
         for i in range(len(intraday_closes) - N_LONG):
-            if intraday_opens[i] < context.prev_day_close < intraday_closes[i]:
+            if intraday_opens[i] < level < intraday_closes[i]:
                 break
         else:
             return
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                           f'Current price {context.current_price}. Side: long.')
+                           f'Level: {level}. '
+                           f'Current price: {context.current_price}. Side: long.')
         self._positions[context.symbol] = {'entry_time': context.current_time,
                                            'status': 'active',
                                            'side': 'long'}
