@@ -9,3 +9,4 @@ from .l2h_processor import L2hProcessorFactory
 from .cross_close_processor import CrossCloseProcessorFactory
 from .tqqq_processor import TqqqProcessorFactory
 from .down_four_processor import DownFourProcessorFactory
+from .abcd_processor import AbcdProcessorFactory
