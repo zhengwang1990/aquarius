@@ -69,12 +69,18 @@ class O2hProcessor(Processor):
         market_open_price = context.today_open
         if market_open_price is None:
             return
+        intraday_closes = context.intraday_lookback['Close']
+        if len(intraday_closes) < 3:
+            return
         current_gain = context.current_price / market_open_price - 1
         z_score = (current_gain - o2h_avg) / (o2h_std + 1E-7)
-        is_trade = 3 > z_score > 2
+        bar_diff = abs(intraday_closes[-3] - intraday_closes[-2]) - abs(intraday_closes[-2] - intraday_closes[-1])
+        is_trade = bar_diff > 0
+        is_trade = is_trade and 3.5 > z_score > 2
         if is_trade or (context.mode == Mode.TRADE and z_score > 1.5):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Current gain: {current_gain * 100:.2f}%. Z-score: {z_score:.2f}. '
+                               f'Bar diff: {bar_diff}. '
                                f'Open price: {market_open_price}. Current price: {context.current_price}.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
@@ -85,7 +91,7 @@ class O2hProcessor(Processor):
         position = self._positions[context.symbol]
         if position['status'] != 'active':
             return
-        if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
+        if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=35) or
                 context.current_time.time() >= EXIT_TIME):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Closing position. Current price {context.current_price}.')
