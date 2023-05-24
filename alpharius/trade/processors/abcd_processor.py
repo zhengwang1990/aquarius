@@ -46,7 +46,7 @@ class AbcdProcessor(Processor):
             return self._open_position(context)
 
     def _get_l2h(self, context: Context) -> float:
-        key = context.symbol + context.current_time.strftime('%F')
+        key = context.symbol + ':l2h:' + context.current_time.strftime('%F')
         if key in self._memo:
             return self._memo[key]
         interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
@@ -56,12 +56,29 @@ class AbcdProcessor(Processor):
         self._memo[key] = l2h_avg
         return l2h_avg
 
+    def _get_h2l(self, context: Context) -> float:
+        key = context.symbol + ':h2l:' + context.current_time.strftime('%F')
+        if key in self._memo:
+            return self._memo[key]
+        interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
+        interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
+        h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
+        h2l_avg = np.average(h2l_losses)
+        self._memo[key] = h2l_avg
+        return h2l_avg
+
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
-        t = context.current_time.time()
-        if t < datetime.time(10, 30) or t > datetime.time(15, 30):
-            return
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
             return
+        t = context.current_time.time()
+        if (datetime.time(10, 30) <= t <= datetime.time(15, 30) and
+                context.current_price > context.prev_day_close):
+            return self._open_long_position(context)
+        if (datetime.time(12, 0) <= t <= datetime.time(15, 30) and
+                context.current_price < context.prev_day_close):
+            return self._open_short_position(context)
+
+    def _open_long_position(self, context: Context) -> Optional[ProcessorAction]:
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
@@ -82,7 +99,7 @@ class AbcdProcessor(Processor):
             return
         if context.mode == Mode.TRADE:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                               f'Checking bar size conditions. Current price: {context.current_price}.')
+                               f'Checking bar shape conditions. Current price: {context.current_price}.')
         if abs(intraday_closes[-3] - intraday_closes[-2]) < abs(intraday_closes[-2] - intraday_closes[-1]):
             return
         if intraday_closes[-1] >= intraday_closes[-2]:
@@ -90,17 +107,60 @@ class AbcdProcessor(Processor):
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'L2h: {l2h}. Intraday high: {intraday_high}. Current price: {context.current_price}.')
         self._positions[context.symbol] = {'entry_time': context.current_time,
-                                           'status': 'active'}
+                                           'status': 'active',
+                                           'side': 'long'}
         return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
+
+    def _open_short_position(self, context: Context) -> Optional[ProcessorAction]:
+        market_open_index = context.market_open_index
+        if market_open_index is None:
+            return
+        open_price = context.intraday_lookback['Open'][market_open_index]
+        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        if len(intraday_closes) < 10:
+            return
+        intraday_low = np.min(intraday_closes)
+        if not context.prev_day_close > open_price > context.current_price > intraday_low:
+            return
+        h2l = self._get_h2l(context)
+        if intraday_low / open_price - 1 > 0.7 * h2l:
+            return
+        if intraday_low / context.current_price - 1 > 0.5 * h2l:
+            return
+        min_i = np.argmin(intraday_closes)
+        if len(intraday_closes) > min_i + 10 or len(intraday_closes) < min_i + 5:
+            return
+        if context.mode == Mode.TRADE:
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                               f'Checking bar shape conditions. Current price: {context.current_price}.')
+        for i in range(-5, 0):
+            if intraday_closes[i] < intraday_closes[i - 1]:
+                break
+        else:
+            return
+        if abs(intraday_closes[-3] - intraday_closes[-2]) < abs(intraday_closes[-2] - intraday_closes[-1]):
+            return
+        if intraday_closes[-1] <= intraday_closes[-2]:
+            return
+        self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                           f'H2l: {h2l}. Intraday low: {intraday_low}. Current price: {context.current_price}.')
+        self._positions[context.symbol] = {'entry_time': context.current_time,
+                                           'status': 'active',
+                                           'side': 'short'}
+        return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
         if position['status'] != 'active':
             return
+        side = position['side']
         intraday_closes = context.intraday_lookback['Close']
         take_profit = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=30)
-                       and len(intraday_closes) >= 7
-                       and context.current_price > intraday_closes[-7])
+                       and len(intraday_closes) >= 7)
+        if side == 'long':
+            take_profit = take_profit and context.current_price > intraday_closes[-7]
+        else:
+            take_profit = take_profit and context.current_price < intraday_closes[-7]
         is_close = (take_profit or
                     context.current_time >= position['entry_time'] + datetime.timedelta(minutes=40)
                     or context.current_time.time() >= datetime.time(16, 0))
@@ -108,7 +168,8 @@ class AbcdProcessor(Processor):
                            f'Closing position: {is_close}. Current price {context.current_price}.')
         if is_close:
             position['status'] = 'inactive'
-            return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
+            action_type = ActionType.SELL_TO_CLOSE if side == 'long' else ActionType.BUY_TO_CLOSE
+            return ProcessorAction(context.symbol, action_type, 1)
 
 
 class AbcdProcessorFactory(ProcessorFactory):
