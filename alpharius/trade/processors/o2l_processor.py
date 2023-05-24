@@ -92,13 +92,15 @@ class O2lProcessor(Processor):
             return
         intraday_closes = context.intraday_lookback['Close']
         elapsed_fifteen = context.current_time == position['entry_time'] + datetime.timedelta(minutes=15)
-        take_profit = elapsed_fifteen and len(intraday_closes) >= 3 and intraday_closes[-1] > intraday_closes[-3]
-        stop_loss = elapsed_fifteen and intraday_closes[-3] < context.prev_day_close < context.today_open
-        if (take_profit or stop_loss or
-                context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
-                context.current_time.time() >= EXIT_TIME):
-            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                               f'Closing position. Current price {context.current_price}.')
+        take_profit = elapsed_fifteen and len(intraday_closes) >= 4 and intraday_closes[-1] > intraday_closes[-4]
+        early_stop = (elapsed_fifteen and len(intraday_closes) >= 4 and
+                      intraday_closes[-4] < context.prev_day_close < context.today_open)
+        is_close = (take_profit or early_stop or
+                    context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30) or
+                    context.current_time.time() >= EXIT_TIME)
+        self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                           f'Closing position: {is_close}. Current price: {context.current_price}.')
+        if is_close:
             position['status'] = 'inactive'
             return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
 
