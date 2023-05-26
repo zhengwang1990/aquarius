@@ -35,13 +35,11 @@ class OvernightProcessor(Processor):
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         hold_symbols = [position.symbol for position in self._hold_positions]
-        self._universe_symbols = self._stock_universe.get_stock_universe(
-            view_time)
+        self._universe_symbols = self._stock_universe.get_stock_universe(view_time)
         return list(set(hold_symbols + self._universe_symbols))
 
     def process_all_data(self, contexts: List[Context]) -> List[ProcessorAction]:
-        current_prices = {
-            context.symbol: context.current_price for context in contexts}
+        current_prices = {context.symbol: context.current_price for context in contexts}
         if not contexts:
             return []
         current_time = contexts[0].current_time
@@ -88,6 +86,8 @@ class OvernightProcessor(Processor):
         if len(interday_lookback) < LOOKBACK_DAYS:
             return 0
         closes = interday_lookback['Close'][-LOOKBACK_DAYS:]
+        if context.current_price / closes[-DAYS_IN_A_WEEK] - 1 < -0.5:
+            return 0
         values = np.append(closes, context.current_price)
         profits = [np.log(values[k + 1] / values[k])
                    for k in range(len(values) - 1)]
