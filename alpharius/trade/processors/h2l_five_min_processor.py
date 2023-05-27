@@ -4,7 +4,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DATETIME_TYPE)
+    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DAYS_IN_A_QUARTER, DATETIME_TYPE)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 40
@@ -66,6 +66,9 @@ class H2lFiveMinProcessor(Processor):
             return
         market_open_index = context.market_open_index
         if market_open_index is None:
+            return
+        quarterly_high = np.max(context.interday_lookback['Close'][-DAYS_IN_A_QUARTER:])
+        if context.current_price < 0.4 * quarterly_high:
             return
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         if len(intraday_closes) < 2:
