@@ -57,7 +57,9 @@ class BearMomentumProcessor(Processor):
         interday_closes = context.interday_lookback['Close'][-DAYS_IN_A_MONTH * 2:]
         if len(interday_closes) < DAYS_IN_A_MONTH * 2:
             return
-        if context.current_price > np.max(interday_closes) * 0.7:
+        allow_long = context.current_price < np.max(interday_closes) * 0.7
+        allow_short = allow_long or context.current_price > np.min(interday_closes) * 1.5
+        if not allow_short and not allow_long:
             return
         up, down = 0, 0
         intraday_high = context.intraday_lookback['High']
@@ -71,11 +73,11 @@ class BearMomentumProcessor(Processor):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Up count [{up} / {n}]. Down count [{down} / {n}]. '
                                f'Current price {context.current_price}.')
-        if down == n and context.current_price < context.prev_day_close:
+        if down == n and context.current_price < context.prev_day_close and allow_short:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'side': 'short'}
             return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
-        if up == n and context.current_price > context.prev_day_close:
+        if up == n and context.current_price > context.prev_day_close and allow_long:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'side': 'long'}
             return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
@@ -93,12 +95,19 @@ class BearMomentumProcessor(Processor):
         wait_minutes = 60 if context.symbol in CONFIG else 90
         if context.current_time >= position['entry_time'] + datetime.timedelta(minutes=wait_minutes):
             return _exit_action()
-        intrayday_closes = context.intraday_lookback['Close']
+        intraday_closes = context.intraday_lookback['Close']
         if (context.symbol not in CONFIG and
                 position['side'] == 'long' and
-                len(intrayday_closes) >= 2 and
-                intrayday_closes[-2] < context.prev_day_close and
+                len(intraday_closes) >= 2 and
+                intraday_closes[-2] < context.prev_day_close and
                 context.current_price < context.prev_day_close):
+            return _exit_action()
+        entry_index = len(intraday_closes) - 1 - (context.current_time - position['entry_time']).seconds // 300
+        if (context.symbol not in CONFIG and
+                position['side'] == 'short' and
+                len(intraday_closes) > max(entry_index, 3) and
+                intraday_closes[-1] > intraday_closes[-2] > intraday_closes[-3] and
+                context.current_price > context.prev_day_close > intraday_closes[entry_index]):
             return _exit_action()
 
 
