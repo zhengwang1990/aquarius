@@ -160,6 +160,7 @@ class Context:
         self.interday_lookback = interday_lookback
         self.intraday_lookback = intraday_lookback
         self.mode = mode
+        self._market_open_index = None
 
     @property
     def prev_day_close(self) -> float:
@@ -167,8 +168,11 @@ class Context:
 
     @property
     def market_open_index(self) -> Optional[int]:
+        if self._market_open_index:
+            return self._market_open_index
         for i in range(len(self.intraday_lookback)):
             if self.intraday_lookback.index[i].time() >= MARKET_OPEN:
+                self._market_open_index = i
                 return i
         return None
 

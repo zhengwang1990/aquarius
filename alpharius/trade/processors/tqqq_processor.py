@@ -55,10 +55,15 @@ class TqqqProcessor(Processor):
         return l2h_avg
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
+        if context.market_open_index is None:
+            return
         action = self._last_hour_momentum(context)
         if action:
             return action
         action = self._mean_reversion(context)
+        if action:
+            return action
+        action = self._first_hour_momentum(context)
         if action:
             return action
 
@@ -68,8 +73,6 @@ class TqqqProcessor(Processor):
             return
         interday_closes = context.interday_lookback['Close']
         market_open_index = context.market_open_index
-        if market_open_index is None:
-            return
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         # short
         l2h = self._get_l2h(context)
@@ -99,6 +102,33 @@ class TqqqProcessor(Processor):
                                                    'entry_time': context.current_time}
                 return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
+    def _first_hour_momentum(self, context: Context) -> Optional[ProcessorAction]:
+        t = context.current_time.time()
+        if t != datetime.time(10, 0):
+            return
+        market_open_index = context.market_open_index
+        intraday_highs = context.intraday_lookback['High'][market_open_index:]
+        intraday_opens = context.intraday_lookback['Open'][market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        if len(intraday_highs) != 6:
+            return
+        cnt = 0
+        for i in range(len(intraday_closes)):
+            cnt += int(intraday_closes[i] >= intraday_opens[i])
+        if cnt < 5:
+            return
+        for i in range(len(intraday_highs) - 1):
+            if intraday_highs[i] > intraday_highs[i + 1] and intraday_closes[i] > intraday_closes[i + 1]:
+                return
+        bar_sizes = [abs(intraday_closes[i] - intraday_opens[i]) for i in range(len(intraday_closes))]
+        bar_sizes.sort(reverse=True)
+        if bar_sizes[0] > 2 * bar_sizes[1]:
+            return
+        self._positions[context.symbol] = {'side': 'long',
+                                           'strategy': 'first_hour_momentum',
+                                           'entry_time': context.current_time}
+        return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
+
     def _last_hour_momentum(self, context: Context) -> Optional[ProcessorAction]:
         def _open_position(side: str) -> ProcessorAction:
             self._positions[context.symbol] = {'side': side,
@@ -106,6 +136,7 @@ class TqqqProcessor(Processor):
                                                'entry_time': context.current_time}
             action_type = ActionType.SELL_TO_OPEN if side == 'short' else ActionType.BUY_TO_OPEN
             return ProcessorAction(context.symbol, action_type, 1)
+
         t = context.current_time.time()
         if t <= datetime.time(15, 0) or t >= datetime.time(15, 30):
             return
@@ -113,8 +144,6 @@ class TqqqProcessor(Processor):
         if interday_closes[-1] > np.max(interday_closes[-DAYS_IN_A_MONTH:]) * 0.9:
             return
         market_open_index = context.market_open_index
-        if market_open_index is None:
-            return
         intraday_opens = context.intraday_lookback['Open'][market_open_index:]
         change_from_open = context.current_price / intraday_opens[0] - 1
         change_from_close = context.current_price / context.prev_day_close - 1
@@ -150,6 +179,7 @@ class TqqqProcessor(Processor):
                                f'Closing position. Current price {context.current_price}.')
             self._positions.pop(context.symbol)
             return action
+
         position = self._positions[context.symbol]
         action_type = ActionType.SELL_TO_CLOSE if position['side'] == 'long' else ActionType.BUY_TO_CLOSE
         action = ProcessorAction(context.symbol, action_type, 1)
@@ -159,6 +189,9 @@ class TqqqProcessor(Processor):
                 return exit_position()
         if strategy == 'mean_reversion':
             if context.current_time >= position['entry_time'] + datetime.timedelta(minutes=60):
+                return exit_position()
+        if strategy == 'first_hour_momentum':
+            if context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30):
                 return exit_position()
 
 
