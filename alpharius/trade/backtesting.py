@@ -44,6 +44,7 @@ class Backtesting:
         self._positions = []
         self._daily_equity = [1]
         self._num_win, self._num_lose = 0, 0
+        self._effective_win, self._effective_lose = 0, 0
         self._cash = 1
         self._interday_data = None
 
@@ -339,8 +340,10 @@ class Backtesting:
                 profit *= -1
             if profit > 0:
                 self._num_win += 1
+                self._effective_win += int(abs(qty) > 1E-7)
             else:
                 self._num_lose += 1
+                self._effective_lose += int(abs(qty) > 1E-7)
             executed_actions.append(
                 Transaction(symbol, action.type == ActionType.SELL_TO_CLOSE, action.processor,
                             current_position.entry_price, action.price, current_position.entry_time,
@@ -444,13 +447,18 @@ class Backtesting:
 
         outputs = [get_header('Summary')]
         n_trades = self._num_win + self._num_lose
+        effective_trades = self._effective_win + self._effective_lose
         success_rate = self._num_win / n_trades if n_trades > 0 else 0
+        effective_success_rate = self._effective_win / effective_trades if effective_trades > 0 else 0
         market_dates = self._market_dates[:len(self._daily_equity) - 1]
         if not market_dates:
             return
         summary = [['Time Range', f'{market_dates[0].date()} ~ {market_dates[-1].date()}'],
-                   ['Success Rate', f'{success_rate * 100:.2f}%'],
-                   ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)'],
+                   ['Total Success Rate', f'{success_rate * 100:.2f}%'],
+                   ['Effective Success Rate', f'{effective_success_rate * 100:.2f}%'],
+                   ['Num of Total Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)'],
+                   ['Num of Effective Trades',
+                    f'{effective_trades} ({effective_trades / len(market_dates):.2f} per day)'],
                    ['Output Dir', os.path.relpath(self._output_dir, BASE_DIR)]]
         outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
 
