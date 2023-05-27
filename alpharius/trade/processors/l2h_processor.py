@@ -68,8 +68,7 @@ class L2hProcessor(Processor):
         if len(interday_closes) < DAYS_IN_A_YEAR:
             return
         if (context.current_price < 1.2 * interday_closes[-DAYS_IN_A_MONTH] or
-                context.current_price > interday_closes[-DAYS_IN_A_MONTH] * 2 or
-                context.current_price > interday_closes[-DAYS_IN_A_YEAR] * 3):
+                context.current_price > interday_closes[-DAYS_IN_A_MONTH] * 2):
             return
         market_open_index = context.market_open_index
         if market_open_index is None:
