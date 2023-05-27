@@ -37,7 +37,7 @@ class AbcdProcessor(Processor):
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
-                        list(self._positions.keys())))
+                        list(self._positions.keys()) + ['TQQQ']))
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
         if context.symbol in self._positions:
@@ -73,12 +73,16 @@ class AbcdProcessor(Processor):
         t = context.current_time.time()
         if (datetime.time(10, 30) <= t <= datetime.time(15, 30) and
                 context.current_price > context.prev_day_close):
-            return self._open_long_position(context)
+            if context.symbol == 'TQQQ':
+                return self._open_long_position(context, 0.7, 0.4)
+            else:
+                return self._open_long_position(context, 1, 0.6)
         if (datetime.time(12, 0) <= t <= datetime.time(15, 30) and
-                context.current_price < context.prev_day_close):
+                context.current_price < context.prev_day_close and
+                context.symbol != 'TQQQ'):
             return self._open_short_position(context)
 
-    def _open_long_position(self, context: Context) -> Optional[ProcessorAction]:
+    def _open_long_position(self, context: Context, a: float, b: float) -> Optional[ProcessorAction]:
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
@@ -90,9 +94,9 @@ class AbcdProcessor(Processor):
         if not context.prev_day_close < open_price < context.current_price < intraday_high:
             return
         l2h = self._get_l2h(context)
-        if intraday_high / open_price - 1 < 1 * l2h:
+        if intraday_high / open_price - 1 < a * l2h:
             return
-        if intraday_high / context.current_price - 1 < 0.6 * l2h:
+        if intraday_high / context.current_price - 1 < b * l2h:
             return
         max_i = np.argmax(intraday_closes)
         if len(intraday_closes) > max_i + 15 or len(intraday_closes) < max_i + 10:
