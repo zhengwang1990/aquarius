@@ -55,14 +55,14 @@ class H2lFiveMinProcessor(Processor):
             h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
             h2l_avg = np.average(h2l_losses)
             self._memo[key] = h2l_avg
-        lower_threshold = h2l_avg
+        lower_threshold = h2l_avg * 1.5
         upper_threshold = h2l_avg * 0.5
         return lower_threshold, upper_threshold
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
         if not (datetime.time(10, 0) <= t < datetime.time(10, 30) or
-                datetime.time(15, 0) <= t < datetime.time(15, 30)):
+                datetime.time(13, 0) <= t < datetime.time(15, 30)):
             return
         market_open_index = context.market_open_index
         if market_open_index is None:
