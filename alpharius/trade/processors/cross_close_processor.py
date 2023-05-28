@@ -136,8 +136,6 @@ class CrossCloseProcessor(Processor):
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
-        if position['status'] != 'active':
-            return
         side = position['side']
         if side == 'short':
             intraday_closes = context.intraday_lookback['Close']

@@ -97,8 +97,6 @@ class H2lFiveMinProcessor(Processor):
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
-        if position['status'] != 'active':
-            return
         intraday_closes = context.intraday_lookback['Close']
         take_profit = len(intraday_closes) >= 2 and context.current_price > intraday_closes[-2]
         is_close = (take_profit or

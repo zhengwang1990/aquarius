@@ -91,8 +91,6 @@ class DownFourProcessor(Processor):
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
-        if position['status'] != 'active':
-            return
         is_close = context.current_time >= position['entry_time'] + datetime.timedelta(minutes=20)
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'Closing position: {is_close}. Current price {context.current_price}.')
