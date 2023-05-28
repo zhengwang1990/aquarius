@@ -44,8 +44,8 @@ def main():
         start_date = args.start_date or default_start_date
         end_date = args.end_date or default_end_date
         runner = Backtesting(start_date=start_date, end_date=end_date,
-                             ack_all=args.ack_all,
-                             processor_factories=PROCESSOR_FACTORIES)
+                             processor_factories=PROCESSOR_FACTORIES,
+                             ack_all=args.ack_all)
         runner.run()
     else:
         runner = Trading(processor_factories=PROCESSOR_FACTORIES)

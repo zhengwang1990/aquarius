@@ -32,8 +32,8 @@ class Backtesting:
     def __init__(self,
                  start_date: Union[DATETIME_TYPE, str],
                  end_date: Union[DATETIME_TYPE, str],
-                 ack_all: bool,
-                 processor_factories: List[ProcessorFactory]) -> None:
+                 processor_factories: List[ProcessorFactory],
+                 ack_all: Optional[bool] = False) -> None:
         if isinstance(start_date, str):
             start_date = pd.to_datetime(start_date)
         if isinstance(end_date, str):

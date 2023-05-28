@@ -7,7 +7,7 @@ import pytest
 import sqlalchemy
 from alpharius import trade
 from alpharius.trade import PROCESSOR_FACTORIES
-from ..fakes import Account, FakeAlpaca, FakeProcessorFactory, FakeDbEngine
+from ..fakes import Account, FakeAlpaca, FakeProcessor, FakeProcessorFactory, FakeDbEngine
 
 
 @pytest.fixture(autouse=True)
@@ -101,7 +101,8 @@ def test_trade_transactions_executed(mocker, mock_alpaca):
         {'symbol': 'GOOG', 'action_type': trade.ActionType.BUY_TO_CLOSE,
          'qty': 10, 'side': 'buy', 'notional': None},
     ]
-    actions = [trade.Action(t['symbol'], t['action_type'], 1, 100, 'Processor')
+    actions = [trade.Action(t['symbol'], t['action_type'], 1, 100,
+                            FakeProcessor(trade.TradingFrequency.FIVE_MIN))
                for t in expected_transactions]
     mocker.patch.object(FakeAlpaca, 'submit_order')
 
@@ -116,9 +117,12 @@ def test_trade_transactions_executed(mocker, mock_alpaca):
 
 def test_trade_transactions_skipped(mock_alpaca):
     trading = trade.Trading(processor_factories=[])
-    actions = [trade.Action('QQQ', trade.ActionType.BUY_TO_CLOSE, 1, 100, 'Processor'),
-               trade.Action('GOOG', trade.ActionType.SELL_TO_CLOSE, 1, 100, 'Processor'),
-               trade.Action('AAPL', trade.ActionType.SELL_TO_CLOSE, 1, 100, 'Processor')]
+    actions = [trade.Action('QQQ', trade.ActionType.BUY_TO_CLOSE, 1, 100,
+                            FakeProcessor(trade.TradingFrequency.FIVE_MIN)),
+               trade.Action('GOOG', trade.ActionType.SELL_TO_CLOSE, 1, 100,
+                            FakeProcessor(trade.TradingFrequency.FIVE_MIN)),
+               trade.Action('AAPL', trade.ActionType.SELL_TO_CLOSE, 1, 100,
+                            FakeProcessor(trade.TradingFrequency.FIVE_MIN))]
 
     trading._trade(actions)
 
@@ -132,7 +136,7 @@ def test_update_db(mocker, mock_engine):
     mocker.patch('builtins.open', mocker.mock_open(read_data='data'))
     mocker.patch.object(time, 'time', return_value=exit_time.timestamp() + 30)
     trading = trade.Trading(processor_factories=[])
-    trading._update_db(
-        [trade.Action('QQQ', trade.ActionType.SELL_TO_CLOSE, 1, 100, 'Processor')])
+    trading._update_db([trade.Action('QQQ', trade.ActionType.SELL_TO_CLOSE, 1, 100,
+                                     FakeProcessor(trade.TradingFrequency.FIVE_MIN))])
 
     assert mock_engine.conn.execute.call_count == 3
