@@ -284,9 +284,15 @@ class Trading:
         for position in self._positions:
             if position.qty < 0:
                 tradable_cash += position.entry_price * position.qty * (1 + SHORT_RESERVE_RATIO)
+        action_cnt = collections.defaultdict(int)
+        for action in actions:
+            action_cnt[action.symbol] += 1
         for action in actions:
             assert action.type in [ActionType.BUY_TO_OPEN, ActionType.SELL_TO_OPEN]
             symbol = action.symbol
+            # Avoid controversial actions for the same symbol
+            if action_cnt[symbol] > 1:
+                continue
             cash_to_trade = min(tradable_cash / len(actions),
                                 tradable_cash * action.percent)
             if cash_to_trade < (self._equity - self._cash_reserve) * 0.01:
