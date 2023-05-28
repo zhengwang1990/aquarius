@@ -42,9 +42,9 @@ class O2lProcessor(Processor):
                         list(self._positions.keys())))
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
-        if context.symbol in self._positions:
+        if self.is_active(context.symbol):
             return self._close_position(context)
-        else:
+        elif context.symbol not in self._positions:
             return self._open_position(context)
 
     def _get_thresholds(self, context: Context) -> Tuple[float, float]:
@@ -83,7 +83,7 @@ class O2lProcessor(Processor):
                                f'Current price: {context.current_price}.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
-                                               'status': 'active'}
+                                               'status': 'pending'}
             return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:

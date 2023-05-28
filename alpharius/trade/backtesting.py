@@ -32,6 +32,7 @@ class Backtesting:
     def __init__(self,
                  start_date: Union[DATETIME_TYPE, str],
                  end_date: Union[DATETIME_TYPE, str],
+                 ack_all: bool,
                  processor_factories: List[ProcessorFactory]) -> None:
         if isinstance(start_date, str):
             start_date = pd.to_datetime(start_date)
@@ -47,6 +48,7 @@ class Backtesting:
         self._effective_win, self._effective_lose = 0, 0
         self._cash = 1
         self._interday_data = None
+        self._ack_all = ack_all
 
         backtesting_output_dir = os.path.join(OUTPUT_DIR, 'backtesting')
         output_num = 1
@@ -174,7 +176,7 @@ class Backtesting:
             processor_actions = processor.process_all_data(processor_contexts)
             actions.extend([Action(pa.symbol, pa.type, pa.percent,
                                    contexts[pa.symbol].current_price,
-                                   processor_name)
+                                   processor)
                             for pa in processor_actions])
             self._processor_time[processor_name] += time.time() - data_process_start
         return actions
@@ -367,8 +369,10 @@ class Backtesting:
                 continue
             cash_to_trade = min(tradable_cash / len(actions),
                                 tradable_cash * action.percent)
-            if abs(cash_to_trade) < 1E-7:
-                cash_to_trade = 0
+            if abs(cash_to_trade) > 1E-7 or self._ack_all:
+                action.processor.ack(symbol)
+            else:
+                continue
             qty = cash_to_trade / action.price
             if action.type == ActionType.SELL_TO_OPEN:
                 qty = -qty
@@ -393,7 +397,7 @@ class Backtesting:
                  executed_closes: List[Transaction]) -> None:
         outputs = [get_header(day.date())]
         if executed_closes:
-            table_list = [[t.symbol, t.processor, t.entry_time.time(), t.exit_time.time(),
+            table_list = [[t.symbol, get_processor_name(t.processor), t.entry_time.time(), t.exit_time.time(),
                            'long' if t.is_long else 'short', f'{t.qty:.2g}', t.entry_price, t.exit_price,
                            f'{t.gl_pct * 100:+.2f}%'] for t in executed_closes]
             trade_info = tabulate.tabulate(table_list,

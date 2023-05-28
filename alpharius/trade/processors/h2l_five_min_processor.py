@@ -18,7 +18,6 @@ class H2lFiveMinProcessor(Processor):
                  data_source: DataSource,
                  output_dir: str) -> None:
         super().__init__(output_dir)
-        self._positions = dict()
         self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
                                                                lookback_end_date,
                                                                data_source,
@@ -40,9 +39,9 @@ class H2lFiveMinProcessor(Processor):
                         list(self._positions.keys())))
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
-        if context.symbol in self._positions:
+        if self.is_active(context.symbol):
             return self._close_position(context)
-        else:
+        elif context.symbol not in self._positions:
             return self._open_position(context)
 
     def _get_thresholds(self, context: Context) -> Tuple[float, float]:
@@ -93,7 +92,7 @@ class H2lFiveMinProcessor(Processor):
                                f'Prev open/close price: {intraday_opens[-2]}/{intraday_closes[-2]}.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
-                                               'status': 'active'}
+                                               'status': 'pending'}
             return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:

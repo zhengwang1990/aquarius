@@ -191,6 +191,7 @@ class Processor:
         self._logger = logging_config(os.path.join(self._output_dir, logger_name + '.txt'),
                                       detail=True,
                                       name=logger_name)
+        self._positions = dict()
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         raise NotImplementedError('Calling parent interface')
@@ -214,6 +215,14 @@ class Processor:
 
     def get_trading_frequency(self) -> TradingFrequency:
         raise NotImplementedError('Calling parent interface')
+
+    def ack(self, symbol: str) -> None:
+        if symbol in self._positions:
+            self._positions[symbol]['status'] = 'active'
+            self._logger.debug('[%s] acked.', symbol)
+
+    def is_active(self, symbol: str) -> bool:
+        return symbol in self._positions and self._positions[symbol].get('status') == 'active'
 
 
 class ProcessorFactory:

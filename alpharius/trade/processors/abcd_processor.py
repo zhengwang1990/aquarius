@@ -40,9 +40,9 @@ class AbcdProcessor(Processor):
                         list(self._positions.keys()) + ['TQQQ']))
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
-        if context.symbol in self._positions:
+        if self.is_active(context.symbol):
             return self._close_position(context)
-        else:
+        elif context.symbol not in self._positions:
             return self._open_position(context)
 
     def _get_l2h(self, context: Context) -> float:
@@ -111,7 +111,7 @@ class AbcdProcessor(Processor):
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'L2h: {l2h}. Intraday high: {intraday_high}. Current price: {context.current_price}.')
         self._positions[context.symbol] = {'entry_time': context.current_time,
-                                           'status': 'active',
+                                           'status': 'pending',
                                            'side': 'long'}
         return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
@@ -155,8 +155,6 @@ class AbcdProcessor(Processor):
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
-        if position['status'] != 'active':
-            return
         side = position['side']
         intraday_closes = context.intraday_lookback['Close']
         take_profit = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=30)

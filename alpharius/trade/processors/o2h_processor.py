@@ -43,9 +43,9 @@ class O2hProcessor(Processor):
                         list(self._positions.keys())) & self._shortable_symbols)
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
-        if context.symbol in self._positions:
+        if self.is_active(context.symbol):
             return self._close_position(context)
-        else:
+        elif context.symbol not in self._positions:
             return self._open_position(context)
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
@@ -84,13 +84,11 @@ class O2hProcessor(Processor):
                                f'Open price: {market_open_price}. Current price: {context.current_price}.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
-                                               'status': 'active'}
+                                               'status': 'pending'}
             return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
-        if position['status'] != 'active':
-            return
         if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=35) or
                 context.current_time.time() >= EXIT_TIME):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '

@@ -33,6 +33,8 @@ def main():
                         help='Start date of the backtesting. Only used in backtest mode.')
     parser.add_argument('--end_date', default=None,
                         help='End date of the backtesting. Only used in backtest mode.')
+    parser.add_argument('--ack_all', action='store_true',
+                        help='Ack all trade actions. Only used in backtest mode.')
     args = parser.parse_args()
 
     if args.mode == 'backtest':
@@ -42,6 +44,7 @@ def main():
         start_date = args.start_date or default_start_date
         end_date = args.end_date or default_end_date
         runner = Backtesting(start_date=start_date, end_date=end_date,
+                             ack_all=args.ack_all,
                              processor_factories=PROCESSOR_FACTORIES)
         runner.run()
     else:

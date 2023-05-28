@@ -185,7 +185,7 @@ class Trading:
             processor_actions = processor.process_all_data(processor_contexts)
             actions.extend([Action(pa.symbol, pa.type, pa.percent,
                                    contexts[pa.symbol].current_price,
-                                   processor_name)
+                                   processor)
                             for pa in processor_actions])
         self._logger.info('Got [%d] actions to process.', len(actions))
 
@@ -296,7 +296,7 @@ class Trading:
             cash_to_trade = min(tradable_cash / len(actions),
                                 tradable_cash * action.percent)
             if cash_to_trade < (self._equity - self._cash_reserve) * 0.01:
-                self._logger.info('Position too small to open [%s]. Position value [%s]. Skipping open.',
+                self._logger.info('Cash [%s] too small to open position [%s]. Skip open.',
                                   cash_to_trade, symbol)
                 continue
             if action.type == ActionType.BUY_TO_OPEN:
@@ -310,6 +310,7 @@ class Trading:
             order_id = self._place_order(symbol, side, qty=qty, notional=notional)
             if order_id:
                 order_ids.append(order_id)
+            action.processor.ack(symbol)
 
         self._wait_for_order_to_fill(order_ids)
 

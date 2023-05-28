@@ -43,9 +43,9 @@ class L2hProcessor(Processor):
                         list(self._positions.keys())) & self._shortable_symbols)
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
-        if context.symbol in self._positions:
+        if self.is_active(context.symbol):
             return self._close_position(context)
-        else:
+        elif context.symbol not in self._positions:
             return self._open_position(context)
 
     def _get_thresholds(self, context: Context) -> float:
@@ -95,13 +95,11 @@ class L2hProcessor(Processor):
                                f'Current price {context.current_price}.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
-                                               'status': 'active'}
+                                               'status': 'pending'}
             return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
-        if position['status'] != 'active':
-            return
         intraday_closes = context.intraday_lookback['Close']
         take_profit = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=10) and
                        len(intraday_closes) >= 3 and intraday_closes[-1] < intraday_closes[-3])

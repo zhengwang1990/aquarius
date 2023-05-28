@@ -47,9 +47,9 @@ class CrossCloseProcessor(Processor):
                         list(self._positions.keys())))
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
-        if context.symbol in self._positions:
+        if self.is_active(context.symbol):
             return self._close_position(context)
-        else:
+        elif context.symbol not in self._positions:
             action = self._open_short_position(context)
             if not action:
                 action = self._open_long_position(context)
@@ -95,7 +95,7 @@ class CrossCloseProcessor(Processor):
                                'Side: short')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
-                                               'status': 'active',
+                                               'status': 'pending',
                                                'side': 'short'}
             return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
 

@@ -38,7 +38,7 @@ class BearMomentumProcessor(Processor):
                         list(self._positions.keys())))
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
-        if context.symbol in self._positions:
+        if self.is_active(context.symbol):
             return self._close_position(context)
         else:
             return self._open_position(context)
@@ -79,6 +79,7 @@ class BearMomentumProcessor(Processor):
             return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
         if up == n and context.current_price > context.prev_day_close and allow_long:
             self._positions[context.symbol] = {'entry_time': context.current_time,
+                                               'status': 'pending',
                                                'side': 'long'}
             return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
@@ -86,7 +87,7 @@ class BearMomentumProcessor(Processor):
         def _exit_action():
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Closing position. Current price {context.current_price}.')
-            self._positions.pop(context.symbol)
+            position['status'] = 'inactive'
             return action
 
         position = self._positions[context.symbol]

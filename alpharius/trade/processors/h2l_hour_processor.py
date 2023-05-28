@@ -43,9 +43,9 @@ class H2lHourProcessor(Processor):
                         list(self._positions.keys())))
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
-        if context.symbol in self._positions:
+        if self.is_active(context.symbol):
             return self._close_position(context)
-        else:
+        elif context.symbol not in self._positions:
             return self._open_position(context)
 
     def _get_h2l_stats(self, context: Context) -> Tuple[float, float, float]:
@@ -95,13 +95,11 @@ class H2lHourProcessor(Processor):
                                    f'Current price {context.current_price}.')
             if is_trade:
                 self._positions[context.symbol] = {'entry_time': context.current_time,
-                                                   'status': 'active', 'n': n}
+                                                   'status': 'pending', 'n': n}
                 return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
-        if position['status'] != 'active':
-            return
         intraday_closes = context.intraday_lookback['Close']
         index = -position['n'] - (context.current_time - position['entry_time']).seconds // 300
         stop_loss = False

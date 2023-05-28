@@ -25,7 +25,7 @@ class TqqqProcessor(Processor):
         self._memo = dict()
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
-        if context.symbol in self._positions:
+        if self.is_active(context.symbol):
             return self._close_position(context)
         else:
             return self._open_position(context)
