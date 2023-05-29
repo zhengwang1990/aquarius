@@ -218,7 +218,6 @@ function get_chart(timeframe) {
             start_date += 86400000 * 2;
         }
         var end_date = date_utc + (new Date(date_utc).getTimezoneOffset() * 60000);
-        console.log(start_date, end_date);
         daily_datepicker.setDates(start_date, end_date);
     }
 }
