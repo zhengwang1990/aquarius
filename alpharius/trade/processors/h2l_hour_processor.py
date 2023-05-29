@@ -45,7 +45,8 @@ class H2lHourProcessor(Processor):
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
         if self.is_active(context.symbol):
             return self._close_position(context)
-        elif context.symbol not in self._positions:
+        elif (context.symbol not in self._positions or
+              self._positions[context.symbol]['status'] == 'pending'):
             return self._open_position(context)
 
     def _get_h2l_stats(self, context: Context) -> Tuple[float, float, float]:

@@ -45,8 +45,7 @@ class L2hProcessor(Processor):
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
         if self.is_active(context.symbol):
             return self._close_position(context)
-        elif (context.symbol not in self._positions or
-              self._positions[context.symbol]['status'] == 'pending'):
+        elif context.symbol not in self._positions:
             return self._open_position(context)
 
     def _get_thresholds(self, context: Context) -> float:

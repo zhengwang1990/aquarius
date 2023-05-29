@@ -45,7 +45,7 @@ class H2lFiveMinProcessor(Processor):
             return self._open_position(context)
 
     def _get_thresholds(self, context: Context) -> Tuple[float, float]:
-        key = context.symbol + context.current_time.strftime('%F')
+        key = context.symbol + ':h2l:' + context.current_time.strftime('%F')
         if key in self._memo:
             h2l_avg = self._memo[key]
         else:
@@ -58,6 +58,13 @@ class H2lFiveMinProcessor(Processor):
         upper_threshold = h2l_avg * 0.5
         return lower_threshold, upper_threshold
 
+    def _get_quarterly_high(self, context: Context) -> float:
+        key = context.symbol + ':qh:' + context.current_time.strftime('%F')
+        if key not in self._memo:
+            quarterly_high = np.max(context.interday_lookback['Close'][-DAYS_IN_A_QUARTER:])
+            self._memo[key] = quarterly_high
+        return self._memo[key]
+
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
         if not (datetime.time(10, 0) <= t < datetime.time(10, 30) or
@@ -66,8 +73,7 @@ class H2lFiveMinProcessor(Processor):
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
-        quarterly_high = np.max(context.interday_lookback['Close'][-DAYS_IN_A_QUARTER:])
-        if context.current_price < 0.4 * quarterly_high:
+        if context.current_price < 0.4 * self._get_quarterly_high(context):
             return
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         if len(intraday_closes) < 2:

@@ -1,10 +1,10 @@
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 from ..common import (
     ProcessorAction, ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
-    DataSource, DATETIME_TYPE, DAYS_IN_A_MONTH)
+    DataSource, Position, DATETIME_TYPE, DAYS_IN_A_MONTH)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 ENTRY_TIME = datetime.time(10, 0)
@@ -28,6 +28,7 @@ class BearMomentumProcessor(Processor):
                                                                lookback_end_date,
                                                                data_source,
                                                                num_stocks=NUM_STOCKS)
+        self._memo = dict()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -37,11 +38,23 @@ class BearMomentumProcessor(Processor):
                         list(CONFIG.keys()) +
                         list(self._positions.keys())))
 
+    def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
+        self._memo = dict()
+
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
         if self.is_active(context.symbol):
             return self._close_position(context)
         else:
             return self._open_position(context)
+
+    def _get_interday_min_max(self, context: Context) -> Tuple[float, float]:
+        key = context.symbol + context.current_time.strftime('%F')
+        if key not in self._memo:
+            interday_closes = context.interday_lookback['Close'][-DAYS_IN_A_MONTH * 2:]
+            min_value = np.min(interday_closes)
+            max_value = np.max(interday_closes)
+            self._memo[key] = (min_value, max_value)
+        return self._memo[key]
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
@@ -54,11 +67,11 @@ class BearMomentumProcessor(Processor):
         n = CONFIG.get(context.symbol, OTHER_N)
         if len(intraday_closes) < n + 1:
             return
-        interday_closes = context.interday_lookback['Close'][-DAYS_IN_A_MONTH * 2:]
-        if len(interday_closes) < DAYS_IN_A_MONTH * 2:
+        if len(context.interday_lookback['Close']) < DAYS_IN_A_MONTH * 2:
             return
-        allow_long = context.current_price < np.max(interday_closes) * 0.7
-        allow_short = allow_long or context.current_price > np.min(interday_closes) * 1.5
+        interday_min, interday_max = self._get_interday_min_max(context)
+        allow_long = context.current_price < interday_max * 0.7
+        allow_short = allow_long or context.current_price > interday_min * 1.5
         if not allow_short and not allow_long:
             return
         up, down = 0, 0

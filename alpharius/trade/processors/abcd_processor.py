@@ -90,7 +90,12 @@ class AbcdProcessor(Processor):
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         if len(intraday_closes) < 10:
             return
-        intraday_high = np.max(intraday_closes)
+        if intraday_closes[-1] >= intraday_closes[-2]:
+            return
+        if abs(intraday_closes[-3] - intraday_closes[-2]) < abs(intraday_closes[-2] - intraday_closes[-1]):
+            return
+        max_i = np.argmax(intraday_closes)
+        intraday_high = intraday_closes[max_i]
         if not context.prev_day_close < open_price < context.current_price < intraday_high:
             return
         l2h = self._get_l2h(context)
@@ -98,15 +103,7 @@ class AbcdProcessor(Processor):
             return
         if intraday_high / context.current_price - 1 < b * l2h:
             return
-        max_i = np.argmax(intraday_closes)
         if len(intraday_closes) > max_i + 15 or len(intraday_closes) < max_i + 10:
-            return
-        if context.mode == Mode.TRADE:
-            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                               f'Checking bar shape conditions. Current price: {context.current_price}.')
-        if abs(intraday_closes[-3] - intraday_closes[-2]) < abs(intraday_closes[-2] - intraday_closes[-1]):
-            return
-        if intraday_closes[-1] >= intraday_closes[-2]:
             return
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'L2h: {l2h}. Intraday high: {intraday_high}. Current price: {context.current_price}.')
