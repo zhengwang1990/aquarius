@@ -1,10 +1,10 @@
 import datetime
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DATETIME_TYPE)
+    Position, ProcessorAction, Mode, DATETIME_TYPE)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -26,7 +26,6 @@ class H2lHourProcessor(Processor):
                                                                lookback_end_date,
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
-        self._memo = dict()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -36,7 +35,6 @@ class H2lHourProcessor(Processor):
                      if position['status'] != 'active']
         for symbol in to_remove:
             self._positions.pop(symbol)
-        self._memo = dict()
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
@@ -48,20 +46,6 @@ class H2lHourProcessor(Processor):
         elif (context.symbol not in self._positions or
               self._positions[context.symbol]['status'] == 'pending'):
             return self._open_position(context)
-
-    def _get_h2l_stats(self, context: Context) -> Tuple[float, float, float]:
-        key = context.symbol + context.current_time.strftime('%F')
-        if key in self._memo:
-            return self._memo[key]
-        interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
-        interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
-        h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
-        h2l_avg = float(np.average(h2l_losses))
-        h2l_std = float(np.std(h2l_losses))
-        lower_threshold = max(h2l_avg - 3 * h2l_std, -0.5)
-        res = (lower_threshold, h2l_avg, h2l_std)
-        self._memo[key] = res
-        return res
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
@@ -82,7 +66,9 @@ class H2lHourProcessor(Processor):
         intraday_opens = context.intraday_lookback['Open'][market_open_index:]
         if intraday_opens[-1] > context.prev_day_close > intraday_closes[-1]:
             return
-        lower_threshold, h2l_avg, h2l_std = self._get_h2l_stats(context)
+        h2l_avg = context.h2l_avg
+        h2l_std = context.h2l_std
+        lower_threshold = max(h2l_avg - 3 * h2l_std, -0.5)
         for n, z in PARAMS:
             if len(intraday_closes) < n:
                 continue
@@ -106,7 +92,7 @@ class H2lHourProcessor(Processor):
         stop_loss = False
         if len(intraday_closes) >= abs(index):
             current_loss = context.current_price / intraday_closes[index] - 1
-            lower_threshold, _, _ = self._get_h2l_stats(context)
+            lower_threshold = max(context.h2l_avg - 3 * context.h2l_std, -0.5)
             stop_loss = current_loss < lower_threshold
         if (stop_loss or
                 context.current_time >= position['entry_time'] + datetime.timedelta(minutes=35) or

@@ -4,7 +4,7 @@ from typing import List, Optional
 import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DATETIME_TYPE)
+    Position, ProcessorAction, Mode, DATETIME_TYPE)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -23,7 +23,6 @@ class AbcdProcessor(Processor):
                                                                lookback_end_date,
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
-        self._memo = dict()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -33,7 +32,6 @@ class AbcdProcessor(Processor):
                      if position['status'] != 'active']
         for symbol in to_remove:
             self._positions.pop(symbol)
-        self._memo = dict()
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
@@ -44,28 +42,6 @@ class AbcdProcessor(Processor):
             return self._close_position(context)
         elif context.symbol not in self._positions:
             return self._open_position(context)
-
-    def _get_l2h(self, context: Context) -> float:
-        key = context.symbol + ':l2h:' + context.current_time.strftime('%F')
-        if key in self._memo:
-            return self._memo[key]
-        interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
-        interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
-        l2h_gains = [h / l - 1 for h, l in zip(interday_highs, interday_lows)]
-        l2h_avg = np.average(l2h_gains)
-        self._memo[key] = l2h_avg
-        return l2h_avg
-
-    def _get_h2l(self, context: Context) -> float:
-        key = context.symbol + ':h2l:' + context.current_time.strftime('%F')
-        if key in self._memo:
-            return self._memo[key]
-        interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
-        interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
-        h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
-        h2l_avg = np.average(h2l_losses)
-        self._memo[key] = h2l_avg
-        return h2l_avg
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
@@ -98,7 +74,7 @@ class AbcdProcessor(Processor):
         intraday_high = intraday_closes[max_i]
         if not context.prev_day_close < open_price < context.current_price < intraday_high:
             return
-        l2h = self._get_l2h(context)
+        l2h = context.l2h_avg
         if intraday_high / open_price - 1 < a * l2h:
             return
         if intraday_high / context.current_price - 1 < b * l2h:
@@ -123,7 +99,7 @@ class AbcdProcessor(Processor):
         intraday_low = np.min(intraday_closes)
         if not context.prev_day_close > open_price > context.current_price > intraday_low:
             return
-        h2l = self._get_h2l(context)
+        h2l = context.h2l_avg
         if intraday_low / open_price - 1 > 0.7 * h2l:
             return
         if intraday_low / context.current_price - 1 > 0.5 * h2l:

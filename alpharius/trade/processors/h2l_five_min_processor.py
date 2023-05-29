@@ -1,10 +1,10 @@
 import datetime
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DAYS_IN_A_QUARTER, DATETIME_TYPE)
+    Position, ProcessorAction, Mode, DAYS_IN_A_QUARTER, DATETIME_TYPE)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 40
@@ -44,20 +44,6 @@ class H2lFiveMinProcessor(Processor):
         elif context.symbol not in self._positions:
             return self._open_position(context)
 
-    def _get_thresholds(self, context: Context) -> Tuple[float, float]:
-        key = context.symbol + ':h2l:' + context.current_time.strftime('%F')
-        if key in self._memo:
-            h2l_avg = self._memo[key]
-        else:
-            interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
-            interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
-            h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
-            h2l_avg = np.average(h2l_losses)
-            self._memo[key] = h2l_avg
-        lower_threshold = h2l_avg * 1.5
-        upper_threshold = h2l_avg * 0.5
-        return lower_threshold, upper_threshold
-
     def _get_quarterly_high(self, context: Context) -> float:
         key = context.symbol + ':qh:' + context.current_time.strftime('%F')
         if key not in self._memo:
@@ -87,7 +73,8 @@ class H2lFiveMinProcessor(Processor):
             return
         prev_loss = intraday_closes[-2] / intraday_opens[-2] - 1
         current_loss = context.current_price / intraday_closes[-2] - 1
-        lower_threshold, upper_threshold = self._get_thresholds(context)
+        lower_threshold = context.h2l_avg * 1.5
+        upper_threshold = context.h2l_avg * 0.5
         is_trade = lower_threshold < prev_loss < upper_threshold and prev_loss < current_loss < 0
         if is_trade or (context.mode == Mode.TRADE and prev_loss < upper_threshold * 0.8):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '

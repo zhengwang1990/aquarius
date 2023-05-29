@@ -4,7 +4,7 @@ from typing import List, Optional
 import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DATETIME_TYPE)
+    Position, ProcessorAction, Mode, DATETIME_TYPE)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -30,7 +30,6 @@ class CrossCloseProcessor(Processor):
                                                                lookback_end_date,
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
-        self._memo = dict()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -40,7 +39,6 @@ class CrossCloseProcessor(Processor):
                      if position['status'] != 'active']
         for symbol in to_remove:
             self._positions.pop(symbol)
-        self._memo = dict()
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
@@ -54,18 +52,6 @@ class CrossCloseProcessor(Processor):
             if not action:
                 action = self._open_long_position(context)
             return action
-
-    def _get_threshold(self, context: Context) -> float:
-        key = context.symbol + context.current_time.strftime('%F')
-        if key in self._memo:
-            return self._memo[key]
-        interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
-        interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
-        h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
-        h2l_avg = np.average(h2l_losses)
-        threshold = h2l_avg * 0.45
-        self._memo[key] = threshold
-        return threshold
 
     def _open_short_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
@@ -84,7 +70,7 @@ class CrossCloseProcessor(Processor):
         if context.current_price > intraday_closes[-2]:
             return
         prev_loss = intraday_closes[-2] / intraday_closes[-3] - 1
-        threshold = self._get_threshold(context)
+        threshold = context.h2l_avg * 0.45
         is_cross = intraday_opens[-2] > context.prev_day_close > intraday_closes[-1]
         is_trade = prev_loss < threshold and is_cross
         if is_trade or (context.mode == Mode.TRADE and prev_loss < threshold * 0.8 and is_cross):

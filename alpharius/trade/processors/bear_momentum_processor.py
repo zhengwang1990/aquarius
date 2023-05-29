@@ -82,7 +82,7 @@ class BearMomentumProcessor(Processor):
                 down += 1
             if intraday_high[i] > intraday_high[i - 1]:
                 up += 1
-        if up >= n - 2 or down >= n - 2:
+        if up >= n - 1 or down >= n - 1:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Up count [{up} / {n}]. Down count [{down} / {n}]. '
                                f'Current price {context.current_price}.')

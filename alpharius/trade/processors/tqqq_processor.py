@@ -4,7 +4,7 @@ from typing import List, Optional
 import numpy as np
 from ..common import (
     ProcessorAction, ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
-    Position, DATETIME_TYPE, DAYS_IN_A_MONTH)
+    DATETIME_TYPE, DAYS_IN_A_MONTH)
 
 
 class TqqqProcessor(Processor):
@@ -13,7 +13,6 @@ class TqqqProcessor(Processor):
                  output_dir: str) -> None:
         super().__init__(output_dir)
         self._positions = dict()
-        self._memo = dict()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -21,38 +20,11 @@ class TqqqProcessor(Processor):
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return ['TQQQ']
 
-    def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
-        self._memo = dict()
-
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
         if self.is_active(context.symbol):
             return self._close_position(context)
         else:
             return self._open_position(context)
-
-    def _get_h2l(self, context: Context) -> float:
-        h2l_key = 'h2l:' + context.current_time.strftime('%F')
-        if h2l_key in self._memo:
-            h2l_avg = self._memo[h2l_key]
-        else:
-            interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
-            interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
-            h2l = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
-            h2l_avg = np.average(h2l)
-            self._memo[h2l_key] = h2l_avg
-        return h2l_avg
-
-    def _get_l2h(self, context: Context) -> float:
-        l2h_key = 'l2h:' + context.current_time.strftime('%F')
-        if l2h_key in self._memo:
-            l2h_avg = self._memo[l2h_key]
-        else:
-            interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
-            interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
-            l2h = [h / l - 1 for h, l in zip(interday_highs, interday_lows)]
-            l2h_avg = np.average(l2h)
-            self._memo[l2h_key] = l2h_avg
-        return l2h_avg
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         if context.market_open_index is None:
@@ -75,7 +47,7 @@ class TqqqProcessor(Processor):
         market_open_index = context.market_open_index
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         # short
-        l2h = self._get_l2h(context)
+        l2h = context.l2h_avg
         short_t = 26
         if (interday_closes[-1] < np.max(interday_closes[-DAYS_IN_A_MONTH:]) * 0.9
                 and len(intraday_closes) >= short_t):
@@ -89,7 +61,7 @@ class TqqqProcessor(Processor):
                                                    'entry_time': context.current_time}
                 return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
         # long
-        h2l = self._get_h2l(context)
+        h2l = context.h2l_avg
         long_t = 19
         if len(intraday_closes) >= long_t:
             change = intraday_closes[-1] / intraday_closes[-long_t] - 1
@@ -147,10 +119,10 @@ class TqqqProcessor(Processor):
         intraday_opens = context.intraday_lookback['Open'][market_open_index:]
         change_from_open = context.current_price / intraday_opens[0] - 1
         change_from_close = context.current_price / context.prev_day_close - 1
-        h2l = self._get_h2l(context)
+        h2l = context.h2l_avg
         if change_from_open < 0.7 * h2l or change_from_close < 2 * h2l:
             return _open_position('short')
-        l2h = self._get_l2h(context)
+        l2h = context.l2h_avg
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         change_from_min = context.current_price / np.min(intraday_closes) - 1
         if change_from_min > 1.2 * l2h and intraday_closes[-1] < intraday_closes[-2]:

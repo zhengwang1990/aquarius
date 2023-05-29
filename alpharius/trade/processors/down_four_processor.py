@@ -1,10 +1,9 @@
 import datetime
 from typing import List, Optional
 
-import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DATETIME_TYPE)
+    Position, ProcessorAction, Mode, DATETIME_TYPE)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -24,7 +23,6 @@ class DownFourProcessor(Processor):
                                                                lookback_end_date,
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
-        self._memo = dict()
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -34,7 +32,6 @@ class DownFourProcessor(Processor):
                      if position['status'] != 'active']
         for symbol in to_remove:
             self._positions.pop(symbol)
-        self._memo = dict()
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
@@ -45,18 +42,6 @@ class DownFourProcessor(Processor):
             return self._close_position(context)
         elif context.symbol not in self._positions:
             return self._open_position(context)
-
-    def _get_h2l(self, context: Context) -> float:
-        key = context.symbol + context.current_time.strftime('%F')
-        if key in self._memo:
-            h2l = self._memo[key]
-        else:
-            interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
-            interday_lows = context.interday_lookback['Low'][-DAYS_IN_A_MONTH:]
-            h2l_losses = [l / h - 1 for h, l in zip(interday_highs, interday_lows)]
-            h2l = np.average(h2l_losses)
-            self._memo[key] = h2l
-        return h2l
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
@@ -77,7 +62,7 @@ class DownFourProcessor(Processor):
         for lose in losses:
             if lose > 0:
                 return
-        h2l = self._get_h2l(context)
+        h2l = context.h2l_avg
         is_trade = losses[-2] < 0.3 * h2l and losses[-1] > 0.05 * h2l
         if is_trade or (context.mode == Mode.TRADE and losses[-2] < 0.25 * h2l):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
