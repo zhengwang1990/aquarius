@@ -207,6 +207,20 @@ function get_chart(timeframe) {
     }
     get_chart_data(dates, symbol, timeframe);
     update_chart(timeframe);
+    // Auto set daily input boxes
+    if (timeframe === "intraday" && daily_chart_container.style.display === "none") {
+        daily_symbol_input.value = symbol;
+        var date_utc = Date.parse(dates[0]);
+        var start_date = date_utc + (new Date(date_utc).getTimezoneOffset() * 60000);
+        start_date -= 86400000 * 92;
+        var day = new Date(start_date).getDay();
+        if (day === 0 || day === 6) {
+            start_date += 86400000 * 2;
+        }
+        var end_date = date_utc + (new Date(date_utc).getTimezoneOffset() * 60000);
+        console.log(start_date, end_date);
+        daily_datepicker.setDates(start_date, end_date);
+    }
 }
 
 function update_chart(timeframe) {
@@ -440,7 +454,8 @@ function validateSymbol(symbol) {
 }
 
 if (validateDate(INIT_DATE) && validateSymbol(INIT_SYMBOL)) {
-    intraday_datepicker.setDate(Date.parse(INIT_DATE) + (new Date().getTimezoneOffset() * 60000));
+    var date_utc = Date.parse(INIT_DATE);
+    intraday_datepicker.setDate(date_utc + (new Date(date_utc).getTimezoneOffset() * 60000));
     intraday_symbol_input.value = INIT_SYMBOL;
     get_chart_data([INIT_DATE], INIT_SYMBOL, "intraday");
     update_chart("intraday");
@@ -449,8 +464,10 @@ if (validateDate(INIT_DATE) && validateSymbol(INIT_SYMBOL)) {
 }
 
 if (validateDate(INIT_START_DATE) && validateDate(INIT_END_DATE) && validateSymbol(INIT_SYMBOL)) {
-    daily_datepicker.setDates(Date.parse(INIT_START_DATE) + (new Date().getTimezoneOffset() * 60000),
-                              Date.parse(INIT_END_DATE) + (new Date().getTimezoneOffset() * 60000));
+    var start_utc = Date.parse(INIT_START_DATE);
+    var end_utc = Date.parse(INIT_END_DATE);
+    daily_datepicker.setDates(start_utc + (new Date(start_utc).getTimezoneOffset() * 60000),
+                              end_utc + (new Date(end_utc).getTimezoneOffset() * 60000));
     daily_symbol_input.value = INIT_SYMBOL;
     get_chart_data([INIT_START_DATE, INIT_END_DATE], INIT_SYMBOL, "daily");
     update_chart("daily");
