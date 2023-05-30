@@ -364,8 +364,9 @@ class Backtesting:
             # Avoid controversial actions for the same symbol
             if action_cnt[symbol] > 1:
                 continue
-            cash_to_trade = min(tradable_cash / len(actions),
-                                tradable_cash * action.percent)
+            # Use abs to avoid sign error caused by floating point error
+            cash_to_trade = abs(min(tradable_cash / len(actions),
+                                    tradable_cash * action.percent))
             if abs(cash_to_trade) > 1E-7 or self._ack_all:
                 action.processor.ack(symbol)
             else:

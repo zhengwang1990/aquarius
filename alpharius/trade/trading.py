@@ -341,6 +341,7 @@ class Trading:
                 if order.status != 'filled':
                     remaining.append(order_id)
             return remaining
+
         orders = _update_open_orders(order_ids)
         if not orders:
             self._logger.info('[%s] orders filled', len(order_ids))
