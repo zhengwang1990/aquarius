@@ -17,7 +17,7 @@ from .common import (
     Action, ActionType, ProcessorFactory, TradingFrequency, Context, Mode,
     TimeInterval, Position, MARKET_OPEN, DATETIME_TYPE, DEFAULT_DATA_SOURCE,
     INTERDAY_LOOKBACK_LOAD, OUTPUT_DIR, SHORT_RESERVE_RATIO,
-    logging_config, get_unique_actions, get_processor_name)
+    logging_config, get_unique_actions)
 from .data_loader import load_tradable_history, DataLoader
 
 _MAX_WORKERS = 10
@@ -81,11 +81,11 @@ class Trading:
         for processor in self._processors:
             processor.setup(self._positions, self._today)
         self._logger.info('Initialized processors: %s',
-                          [get_processor_name(processor) for processor in self._processors])
+                          [processor.name for processor in self._processors])
 
     def _init_stock_universe(self) -> None:
         for processor in self._processors:
-            processor_name = get_processor_name(processor)
+            processor_name = processor.name
             processor_stock_universe = processor.get_stock_universe(self._today)
             self._processor_stock_universes[processor_name] = processor_stock_universe
             self._stock_universe[processor.get_trading_frequency()].update(processor_stock_universe)
@@ -175,7 +175,7 @@ class Trading:
         for processor in self._processors:
             if processor.get_trading_frequency() not in frequency_to_process:
                 continue
-            processor_name = get_processor_name(processor)
+            processor_name = processor.name
             stock_universe = self._processor_stock_universes[processor_name]
             processor_contexts = []
             for symbol in stock_universe:
@@ -372,7 +372,7 @@ class Trading:
                     continue
                 if symbol not in actions or current_time - transaction.exit_time.timestamp() > 100:
                     continue
-                transaction.processor = get_processor_name(actions[symbol].processor)
+                transaction.processor = actions[symbol].processor.name
                 try:
                     self._db.insert_transaction(transaction)
                 except sqlalchemy.exc.SQLAlchemyError as e:

@@ -21,7 +21,7 @@ from .common import (
     Action, ActionType, Context, Position, Processor, ProcessorFactory, TimeInterval,
     TradingFrequency, Mode, BASE_DIR, DATETIME_TYPE, MARKET_OPEN, MARKET_CLOSE, OUTPUT_DIR,
     DEFAULT_DATA_SOURCE, INTERDAY_LOOKBACK_LOAD, BID_ASK_SPREAD, SHORT_RESERVE_RATIO,
-    logging_config, timestamp_to_index, get_unique_actions, get_header, get_processor_name)
+    logging_config, timestamp_to_index, get_unique_actions, get_header)
 from .data_loader import load_cached_daily_data, load_tradable_history
 
 _MAX_WORKERS = 20
@@ -150,7 +150,7 @@ class Backtesting:
         processor_stock_universes = dict()
         stock_universe = collections.defaultdict(set)
         for processor in self._processors:
-            processor_name = get_processor_name(processor)
+            processor_name = processor.name
             processor_stock_universe = processor.get_stock_universe(day)
             processor_stock_universes[processor_name] = processor_stock_universe
             stock_universe[processor.get_trading_frequency()].update(
@@ -165,7 +165,7 @@ class Backtesting:
         actions = []
         for processor in processors:
             data_process_start = time.time()
-            processor_name = get_processor_name(processor)
+            processor_name = processor.name
             processor_stock_universe = stock_universes[processor_name]
             processor_contexts = []
             for symbol in processor_stock_universe:
@@ -344,7 +344,7 @@ class Backtesting:
             else:
                 self._num_lose += 1
             executed_actions.append(
-                Transaction(symbol, action.type == ActionType.SELL_TO_CLOSE, action.processor,
+                Transaction(symbol, action.type == ActionType.SELL_TO_CLOSE, action.processor.name,
                             current_position.entry_price, action.price, current_position.entry_time,
                             current_time, qty, profit * qty * current_position.entry_price,
                             profit, None, None))
@@ -395,7 +395,7 @@ class Backtesting:
                  executed_closes: List[Transaction]) -> None:
         outputs = [get_header(day.date())]
         if executed_closes:
-            table_list = [[t.symbol, get_processor_name(t.processor), t.entry_time.time(), t.exit_time.time(),
+            table_list = [[t.symbol, t.processor, t.entry_time.time(), t.exit_time.time(),
                            'long' if t.is_long else 'short', f'{t.qty:.2g}', t.entry_price, t.exit_price,
                            f'{t.gl_pct * 100:+.2f}%'] for t in executed_closes]
             trade_info = tabulate.tabulate(table_list,

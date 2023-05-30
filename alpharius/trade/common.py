@@ -227,6 +227,13 @@ class Processor:
                                       name=logger_name)
         self._positions = dict()
 
+    @property
+    def name(self) -> str:
+        processor_name = type(self).__name__
+        suffix = 'Processor'
+        assert processor_name.endswith(suffix)
+        return processor_name[:-len(suffix)]
+
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         raise NotImplementedError('Calling parent interface')
 
@@ -266,10 +273,3 @@ class ProcessorFactory:
 
     def create(self, *args, **kwargs) -> Processor:
         raise NotImplementedError('Calling parent interface')
-
-
-def get_processor_name(processor: Processor) -> str:
-    processor_name = type(processor).__name__
-    suffix = 'Processor'
-    assert processor_name.endswith(suffix)
-    return processor_name[:-len(suffix)]
