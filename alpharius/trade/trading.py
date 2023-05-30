@@ -372,7 +372,7 @@ class Trading:
                     continue
                 if symbol not in actions or current_time - transaction.exit_time.timestamp() > 100:
                     continue
-                transaction.processor = actions[symbol].processor
+                transaction.processor = get_processor_name(actions[symbol].processor)
                 try:
                     self._db.insert_transaction(transaction)
                 except sqlalchemy.exc.SQLAlchemyError as e:
