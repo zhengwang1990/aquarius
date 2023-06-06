@@ -8,7 +8,6 @@ from ..common import (
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
-N_LONG = 6
 
 
 def _round_num(num: float):
@@ -48,12 +47,16 @@ class CrossCloseProcessor(Processor):
         if self.is_active(context.symbol):
             return self._close_position(context)
         elif context.symbol not in self._positions:
-            action = self._open_short_position(context)
-            if not action:
-                action = self._open_long_position(context)
+            action = self._open_break_short_position(context)
+            if action:
+                return action
+            action = self._open_break_long_position(context)
+            if action:
+                return action
+            action = self._open_reject_short_position(context)
             return action
 
-    def _open_short_position(self, context: Context) -> Optional[ProcessorAction]:
+    def _open_break_short_position(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
         if not (t < datetime.time(10, 0) or
                 datetime.time(10, 30) <= t < datetime.time(11, 0)):
@@ -85,12 +88,13 @@ class CrossCloseProcessor(Processor):
                                                'side': 'short'}
             return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
 
-    def _open_long_position(self, context: Context) -> Optional[ProcessorAction]:
+    def _open_break_long_position(self, context: Context) -> Optional[ProcessorAction]:
+        n_long = 6
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
-        if len(intraday_closes) < N_LONG + 1:
+        if len(intraday_closes) < n_long + 1:
             return
         level = None
         if intraday_closes[-2] < context.prev_day_close < intraday_closes[-1]:
@@ -99,15 +103,15 @@ class CrossCloseProcessor(Processor):
             level = _round_num(context.current_price)
         if level is None:
             return
-        for i in range(-N_LONG, 0):
+        for i in range(-n_long, 0):
             if intraday_closes[i] < intraday_closes[i - 1]:
                 return
         if context.current_price != np.max(intraday_closes):
             return
-        if intraday_closes[-N_LONG] > 0.6 * np.max(intraday_closes) + 0.4 * np.min(intraday_closes):
+        if intraday_closes[-n_long] > 0.6 * np.max(intraday_closes) + 0.4 * np.min(intraday_closes):
             return
         intraday_opens = context.intraday_lookback['Open'][market_open_index:]
-        for i in range(len(intraday_closes) - N_LONG):
+        for i in range(len(intraday_closes) - n_long):
             if intraday_opens[i] < level < intraday_closes[i]:
                 break
         else:
@@ -119,6 +123,43 @@ class CrossCloseProcessor(Processor):
                                            'status': 'active',
                                            'side': 'long'}
         return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
+
+    def _open_reject_short_position(self, context: Context) -> Optional[ProcessorAction]:
+        n_long = 6
+        t = context.current_time.time()
+        if t >= datetime.time(11, 0):
+            return
+        market_open_index = context.market_open_index
+        if market_open_index is None:
+            return
+        intraday_highs = context.intraday_lookback['High'][market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        if len(intraday_closes) < n_long + 1:
+            return
+        level = None
+        if intraday_closes[-2] < intraday_closes[-1] < context.prev_day_close < intraday_highs[-1]:
+            level = context.prev_day_close
+        elif intraday_closes[-2] < intraday_closes[-1] < _round_num(context.current_price) < intraday_highs[-1]:
+            level = _round_num(context.current_price)
+        if level is None:
+            return
+        prev_gain = intraday_closes[-2] / intraday_closes[-n_long] - 1
+        if prev_gain < context.l2h_avg * 0.5:
+            return
+        intraday_opens = context.intraday_lookback['Open'][market_open_index:]
+        for i in range(-1, -n_long - 1, -1):
+            if intraday_opens[i] > intraday_closes[i]:
+                break
+        else:
+            return
+        self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                           f'Prev gain: {prev_gain * 100:.2f}%. L2h: {context.l2h_avg * 100:.2f}%. '
+                           f'Level: {level}. '
+                           f'Current price: {context.current_price}. Side: short.')
+        self._positions[context.symbol] = {'entry_time': context.current_time,
+                                           'status': 'active',
+                                           'side': 'short'}
+        return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
