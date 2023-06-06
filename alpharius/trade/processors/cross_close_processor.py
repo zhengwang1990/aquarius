@@ -81,7 +81,7 @@ class CrossCloseProcessor(Processor):
                                f'Prev loss: {prev_loss * 100:.2f}%. '
                                f'Threshold: {threshold * 100:.2f}%. '
                                f'Current price {context.current_price}. '
-                               'Side: short')
+                               'Side: short.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'status': 'pending',
@@ -154,7 +154,7 @@ class CrossCloseProcessor(Processor):
             return
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'Prev gain: {prev_gain * 100:.2f}%. L2h: {context.l2h_avg * 100:.2f}%. '
-                           f'Level: {level}. '
+                           f'Level: {level}. High: {intraday_highs[-1]}. '
                            f'Current price: {context.current_price}. Side: short.')
         self._positions[context.symbol] = {'entry_time': context.current_time,
                                            'status': 'active',
