@@ -302,7 +302,7 @@ class Trading:
             if action.type == ActionType.BUY_TO_OPEN:
                 side = 'buy'
                 qty = None
-                notional = cash_to_trade
+                notional = int(cash_to_trade * 100) / 100
             else:
                 side = 'sell'
                 qty = int(cash_to_trade / action.price)
