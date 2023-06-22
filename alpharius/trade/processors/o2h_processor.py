@@ -80,7 +80,7 @@ class O2hProcessor(Processor):
         if is_trade or (context.mode == Mode.TRADE and z_score > 1.5):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Current gain: {current_gain * 100:.2f}%. Z-score: {z_score:.2f}. '
-                               f'Bar diff: {bar_diff}. '
+                               f'Expected z-score range: 2 ~ 3.5. Bar diff: {bar_diff:.2f}. '
                                f'Open price: {market_open_price}. Current price: {context.current_price}.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,

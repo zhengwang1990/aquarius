@@ -67,6 +67,7 @@ class TqqqProcessor(Processor):
             change = intraday_closes[-1] / intraday_closes[-long_t] - 1
             if change < 0.8 * h2l:
                 self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                                   f'Mean reversion strategy. Current price: {context.current_price}. '
                                    f'Side: long. Change: {change * 100:.2f}%. Threshold: {h2l * 100:.2f}%.')
             if change < h2l:
                 self._positions[context.symbol] = {'side': 'long',
@@ -96,6 +97,8 @@ class TqqqProcessor(Processor):
         bar_sizes.sort(reverse=True)
         if bar_sizes[0] > 2 * bar_sizes[1]:
             return
+        self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                           f'First hour momentum strategy. Current price: {context.current_price}.')
         self._positions[context.symbol] = {'side': 'long',
                                            'strategy': 'first_hour_momentum',
                                            'entry_time': context.current_time}
@@ -126,23 +129,27 @@ class TqqqProcessor(Processor):
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         change_from_min = context.current_price / np.min(intraday_closes) - 1
         if change_from_min > 1.2 * l2h and intraday_closes[-1] < intraday_closes[-2]:
-            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Change from min '
-                               f'[{change_from_min * 100:.2f}%] exceeds threshold [{1.2 * l2h * 100:.2f}%]')
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Last hour momentum strategy. '
+                               f'Change from min [{change_from_min * 100:.2f}%] '
+                               f'exceeds threshold [{1.2 * l2h * 100:.2f}%]')
             return _open_position('long')
         if intraday_opens[0] < context.prev_day_close:
             for i in range(-25, -len(intraday_closes), -24):
                 if intraday_closes[i + 24] / intraday_closes[i] - 1 < l2h * 0.15:
                     break
             else:
-                self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Continuous up trend.')
+                self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] '
+                                   'Last hour momentum strategy. Continuous up trend.')
                 return _open_position('long')
         if change_from_open > 0.7 * l2h:
-            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Change from open '
-                               f'[{change_from_open * 100:.2f}%] exceeds threshold [{0.7 * l2h * 100:.2f}%]')
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Last hour momentum strategy. '
+                               f'Change from open [{change_from_open * 100:.2f}%] '
+                               f'exceeds threshold [{0.7 * l2h * 100:.2f}%]')
             return _open_position('long')
         if change_from_close > 1.5 * l2h:
-            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Change from close '
-                               f'[{change_from_close * 100:.2f}%] exceeds threshold [{1.5 * l2h * 100:.2f}%]')
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Last hour momentum strategy. '
+                               f'Change from close [{change_from_close * 100:.2f}%] '
+                               f'exceeds threshold [{1.5 * l2h * 100:.2f}%]')
             return _open_position('long')
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
