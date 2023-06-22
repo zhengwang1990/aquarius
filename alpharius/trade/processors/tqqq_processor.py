@@ -130,6 +130,7 @@ class TqqqProcessor(Processor):
         change_from_min = context.current_price / np.min(intraday_closes) - 1
         if change_from_min > 1.2 * l2h and intraday_closes[-1] < intraday_closes[-2]:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Last hour momentum strategy. '
+                               f'Current price: {context.current_price}. '
                                f'Change from min [{change_from_min * 100:.2f}%] '
                                f'exceeds threshold [{1.2 * l2h * 100:.2f}%]')
             return _open_position('long')
@@ -139,15 +140,18 @@ class TqqqProcessor(Processor):
                     break
             else:
                 self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] '
-                                   'Last hour momentum strategy. Continuous up trend.')
+                                   f'Last hour momentum strategy. Current price: {context.current_price}. '
+                                   'Continuous up trend.')
                 return _open_position('long')
         if change_from_open > 0.7 * l2h:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Last hour momentum strategy. '
+                               f'Current price: {context.current_price}. '
                                f'Change from open [{change_from_open * 100:.2f}%] '
                                f'exceeds threshold [{0.7 * l2h * 100:.2f}%]')
             return _open_position('long')
         if change_from_close > 1.5 * l2h:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Last hour momentum strategy. '
+                               f'Current price: {context.current_price}. '
                                f'Change from close [{change_from_close * 100:.2f}%] '
                                f'exceeds threshold [{1.5 * l2h * 100:.2f}%]')
             return _open_position('long')
