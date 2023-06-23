@@ -103,7 +103,7 @@ class OvernightProcessor(Processor):
             overnight_returns.append(np.log(open_price / close_price))
         quarterly = np.sum(overnight_returns[-DAYS_IN_A_QUARTER:])
         weekly = np.sum(overnight_returns[-DAYS_IN_A_WEEK:])
-        if quarterly < 0 and weekly < 0:
+        if quarterly < 0 and (weekly < 0 or closes[-1] < closes[-DAYS_IN_A_WEEK]):
             return 0
         yearly = np.sum(sorted(overnight_returns)[25:-25])
         performance = yearly + 0.3 * quarterly + 0.3 * weekly
