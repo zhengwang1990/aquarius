@@ -10,3 +10,4 @@ from .cross_close_processor import CrossCloseProcessorFactory
 from .tqqq_processor import TqqqProcessorFactory
 from .down_four_processor import DownFourProcessorFactory
 from .abcd_processor import AbcdProcessorFactory
+from .first_hour_m6m_processor import FirstHourM6mProcessorFactory
