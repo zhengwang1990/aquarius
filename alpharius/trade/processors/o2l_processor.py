@@ -5,9 +5,9 @@ import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
     Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DATETIME_TYPE)
-from ..stock_universe import MonthlyGainStockUniverse
+from ..stock_universe import IntradayVolatilityStockUniverse
 
-NUM_UNIVERSE_SYMBOLS = 15
+NUM_UNIVERSE_SYMBOLS = 30
 EXIT_TIME = datetime.time(13, 0)
 
 
@@ -21,10 +21,10 @@ class O2lProcessor(Processor):
                  output_dir: str) -> None:
         super().__init__(output_dir)
         self._positions = dict()
-        self._stock_universe = MonthlyGainStockUniverse(lookback_start_date,
-                                                        lookback_end_date,
-                                                        data_source,
-                                                        num_stocks=NUM_UNIVERSE_SYMBOLS)
+        self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
+                                                               lookback_end_date,
+                                                               data_source,
+                                                               num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._memo = dict()
 
     def get_trading_frequency(self) -> TradingFrequency:
@@ -66,12 +66,17 @@ class O2lProcessor(Processor):
         t = context.current_time.time()
         if t >= EXIT_TIME:
             return
+        interday_closes = context.interday_lookback['Close']
+        if context.current_price < interday_closes[-DAYS_IN_A_MONTH]:
+            return
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
         market_open_price = context.intraday_lookback['Open'][market_open_index]
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         if intraday_closes[-1] > np.min(intraday_closes):
+            return
+        if context.current_price < context.prev_day_close < market_open_price and t <= datetime.time(10, 0):
             return
         current_loss = context.current_price / market_open_price - 1
         lower_threshold, upper_threshold = self._get_thresholds(context)
