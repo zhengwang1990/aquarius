@@ -46,6 +46,8 @@ class Backtesting:
         self._daily_equity = [1]
         self._num_win, self._num_lose = 0, 0
         self._cash = 1
+        self._cash_portion = 1
+        self._processor_profit = dict()
         self._interday_data = None
         self._ack_all = ack_all
 
@@ -327,11 +329,17 @@ class Backtesting:
                 continue
             self._pop_current_position(symbol)
             qty = current_position.qty * action.percent
+            portion = current_position.entry_portion * action.percent
+            self._cash_portion += portion
+            if abs(self._cash_portion - 1) < 1E-7:
+                self._cash_portion = 1
             new_qty = current_position.qty - qty
+            new_portion = current_position.entry_portion - portion
             if abs(new_qty) > 1E-7:
                 self._positions.append(Position(symbol, new_qty,
                                                 current_position.entry_price,
-                                                current_position.entry_time))
+                                                current_position.entry_time,
+                                                new_portion))
             spread_adjust = (1 - BID_ASK_SPREAD
                              if action.type == ActionType.SELL_TO_CLOSE else 1 + BID_ASK_SPREAD)
             adjusted_action_price = action.price * spread_adjust
@@ -343,6 +351,8 @@ class Backtesting:
                 self._num_win += 1
             else:
                 self._num_lose += 1
+            current_value = self._processor_profit.get(action.processor.name, 0) + 1
+            self._processor_profit[action.processor.name] = current_value * (1 + profit) - 1
             executed_actions.append(
                 Transaction(symbol, action.type == ActionType.SELL_TO_CLOSE, action.processor.name,
                             current_position.entry_price, action.price, current_position.entry_time,
@@ -356,6 +366,7 @@ class Backtesting:
             if position.qty < 0:
                 tradable_cash += position.entry_price * position.qty * (1 + SHORT_RESERVE_RATIO)
         action_cnt = collections.defaultdict(int)
+        cash_portion = self._cash_portion
         for action in actions:
             action_cnt[action.symbol] += 1
         for action in actions:
@@ -364,13 +375,15 @@ class Backtesting:
             # Avoid controversial actions for the same symbol
             if action_cnt[symbol] > 1:
                 continue
+            portion = min(1 / len(actions), action.percent)
             # Use abs to avoid sign error caused by floating point error
-            cash_to_trade = abs(min(tradable_cash / len(actions),
-                                    tradable_cash * action.percent))
+            cash_to_trade = abs(tradable_cash * portion)
             if abs(cash_to_trade) > 1E-7 or self._ack_all:
                 action.processor.ack(symbol)
             else:
                 continue
+            entry_portion = cash_portion * portion
+            self._cash_portion -= entry_portion
             qty = cash_to_trade / action.price
             if action.type == ActionType.SELL_TO_OPEN:
                 qty = -qty
@@ -385,8 +398,9 @@ class Backtesting:
                 else:
                     entry_price = (old_position.entry_price * old_position.qty +
                                    action.price * qty) / (old_position.qty + qty)
+                    entry_portion = old_position.entry_portion + entry_portion
                 new_qty = qty + old_position.qty
-            new_position = Position(symbol, new_qty, entry_price, current_time)
+            new_position = Position(symbol, new_qty, entry_price, current_time, entry_portion)
             self._positions.append(new_position)
             self._cash -= action.price * qty
 
@@ -464,6 +478,12 @@ class Backtesting:
                    ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)'],
                    ['Output Dir', os.path.relpath(self._output_dir, BASE_DIR)]]
         outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
+
+        processor_profit = [['Processor', 'Gain/Loss']]
+        for processor_name in sorted(self._processor_profit.keys()):
+            processor_profit.append([processor_name,
+                                     _profit_to_str(self._processor_profit[processor_name])])
+        outputs.append(tabulate.tabulate(processor_profit, tablefmt='grid'))
 
         print_symbols = ['QQQ', 'SPY', 'TQQQ']
         market_symbol = 'SPY'

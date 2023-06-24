@@ -65,7 +65,7 @@ class Trading:
     def _update_positions(self) -> None:
         alpaca_positions = self._alpaca.list_positions()
         self._positions = [Position(position.symbol, float(position.qty),
-                                    float(position.avg_entry_price), None)
+                                    float(position.avg_entry_price), None, None)
                            for position in alpaca_positions]
         self._logger.info('Positions updated: [%d] open positions.', len(self._positions))
 
