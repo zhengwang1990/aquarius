@@ -57,9 +57,8 @@ class O2lProcessor(Processor):
         o2l_avg = np.average(o2l_losses)
         o2l_std = np.std(o2l_losses)
         upper_threshold = o2l_avg - 4 * o2l_std
-        lower_threshold = max(o2l_avg - 6 * o2l_std, -0.4)
+        lower_threshold = max(o2l_avg - 5.5 * o2l_std, -0.4)
         res = (lower_threshold, upper_threshold)
-        self._memo[key] = res
         return res
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:

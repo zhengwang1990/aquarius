@@ -149,10 +149,9 @@ class IntradayVolatilityStockUniverse(StockUniverse):
             if prev_day_ind < DAYS_IN_A_MONTH:
                 continue
             prev_close = hist['Close'][prev_day_ind]
-            if prev_close < 0.4 * np.max(hist['Close'][-DAYS_IN_A_QUARTER:]):
+            if prev_close < 0.4 * np.max(hist['Close'][prev_day_ind - DAYS_IN_A_QUARTER:prev_day_ind + 1]):
                 continue
-            intraday_volatility = self._get_intraday_range(
-                symbol, prev_day_ind)
+            intraday_volatility = self._get_intraday_range(symbol, prev_day_ind)
             intraday_volatilities.append((symbol, intraday_volatility))
 
         intraday_volatilities.sort(key=lambda s: s[1], reverse=True)
