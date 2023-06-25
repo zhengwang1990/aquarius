@@ -331,8 +331,6 @@ class Backtesting:
             qty = current_position.qty * action.percent
             portion = current_position.entry_portion * action.percent
             self._cash_portion += portion
-            if abs(self._cash_portion - 1) < 1E-7:
-                self._cash_portion = 1
             new_qty = current_position.qty - qty
             new_portion = current_position.entry_portion - portion
             if abs(new_qty) > 1E-7:

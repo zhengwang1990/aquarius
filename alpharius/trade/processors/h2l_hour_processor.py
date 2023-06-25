@@ -59,6 +59,8 @@ class H2lHourProcessor(Processor):
         if market_open_index is None:
             return
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        if len(intraday_closes) < 10:
+            return
         if context.current_price > np.min(intraday_closes):
             return
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
@@ -73,7 +75,8 @@ class H2lHourProcessor(Processor):
             if len(intraday_closes) < n:
                 continue
             current_loss = context.current_price / intraday_closes[-n] - 1
-            upper_threshold = h2l_avg - z * h2l_std
+            z0 = 0.1 if t < datetime.time(11, 0) or t > datetime.time(15, 0) else 0
+            upper_threshold = h2l_avg - (z + z0) * h2l_std
             is_trade = lower_threshold < current_loss < upper_threshold
             if is_trade or (context.mode == Mode.TRADE and current_loss < upper_threshold * 0.8):
                 self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
