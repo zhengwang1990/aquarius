@@ -146,10 +146,11 @@ class IntradayVolatilityStockUniverse(StockUniverse):
             if prev_day not in hist.index:
                 continue
             prev_day_ind = timestamp_to_index(hist.index, prev_day)
-            if prev_day_ind < DAYS_IN_A_QUARTER:
+            if prev_day_ind < DAYS_IN_A_MONTH:
                 continue
             prev_close = hist['Close'][prev_day_ind]
-            if prev_close < 0.4 * np.max(hist['Close'][prev_day_ind - DAYS_IN_A_QUARTER:prev_day_ind + 1]):
+            start_ind = max(prev_day_ind - DAYS_IN_A_QUARTER, 0)
+            if prev_close < 0.4 * np.max(hist['Close'][start_ind:prev_day_ind + 1]):
                 continue
             intraday_volatility = self._get_intraday_range(symbol, prev_day_ind)
             intraday_volatilities.append((symbol, intraday_volatility))
