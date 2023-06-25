@@ -352,7 +352,7 @@ class Backtesting:
             else:
                 self._num_lose += 1
             current_value = self._processor_profit.get(action.processor.name, 0) + 1
-            self._processor_profit[action.processor.name] = current_value * (1 + profit) - 1
+            self._processor_profit[action.processor.name] = current_value * (1 + portion * profit) - 1
             executed_actions.append(
                 Transaction(symbol, action.type == ActionType.SELL_TO_CLOSE, action.processor.name,
                             current_position.entry_price, action.price, current_position.entry_time,
