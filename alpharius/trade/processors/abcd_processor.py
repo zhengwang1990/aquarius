@@ -5,6 +5,7 @@ import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
     Position, ProcessorAction, Mode, DATETIME_TYPE)
+from ..data_loader import get_shortable_symbols
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -23,6 +24,7 @@ class AbcdProcessor(Processor):
                                                                lookback_end_date,
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
+        self._shortable_symbols = set(get_shortable_symbols())
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -55,6 +57,7 @@ class AbcdProcessor(Processor):
                 return self._open_long_position(context, 1, 0.6)
         if (datetime.time(12, 0) <= t <= datetime.time(15, 30) and
                 context.current_price < context.prev_day_close and
+                context.symbol in self._shortable_symbols and
                 context.symbol != 'TQQQ'):
             return self._open_short_position(context)
 

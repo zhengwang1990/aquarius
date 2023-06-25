@@ -5,6 +5,7 @@ import numpy as np
 from ..common import (
     ProcessorAction, ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
     DataSource, Position, DATETIME_TYPE, DAYS_IN_A_MONTH)
+from ..data_loader import get_shortable_symbols
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 ENTRY_TIME = datetime.time(10, 0)
@@ -28,6 +29,7 @@ class BearMomentumProcessor(Processor):
                                                                lookback_end_date,
                                                                data_source,
                                                                num_stocks=NUM_STOCKS)
+        self._shortable_symbols = set(get_shortable_symbols())
         self._memo = dict()
 
     def get_trading_frequency(self) -> TradingFrequency:
@@ -72,6 +74,7 @@ class BearMomentumProcessor(Processor):
         interday_min, interday_max = self._get_interday_min_max(context)
         allow_long = context.current_price < interday_max * 0.7
         allow_short = allow_long or context.current_price > interday_min * 1.5
+        allow_short = allow_short and context.symbol in self._shortable_symbols
         if not allow_short and not allow_long:
             return
         up, down = 0, 0

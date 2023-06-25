@@ -5,6 +5,7 @@ import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
     Position, ProcessorAction, Mode, DATETIME_TYPE)
+from ..data_loader import get_shortable_symbols
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -29,6 +30,7 @@ class CrossCloseProcessor(Processor):
                                                                lookback_end_date,
                                                                data_source,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
+        self._shortable_symbols = set(get_shortable_symbols())
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
@@ -57,6 +59,8 @@ class CrossCloseProcessor(Processor):
             return action
 
     def _open_break_short_position(self, context: Context) -> Optional[ProcessorAction]:
+        if context.symbol not in self._shortable_symbols:
+            return
         t = context.current_time.time()
         if not (t < datetime.time(10, 0) or
                 datetime.time(10, 30) <= t < datetime.time(11, 0)):
@@ -125,6 +129,8 @@ class CrossCloseProcessor(Processor):
         return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _open_reject_short_position(self, context: Context) -> Optional[ProcessorAction]:
+        if context.symbol not in self._shortable_symbols:
+            return
         n_long = 6
         t = context.current_time.time()
         if t >= datetime.time(11, 0):
