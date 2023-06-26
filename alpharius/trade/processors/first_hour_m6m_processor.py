@@ -52,13 +52,15 @@ class FirstHourM6mProcessor(Processor):
         intraday_highs = context.intraday_lookback['High'][market_open_index:]
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         interday_closes = context.interday_lookback['Close']
+        interday_opens = context.interday_lookback['Open']
         if len(interday_closes) < DAYS_IN_A_QUARTER:
             return
         if interday_closes[-1] < 1.3 * interday_closes[-DAYS_IN_A_MONTH]:
             return
         if interday_closes[-DAYS_IN_A_MONTH] < 1.1 * interday_closes[-DAYS_IN_A_QUARTER]:
             return
-        if interday_closes[-1] < np.max(interday_closes[-DAYS_IN_A_MONTH:]) * 0.8:
+        if interday_closes[-1] < max(np.max(interday_closes[-DAYS_IN_A_MONTH:]),
+                                     np.max(interday_opens[-DAYS_IN_A_MONTH:])) * 0.8:
             return
         if intraday_closes[0] >= context.prev_day_close:
             return
