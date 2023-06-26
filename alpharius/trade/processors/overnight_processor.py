@@ -6,7 +6,7 @@ import tabulate
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
     Position, ProcessorAction, DATETIME_TYPE, DAYS_IN_A_YEAR, DAYS_IN_A_QUARTER,
-    DAYS_IN_A_WEEK, get_header)
+    DAYS_IN_A_MONTH, DAYS_IN_A_WEEK, get_header)
 from ..stock_universe import TopVolumeUniverse
 
 NUM_UNIVERSE_SYMBOLS = 200
@@ -96,14 +96,14 @@ class OvernightProcessor(Processor):
         if (profits[-1] - r) / std < -1:
             return 0
         today_open = context.today_open
-        opens = np.append(
-            interday_lookback['Open'][-DAYS_IN_A_YEAR + 1:], today_open)
+        opens = np.append(interday_lookback['Open'][-DAYS_IN_A_YEAR + 1:], today_open)
         overnight_returns = []
         for close_price, open_price in zip(closes, opens):
             overnight_returns.append(np.log(open_price / close_price))
         quarterly = np.sum(overnight_returns[-DAYS_IN_A_QUARTER:])
         weekly = np.sum(overnight_returns[-DAYS_IN_A_WEEK:])
-        if quarterly < 0 and (weekly < 0 or closes[-1] < closes[-DAYS_IN_A_WEEK]):
+        if ((quarterly < 0 or closes[-1] < closes[-DAYS_IN_A_MONTH]) and
+                (weekly < 0 or closes[-1] < closes[-DAYS_IN_A_WEEK])):
             return 0
         yearly = np.sum(sorted(overnight_returns)[25:-25])
         performance = yearly + 0.3 * quarterly + 0.3 * weekly
