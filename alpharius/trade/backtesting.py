@@ -317,6 +317,7 @@ class Backtesting:
 
     def _close_positions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> List[Transaction]:
         executed_actions = []
+        one_time_processor_profit = collections.defaultdict(float)
         for action in actions:
             assert action.type in [ActionType.BUY_TO_CLOSE, ActionType.SELL_TO_CLOSE]
             symbol = action.symbol
@@ -349,13 +350,15 @@ class Backtesting:
                 self._num_win += 1
             else:
                 self._num_lose += 1
-            current_value = self._processor_profit.get(action.processor.name, 0) + 1
-            self._processor_profit[action.processor.name] = current_value * (1 + portion * profit) - 1
+            one_time_processor_profit[action.processor.name] += portion * profit
             executed_actions.append(
                 Transaction(symbol, action.type == ActionType.SELL_TO_CLOSE, action.processor.name,
                             current_position.entry_price, action.price, current_position.entry_time,
                             current_time, qty, profit * qty * current_position.entry_price,
                             profit, None, None))
+        for processor_name, profit in one_time_processor_profit.items():
+            current_value = self._processor_profit.get(processor_name, 0) + 1
+            self._processor_profit[processor_name] = current_value * (1 + profit) - 1
         return executed_actions
 
     def _open_positions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> None:
