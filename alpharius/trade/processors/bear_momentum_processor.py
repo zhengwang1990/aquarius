@@ -77,18 +77,21 @@ class BearMomentumProcessor(Processor):
         allow_short = allow_short and context.symbol in self._shortable_symbols
         if not allow_short and not allow_long:
             return
-        up, down = 0, 0
+        no_up, no_down = 0, 0
         intraday_high = context.intraday_lookback['High']
         intraday_low = context.intraday_lookback['Low']
         for i in range(-1, -n - 1, -1):
-            if intraday_low[i] < intraday_low[i - 1]:
-                down += 1
-            if intraday_high[i] > intraday_high[i - 1]:
-                up += 1
-        if up >= n - 1 or down >= n - 1:
-            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                               f'Up count [{up} / {n}]. Down count [{down} / {n}]. '
-                               f'Current price {context.current_price}.')
+            if intraday_low[i] >= intraday_low[i - 1]:
+                no_down += 1
+            if intraday_high[i] <= intraday_high[i - 1]:
+                no_up += 1
+            if no_down > 0 and no_up > 0:
+                return
+        up = n - no_up
+        down = n - no_down
+        self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                           f'Up count [{up} / {n}]. Down count [{down} / {n}]. '
+                           f'Current price {context.current_price}.')
         if down == n and context.current_price < context.prev_day_close and allow_short:
             self._positions[context.symbol] = {'entry_time': context.current_time,
                                                'side': 'short'}
