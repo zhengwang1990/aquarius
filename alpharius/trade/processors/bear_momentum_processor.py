@@ -91,6 +91,7 @@ class BearMomentumProcessor(Processor):
         down = n - no_down
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'Up count [{up} / {n}]. Down count [{down} / {n}]. '
+                           f'Allow long [{allow_long}]. Allow short [{allow_short}]. '
                            f'Current price {context.current_price}.')
         if down == n and context.current_price < context.prev_day_close and allow_short:
             self._positions[context.symbol] = {'entry_time': context.current_time,
