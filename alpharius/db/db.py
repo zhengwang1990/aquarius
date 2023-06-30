@@ -267,7 +267,6 @@ class Db:
         if conditions:
             condition = 'WHERE ' + ' AND '.join(conditions)
         query = sqlalchemy.text(SELECT_TRANSACTION_DETAIL_QUERY.format(condition=condition))
-        print(query)
         results = self._execute(query, **kwargs)
         return [Transaction(*result) for result in results]
 
