@@ -186,7 +186,7 @@ class Db:
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
     def _execute(self, query, **kwargs):
         with self._eng.connect() as conn:
-            return conn.execute(query, **kwargs)
+            return conn.execute(query, parameters=kwargs)
 
     def update_aggregation(self, date: str) -> None:
         start_time = f'{date} 00:00:00'
@@ -267,6 +267,7 @@ class Db:
         if conditions:
             condition = 'WHERE ' + ' AND '.join(conditions)
         query = sqlalchemy.text(SELECT_TRANSACTION_DETAIL_QUERY.format(condition=condition))
+        print(query)
         results = self._execute(query, **kwargs)
         return [Transaction(*result) for result in results]
 
