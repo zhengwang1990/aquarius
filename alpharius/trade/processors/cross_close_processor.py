@@ -174,8 +174,11 @@ class CrossCloseProcessor(Processor):
             intraday_closes = context.intraday_lookback['Close']
             take_profit = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=5)
                            and context.current_price < intraday_closes[-2])
-            is_close = (take_profit or
-                        context.current_time >= position['entry_time'] + datetime.timedelta(minutes=10) or
+            # Stop when there is an up bar
+            stop_loss = (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=10)
+                         and context.current_price > intraday_closes[-2])
+            is_close = (take_profit or stop_loss or
+                        context.current_time >= position['entry_time'] + datetime.timedelta(minutes=20) or
                         context.current_time.time() >= datetime.time(16, 0))
         else:
             is_close = (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=60)
