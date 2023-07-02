@@ -74,7 +74,7 @@ class CrossCloseProcessor(Processor):
             return
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
             return
-        if context.current_price > intraday_closes[-2]:
+        if context.current_price >= intraday_closes[-2]:
             return
         prev_loss = intraday_closes[-2] / intraday_closes[-3] - 1
         threshold = context.h2l_avg * 0.45
