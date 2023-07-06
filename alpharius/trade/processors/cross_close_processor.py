@@ -4,7 +4,7 @@ from typing import List, Optional
 import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DATETIME_TYPE)
+    Position, ProcessorAction, Mode, DATETIME_TYPE, DAYS_IN_A_MONTH)
 from ..data_loader import get_shortable_symbols
 from ..stock_universe import IntradayVolatilityStockUniverse
 
@@ -134,6 +134,9 @@ class CrossCloseProcessor(Processor):
         n_long = 6
         t = context.current_time.time()
         if t >= datetime.time(11, 0):
+            return
+        interday_closes = context.interday_lookback['Close']
+        if len(interday_closes) < DAYS_IN_A_MONTH or interday_closes[-1] < 0.5 * interday_closes[-DAYS_IN_A_MONTH]:
             return
         market_open_index = context.market_open_index
         if market_open_index is None:
