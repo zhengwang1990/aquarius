@@ -90,6 +90,7 @@ class L2hProcessor(Processor):
         intraday_closes = context.intraday_lookback['Close']
         take_profit = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=10) and
                        len(intraday_closes) >= 3 and intraday_closes[-1] < intraday_closes[-3])
+        # If profit isn't taken after 10 min and the last bar still increases
         stop_loss = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=15) and
                      len(intraday_closes) >= 2 and intraday_closes[-1] > intraday_closes[-2])
         is_close = (take_profit or stop_loss or
