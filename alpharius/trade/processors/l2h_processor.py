@@ -60,6 +60,7 @@ class L2hProcessor(Processor):
         if market_open_index is None:
             return
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        intraday_opens = context.intraday_lookback['Open'][market_open_index:]
         if len(intraday_closes) < 10:
             return
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
@@ -67,7 +68,7 @@ class L2hProcessor(Processor):
         if context.current_price < np.max(intraday_closes):
             return
         for i in range(-1, -9, -1):
-            if intraday_closes[i] <= intraday_closes[i - 1]:
+            if intraday_closes[i] <= intraday_closes[i - 1] and intraday_closes[i] <= intraday_opens[i]:
                 break
         else:
             return
@@ -89,8 +90,10 @@ class L2hProcessor(Processor):
         intraday_closes = context.intraday_lookback['Close']
         take_profit = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=10) and
                        len(intraday_closes) >= 3 and intraday_closes[-1] < intraday_closes[-3])
-        is_close = (take_profit or
-                    context.current_time >= position['entry_time'] + datetime.timedelta(minutes=15) or
+        stop_loss = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=15) and
+                     len(intraday_closes) >= 2 and intraday_closes[-1] > intraday_closes[-2])
+        is_close = (take_profit or stop_loss or
+                    context.current_time >= position['entry_time'] + datetime.timedelta(minutes=20) or
                     context.current_time.time() >= EXIT_TIME)
         if is_close:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
