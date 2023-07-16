@@ -43,7 +43,7 @@ class CrossCloseProcessor(Processor):
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
-                        list(self._positions.keys())))
+                        list(self._positions.keys()) + ['TQQQ']))
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
         if self.is_active(context.symbol):
@@ -103,7 +103,8 @@ class CrossCloseProcessor(Processor):
         level = None
         if intraday_closes[-2] < context.prev_day_close < intraday_closes[-1]:
             level = context.prev_day_close
-        elif intraday_closes[-2] < _round_num(context.current_price) < intraday_closes[-1]:
+        elif (context.symbol != 'TQQQ' and
+              intraday_closes[-2] < _round_num(context.current_price) < intraday_closes[-1]):
             level = _round_num(context.current_price)
         if level is None:
             return
@@ -148,7 +149,8 @@ class CrossCloseProcessor(Processor):
         level = None
         if intraday_closes[-2] < intraday_closes[-1] < context.prev_day_close < intraday_highs[-1]:
             level = context.prev_day_close
-        elif intraday_closes[-2] < intraday_closes[-1] < _round_num(context.current_price) < intraday_highs[-1]:
+        elif (context.symbol != 'TQQQ' and
+              intraday_closes[-2] < intraday_closes[-1] < _round_num(context.current_price) < intraday_highs[-1]):
             level = _round_num(context.current_price)
         if level is None:
             return
