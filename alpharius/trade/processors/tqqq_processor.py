@@ -38,6 +38,9 @@ class TqqqProcessor(Processor):
         action = self._first_hour_momentum(context)
         if action:
             return action
+        action = self._four_day_drop(context)
+        if action:
+            return action
 
     def _mean_reversion(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
@@ -156,6 +159,53 @@ class TqqqProcessor(Processor):
                                f'exceeds threshold [{1.5 * l2h * 100:.2f}%]')
             return _open_position('long')
 
+    def _four_day_drop(self, context: Context) -> Optional[ProcessorAction]:
+        t = context.current_time.time()
+        if not datetime.time(10, 0) <= t < datetime.time(12, 0):
+            return
+        interday_closes = context.interday_lookback['Close']
+        if context.current_price > context.prev_day_close:
+            return
+        for i in range(-1, -4, -1):
+            day_change = interday_closes[i] / interday_closes[i - 1] - 1
+            if day_change > 0.3 * context.h2l_avg:
+                return
+        market_open_index = context.market_open_index
+        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        if len(intraday_closes) < 5:
+            return
+        change_today = context.current_price / context.prev_day_close - 1
+        if change_today > 0.3 * context.h2l_avg:
+            return
+        if market_open_index is None:
+            return
+        is_trade = False
+        wait_min = 0
+        for i in range(-1, -5, -1):
+            if intraday_closes[i] > intraday_closes[i - 1]:
+                break
+        else:
+            is_trade = (change_today < 0.4 * context.h2l_avg and
+                        context.current_price == np.min(intraday_closes) and
+                        2 * intraday_closes[-2] < intraday_closes[-3] + intraday_closes[-1])
+            wait_min = 30
+        for i in range(-1, -4, -1):
+            if intraday_closes[i] < intraday_closes[i - 1]:
+                break
+        else:
+            is_trade = True
+            wait_min = 15
+        if is_trade:
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Four day drop strategy. '
+                               f'Current price: {context.current_price}. '
+                               f'Change today [{change_today * 100:.2f}%]. '
+                               f'H2l [{context.h2l_avg * 100:.2f}%].')
+            self._positions[context.symbol] = {'entry_time': context.current_time,
+                                               'strategy': 'four_day_drop',
+                                               'wait_min': wait_min,
+                                               'side': 'long'}
+            return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
+
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         def exit_position():
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
@@ -175,6 +225,10 @@ class TqqqProcessor(Processor):
                 return exit_position()
         if strategy == 'first_hour_momentum':
             if context.current_time >= position['entry_time'] + datetime.timedelta(minutes=30):
+                return exit_position()
+        if strategy == 'four_day_drop':
+            wait_min = position['wait_min']
+            if context.current_time >= position['entry_time'] + datetime.timedelta(minutes=wait_min):
                 return exit_position()
 
 

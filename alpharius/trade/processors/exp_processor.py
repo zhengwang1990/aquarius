@@ -44,6 +44,13 @@ class ExpProcessor(Processor):
             return self._open_position(context)
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
+        t = context.current_time.time()
+        if t >= EXIT_TIME:
+            return
+        market_open_index = context.market_open_index
+        if market_open_index is None:
+            return
+        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         is_trade = False
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
@@ -52,7 +59,8 @@ class ExpProcessor(Processor):
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
-        is_close = context.current_time >= position['entry_time'] + datetime.timedelta(minutes=10)
+        is_close = (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=10)
+                    or context.current_time.time() >= EXIT_TIME)
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'Closing position: {is_close}. Current price {context.current_price}.')
         if is_close:
