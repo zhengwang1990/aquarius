@@ -47,7 +47,7 @@ class Backtesting:
         self._num_win, self._num_lose = 0, 0
         self._cash = 1
         self._cash_portion = 1
-        self._processor_profit = dict()
+        self._processor_stats = dict()
         self._interday_data = None
         self._ack_all = ack_all
 
@@ -119,15 +119,15 @@ class Backtesting:
             html += html_diff.make_table(old_content, new_content, context=True)
             html += '</div>'
         if html:
-            template_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                         'html', 'diff.html')
+            current_dir = os.path.dirname(os.path.realpath(__file__))
+            template_file = os.path.join(current_dir, 'html', 'diff.html')
             header_width = (int(np.log10(max_num_line)) + 1) * 7 + 6
             with open(template_file, 'r') as f:
                 template = f.read()
             with open(os.path.join(self._output_dir, 'diff.html'), 'w') as f:
                 f.write(template.format(
                     header_width=header_width, html=html, output_num=self._output_num,
-                    logo_path=os.path.join(os.path.realpath(__file__), 'html', 'diff.png')))
+                    logo_path=os.path.join(current_dir, 'html', 'diff.png')))
 
     def run(self) -> List[Transaction]:
         self._run_start_time = time.time()
@@ -348,10 +348,14 @@ class Backtesting:
             profit = adjusted_action_price / current_position.entry_price - 1
             if action.type == ActionType.BUY_TO_CLOSE:
                 profit *= -1
+            processor_stats = self._processor_stats.setdefault(action.processor.name,
+                                                               {'profit': 0.0, 'num_win': 0, 'num_lose': 0})
             if profit > 0:
                 self._num_win += 1
+                processor_stats['num_win'] += 1
             else:
                 self._num_lose += 1
+                processor_stats['num_lose'] += 1
             one_time_processor_profit[action.processor.name] += portion * profit
             executed_actions.append(
                 Transaction(symbol, action.type == ActionType.SELL_TO_CLOSE, action.processor.name,
@@ -359,8 +363,9 @@ class Backtesting:
                             current_time, qty, profit * qty * current_position.entry_price,
                             profit, None, None))
         for processor_name, profit in one_time_processor_profit.items():
-            current_value = self._processor_profit.get(processor_name, 0) + 1
-            self._processor_profit[processor_name] = current_value * (1 + profit) - 1
+            processor_stats = self._processor_stats.setdefault(processor_name,
+                                                               {'profit': 0.0, 'num_win': 0, 'num_lose': 0})
+            processor_stats['profit'] = (processor_stats['profit'] + 1) * (1 + profit) - 1
         return executed_actions
 
     def _open_positions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> None:
@@ -472,21 +477,27 @@ class Backtesting:
 
         outputs = [get_header('Summary')]
         n_trades = self._num_win + self._num_lose
-        success_rate = self._num_win / n_trades if n_trades > 0 else 0
+        win_rate = self._num_win / n_trades if n_trades > 0 else 0
         market_dates = self._market_dates[:len(self._daily_equity) - 1]
         if not market_dates:
             return
         summary = [['Time Range', f'{market_dates[0].date()} ~ {market_dates[-1].date()}'],
-                   ['Success Rate', f'{success_rate * 100:.2f}%'],
+                   ['Win Rate', f'{win_rate * 100:.2f}%'],
                    ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)'],
                    ['Output Dir', os.path.relpath(self._output_dir, BASE_DIR)]]
         outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
 
-        processor_profit = [['Processor', 'Gain/Loss']]
-        for processor_name in sorted(self._processor_profit.keys()):
-            processor_profit.append([processor_name,
-                                     _profit_to_str(self._processor_profit[processor_name])])
-        outputs.append(tabulate.tabulate(processor_profit, tablefmt='grid'))
+        processor_stats = [['Processor', 'Gain/Loss', 'Win Rate', 'Num of Trades']]
+        for processor_name in sorted(self._processor_stats.keys()):
+            current_stats = self._processor_stats[processor_name]
+            processor_n_trade = current_stats['num_win'] + current_stats['num_lose']
+            processor_win_rate = current_stats['num_win'] / processor_n_trade
+            processor_stats.append([
+                processor_name,
+                _profit_to_str(current_stats['profit']),
+                f'{processor_win_rate * 100:.2f}%',
+                f'{processor_n_trade} ({processor_n_trade / len(market_dates):.2f} per day)'])
+        outputs.append(tabulate.tabulate(processor_stats, tablefmt='grid'))
 
         print_symbols = ['QQQ', 'SPY', 'TQQQ']
         market_symbol = 'SPY'
