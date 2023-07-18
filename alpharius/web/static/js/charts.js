@@ -176,11 +176,11 @@ function get_chart(timeframe) {
         var date = intraday_datepicker.getDate("yyyy-mm-dd");
         if (date === undefined) {
             displayAlert("danger", "Date must be selected", timeframe);
-            return;
+            return 1;
         }
         if (!validateDate(date)) {
             displayAlert("danger", `${date} is not a valid date`, timeframe);
-            return;
+            return 1;
         }
         dates = [date];
         symbol_input = intraday_symbol_input;
@@ -189,11 +189,11 @@ function get_chart(timeframe) {
         for (var date of dates) {
             if (date === undefined) {
                 displayAlert("danger", "Date must be selected", timeframe);
-                return;
+                return 1;
             }
             if (!validateDate(date)) {
                 displayAlert("danger", `${date} is not a valid date`, timeframe);
-                return;
+                return 1;
             }
         }
         symbol_input = daily_symbol_input;
@@ -201,11 +201,11 @@ function get_chart(timeframe) {
     var symbol = symbol_input.value.toUpperCase();
     if (symbol.length === 0) {
         displayAlert("danger", "Symbol must be entered", timeframe);
-        return;
+        return 1;
     }
     if (!validateSymbol(symbol)) {
         displayAlert("danger", `${symbol} is not a valid symbol`, timeframe);
-        return;
+        return 1;
     }
     get_chart_data(dates, symbol, timeframe);
     update_chart(timeframe);
@@ -213,6 +213,7 @@ function get_chart(timeframe) {
     if (timeframe === "intraday" && daily_chart_container.style.display === "none") {
         copy_date_to_daily();
     }
+    return 0;
 }
 
 function copy_date_to_daily() {
@@ -448,8 +449,9 @@ intraday_datepicker.element.addEventListener("changeDate", () => {
 
 intraday_button.addEventListener("click", () => {
     if (button_state === 0) {
-        get_chart("intraday");
-        toggle_button_state();
+        if (get_chart("intraday") === 0) {
+            toggle_button_state();
+        }
     } else {
         copy_date_to_daily();
     }
