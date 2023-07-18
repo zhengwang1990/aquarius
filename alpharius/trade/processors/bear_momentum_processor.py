@@ -73,8 +73,7 @@ class BearMomentumProcessor(Processor):
             return
         interday_min, interday_max = self._get_interday_min_max(context)
         allow_long = context.current_price < interday_max * 0.7
-        allow_short = allow_long or context.current_price > interday_min * 1.5
-        allow_short = allow_short and context.symbol in self._shortable_symbols
+        allow_short = allow_long and context.symbol in self._shortable_symbols
         if not allow_short and not allow_long:
             return
         no_up, no_down = 0, 0
