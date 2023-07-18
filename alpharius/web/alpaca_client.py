@@ -404,11 +404,14 @@ class AlpacaClient:
                                      start=start_time.isoformat(),
                                      end=end_time.isoformat(),
                                      adjustment='split')
-        prev_day_bar = self._alpaca.get_bars(symbol=symbol,
-                                             timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
-                                             start=(start_time - datetime.timedelta(days=7)).strftime('%F'),
-                                             end=(start_time - datetime.timedelta(days=1)).strftime('%F'),
-                                             adjustment='split')[-1]
+        if timeframe == 'intraday':
+            prev_close = self._alpaca.get_bars(symbol=symbol,
+                                               timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
+                                               start=(start_time - datetime.timedelta(days=7)).strftime('%F'),
+                                               end=(start_time - datetime.timedelta(days=1)).strftime('%F'),
+                                               adjustment='split')[-1].c
+        else:
+            prev_close = None
         name = self._alpaca.get_asset(symbol).name
         labels = []
         prices = []
@@ -428,7 +431,7 @@ class AlpacaClient:
             volume = {'x': label, 's': bar.v, 'g': int(bar.c >= bar.o)}
             volumes.append(volume)
         return {'labels': labels, 'prices': prices, 'volumes': volumes,
-                'prev_close': prev_day_bar.c, 'name': name}
+                'prev_close': prev_close, 'name': name}
 
     @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
     def get_all_symbols(self):

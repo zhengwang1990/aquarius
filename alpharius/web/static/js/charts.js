@@ -25,10 +25,12 @@ const intraday_alert = document.getElementById("intraday-alert");
 const intraday_symbol_input = document.getElementById("intraday-symbol-input");
 const intraday_chart_container = document.getElementById("intraday-chart-container");
 const intraday_chart_name = document.getElementById("intraday-chart-name");
+const intraday_button = document.getElementById("intraday-chart-btn");
 const daily_alert = document.getElementById("daily-alert");
 const daily_symbol_input = document.getElementById("daily-symbol-input");
 const daily_chart_container = document.getElementById("daily-chart-container");
 const daily_chart_name = document.getElementById("daily-chart-name");
+const daily_button = document.getElementById("daily-chart-btn");
 
 if (window.innerWidth <= 800) {
     chart_mode = "compact";
@@ -209,17 +211,22 @@ function get_chart(timeframe) {
     update_chart(timeframe);
     // Auto set daily input boxes
     if (timeframe === "intraday" && daily_chart_container.style.display === "none") {
-        daily_symbol_input.value = symbol;
-        var date_utc = Date.parse(dates[0]);
-        var start_date = date_utc + (new Date(date_utc).getTimezoneOffset() * 60000);
-        start_date -= 86400000 * 92;
-        var day = new Date(start_date).getDay();
-        if (day === 0 || day === 6) {
-            start_date += 86400000 * 2;
-        }
-        var end_date = date_utc + (new Date(date_utc).getTimezoneOffset() * 60000);
-        daily_datepicker.setDates(start_date, end_date);
+        copy_date_to_daily();
     }
+}
+
+function copy_date_to_daily() {
+    daily_symbol_input.value = intraday_symbol_input.value.toUpperCase();
+    var date = intraday_datepicker.getDate("yyyy-mm-dd");
+    var date_utc = Date.parse(date);
+    var start_date = date_utc + (new Date(date_utc).getTimezoneOffset() * 60000);
+    start_date -= 86400000 * 92;
+    var day = new Date(start_date).getDay();
+    if (day === 0 || day === 6) {
+        start_date += 86400000 * 2;
+    }
+    var end_date = date_utc + (new Date(date_utc).getTimezoneOffset() * 60000);
+    daily_datepicker.setDates(start_date, end_date);
 }
 
 function update_chart(timeframe) {
@@ -416,8 +423,38 @@ function update_chart(timeframe) {
     }
 }
 
-document.getElementById("intraday-chart-btn").addEventListener("click", () => {get_chart("intraday");});
-document.getElementById("daily-chart-btn").addEventListener("click", () => {get_chart("daily");});
+var button_state = 0;
+function toggle_button_state() {
+    if (button_state === 0) {
+        button_state = 1;
+        intraday_button.innerHTML = "OK";
+    } else {
+        button_state = 0;
+        intraday_button.innerHTML = "GO";
+    }
+    intraday_button.classList.toggle("btn-secondary");
+    intraday_button.classList.toggle("btn-outline-secondary");
+}
+intraday_symbol_input.addEventListener("input", () => {
+    if (button_state === 1) {
+        toggle_button_state();
+    }
+});
+intraday_datepicker.element.addEventListener("changeDate", () => {
+    if (button_state === 1) {
+        toggle_button_state();
+    }
+});
+
+intraday_button.addEventListener("click", () => {
+    if (button_state === 0) {
+        get_chart("intraday");
+        toggle_button_state();
+    } else {
+        copy_date_to_daily();
+    }
+});
+daily_button.addEventListener("click", () => {get_chart("daily");});
 
 window.addEventListener("resize", function(event) {
     const width = window.innerWidth;
