@@ -52,16 +52,16 @@ class Backtesting:
         self._ack_all = ack_all
 
         backtesting_output_dir = os.path.join(OUTPUT_DIR, 'backtesting')
-        output_num = 1
+        self._output_num = 1
         while True:
             output_dir = os.path.join(backtesting_output_dir,
                                       datetime.datetime.now().strftime('%m-%d'),
-                                      f'{output_num:02d}')
+                                      f'{self._output_num:02d}')
             if not os.path.exists(output_dir):
                 self._output_dir = output_dir
                 os.makedirs(output_dir, exist_ok=True)
                 break
-            output_num += 1
+            self._output_num += 1
 
         self._details_log = logging_config(os.path.join(
             self._output_dir, 'details.txt'), detail=False, name='details')
@@ -125,7 +125,9 @@ class Backtesting:
             with open(template_file, 'r') as f:
                 template = f.read()
             with open(os.path.join(self._output_dir, 'diff.html'), 'w') as f:
-                f.write(template.format(header_width=header_width, html=html))
+                f.write(template.format(
+                    header_width=header_width, html=html, output_num=self._output_num,
+                    logo_path=os.path.join(os.path.realpath(__file__), 'html', 'diff.png')))
 
     def run(self) -> List[Transaction]:
         self._run_start_time = time.time()
