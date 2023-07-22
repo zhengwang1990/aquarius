@@ -10,4 +10,5 @@ from .tqqq_processor import TqqqProcessorFactory
 from .down_four_processor import DownFourProcessorFactory
 from .abcd_processor import AbcdProcessorFactory
 from .first_hour_m6m_processor import FirstHourM6mProcessorFactory
+from .open_high_processor import OpenHighProcessorFactory
 from .exp_processor import ExpProcessorFactory
