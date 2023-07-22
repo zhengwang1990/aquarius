@@ -4,7 +4,7 @@ from typing import List, Optional
 import numpy as np
 from ..common import (
     ActionType, Context, Processor, ProcessorFactory, TradingFrequency, Position,
-    ProcessorAction, DataSource, Mode, DATETIME_TYPE, DAYS_IN_A_MONTH)
+    ProcessorAction, DataSource, Mode, DATETIME_TYPE, DAYS_IN_A_MONTH, DAYS_IN_A_QUARTER)
 from ..data_loader import get_shortable_symbols
 from ..stock_universe import IntradayVolatilityStockUniverse
 
@@ -56,6 +56,8 @@ class O2hProcessor(Processor):
         if (context.current_price < 0.8 * interday_closes[-DAYS_IN_A_MONTH] or
                 context.current_price > 1.5 * interday_closes[-DAYS_IN_A_MONTH]):
             return
+        if interday_closes[-1] / interday_closes[-2] - 1 > 2.25 * context.l2h_avg:
+            return
         key = context.symbol + context.current_time.strftime('%F')
         if key in self._memo:
             o2h_avg, o2h_std = self._memo[key]
@@ -71,6 +73,8 @@ class O2hProcessor(Processor):
             return
         intraday_closes = context.intraday_lookback['Close']
         if len(intraday_closes) < 3:
+            return
+        if context.current_price < context.prev_day_close:
             return
         current_gain = context.current_price / market_open_price - 1
         z_score = (current_gain - o2h_avg) / (o2h_std + 1E-7)
