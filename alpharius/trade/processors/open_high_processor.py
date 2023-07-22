@@ -82,10 +82,13 @@ class OpenHighProcessor(Processor):
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
-        if (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=15)
-                or context.current_time.time() >= EXIT_TIME):
-            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
-                               f'Closing position. Current price {context.current_price}.')
+        stop_loss = context.current_price < context.prev_day_close
+        is_close = (stop_loss or
+                    context.current_time >= position['entry_time'] + datetime.timedelta(minutes=15)
+                    or context.current_time.time() >= EXIT_TIME)
+        self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
+                           f'Closing position: {is_close}. Current price {context.current_price}.')
+        if is_close:
             position['status'] = 'inactive'
             return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
 
