@@ -4,7 +4,7 @@ from typing import List, Optional
 import numpy as np
 from ..common import (
     ActionType, Context, Processor, ProcessorFactory, TradingFrequency, Position,
-    ProcessorAction, DataSource, Mode, DATETIME_TYPE, DAYS_IN_A_MONTH, DAYS_IN_A_QUARTER)
+    ProcessorAction, DataSource, Mode, DATETIME_TYPE, DAYS_IN_A_MONTH)
 from ..data_loader import get_shortable_symbols
 from ..stock_universe import IntradayVolatilityStockUniverse
 
