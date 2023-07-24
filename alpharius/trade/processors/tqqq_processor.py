@@ -41,6 +41,9 @@ class TqqqProcessor(Processor):
         action = self._four_day_drop(context)
         if action:
             return action
+        action = self._open_high_momentum(context)
+        if action:
+            return action
 
     def _mean_reversion(self, context: Context) -> Optional[ProcessorAction]:
         t = context.current_time.time()
@@ -206,6 +209,34 @@ class TqqqProcessor(Processor):
                                                'side': 'long'}
             return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
+    def _open_high_momentum(self, context: Context) -> Optional[ProcessorAction]:
+        t = context.current_time.time()
+        if not datetime.time(11, 0) <= t < datetime.time(16, 0):
+            return
+        interday_closes = context.interday_lookback['Close']
+        if interday_closes[-1] / interday_closes[-2] - 1 > context.l2h_avg:
+            return
+        market_open_index = context.market_open_index
+        intraday_opens = context.intraday_lookback['Open'][market_open_index:]
+        open_price = intraday_opens[0]
+        open_gain = open_price / context.prev_day_close - 1
+        if open_gain < context.l2h_avg:
+            return
+        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        if len(intraday_closes) < 19:
+            return
+        for i in [-1, -7, -13]:
+            if intraday_closes[i] < intraday_closes[i - 6]:
+                return
+        self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Open high momentum strategy. '
+                           f'Current price: {context.current_price}. '
+                           f'Open gain: {open_gain * 100:.2f}%. '
+                           f'H2l [{context.h2l_avg * 100:.2f}%].')
+        self._positions[context.symbol] = {'entry_time': context.current_time,
+                                           'strategy': 'open_high_momentum',
+                                           'side': 'long'}
+        return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 0.5)
+
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         def exit_position():
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
@@ -229,6 +260,9 @@ class TqqqProcessor(Processor):
         if strategy == 'four_day_drop':
             wait_min = position['wait_min']
             if context.current_time >= position['entry_time'] + datetime.timedelta(minutes=wait_min):
+                return exit_position()
+        if strategy == 'open_high_momentum':
+            if context.current_time.time() == datetime.time(16, 0):
                 return exit_position()
 
 
