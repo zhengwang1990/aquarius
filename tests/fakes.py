@@ -135,7 +135,6 @@ class FakeAlpaca:
         else:
             raise ValueError('Time frame must be 5Min, 1H or 1D.')
         start_time = _to_timestamp(date_start)
-        start_time -= start_time % time_interval
         end_time = _to_timestamp(date_end) + time_interval
         timestamps = [t for t in range(start_time, end_time, time_interval)
                       if pd.to_datetime(t, unit='s', utc=True).tz_convert(TIME_ZONE).isoweekday() < 6]
@@ -156,7 +155,6 @@ class FakeAlpaca:
         else:
             raise ValueError('Time frame must be 5 min, 1 hour or 1 day.')
         start_timestamp = _to_timestamp(start)
-        start_timestamp -= start_timestamp % time_interval
         end_timestamp = _to_timestamp(end) + time_interval
         return [Bar(pd.to_datetime(t, unit='s', utc=True),
                     42, 50, 35, next(self._value_cycle), 40.123, 10)
