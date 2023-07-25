@@ -30,8 +30,9 @@ def get_time_vs_equity(history_equity: List[float],
                        cash_reserve: float) -> Tuple[List[str], List[float]]:
     time_list = []
     equity_list = []
-    n = sum([equity is not None for equity in history_equity])
-    for i, (e, t) in enumerate(zip(history_equity[:n], history_time[:n])):
+    for i, (e, t) in enumerate(zip(history_equity, history_time)):
+        if e is None:
+            continue
         dt = pd.to_datetime(t, utc=True, unit='s').tz_convert(TIME_ZONE)
         equity_list.append(max(e - cash_reserve, 0))
         time_list.append(dt.strftime(time_format))
