@@ -370,11 +370,6 @@ class AlpacaClient:
                 portfolio_dates.append(
                     pd.to_datetime(t, utc=True, unit='s').tz_convert(TIME_ZONE).strftime('%F'))
                 portfolio_values.append(max(e - cash_reserve, 0))
-            # Current equity value is wrong from get_portfolio_history
-            portfolio_values[-1] = max(float(self._alpaca.get_account().equity) - cash_reserve, 0)
-            start_index = 0
-            while start_index < len(portfolio_values) and portfolio_values[start_index] == 0:
-                start_index += 1
             compare_symbols = ['QQQ', 'SPY']
             tasks = dict()
             for symbol in compare_symbols:
@@ -384,6 +379,11 @@ class AlpacaClient:
                                             start=portfolio_dates[0],
                                             end=end_date,
                                             adjustment='split')
+            # Current equity value is wrong from get_portfolio_history
+            portfolio_values[-1] = max(float(self._alpaca.get_account().equity) - cash_reserve, 0)
+            start_index = 0
+            while start_index < len(portfolio_values) and portfolio_values[start_index] == 0:
+                start_index += 1
             result = {'dates': portfolio_dates[start_index:],
                       'symbols': ['My Portfolio'] + compare_symbols,
                       'values': [portfolio_values[start_index:]]}
