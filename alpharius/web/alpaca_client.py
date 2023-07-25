@@ -360,25 +360,30 @@ class AlpacaClient:
                                          date_end=end_date,
                                          timeframe='1D',
                                          extended_hours=False)
+            portfolio_result = portfolio_task.result()
+            cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
+            portfolio_dates = []
+            portfolio_values = []
+            for t, e in zip(portfolio_result.timestamp, portfolio_result.equity):
+                if e is None:
+                    continue
+                portfolio_dates.append(
+                    pd.to_datetime(t, utc=True, unit='s').tz_convert(TIME_ZONE).strftime('%F'))
+                portfolio_values.append(max(e - cash_reserve, 0))
+            # Current equity value is wrong from get_portfolio_history
+            portfolio_values[-1] = max(float(self._alpaca.get_account().equity) - cash_reserve, 0)
+            start_index = 0
+            while start_index < len(portfolio_values) and portfolio_values[start_index] == 0:
+                start_index += 1
             compare_symbols = ['QQQ', 'SPY']
             tasks = dict()
             for symbol in compare_symbols:
                 tasks[symbol] = pool.submit(self._alpaca.get_bars,
                                             symbol=symbol,
                                             timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
-                                            start=START_DATE,
+                                            start=portfolio_dates[0],
                                             end=end_date,
                                             adjustment='split')
-            portfolio_result = portfolio_task.result()
-            portfolio_dates = [pd.to_datetime(t, utc=True, unit='s').tz_convert(TIME_ZONE).strftime('%F')
-                               for t in portfolio_result.timestamp]
-            cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
-            portfolio_values = [max(e - cash_reserve, 0) for e in portfolio_result.equity]
-            # Current equity value is wrong from get_portfolio_history
-            portfolio_values[-1] = max(float(self._alpaca.get_account().equity) - cash_reserve, 0)
-            start_index = 0
-            while start_index < len(portfolio_values) and portfolio_values[start_index] == 0:
-                start_index += 1
             result = {'dates': portfolio_dates[start_index:],
                       'symbols': ['My Portfolio'] + compare_symbols,
                       'values': [portfolio_values[start_index:]]}
