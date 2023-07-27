@@ -247,6 +247,8 @@ class TqqqProcessor(Processor):
         position = self._positions[context.symbol]
         action_type = ActionType.SELL_TO_CLOSE if position['side'] == 'long' else ActionType.BUY_TO_CLOSE
         action = ProcessorAction(context.symbol, action_type, 1)
+        market_open_index = context.market_open_index
+        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
         strategy = position['strategy']
         if strategy == 'last_hour_momentum':
             if context.current_time.time() == datetime.time(16, 0):
@@ -262,7 +264,8 @@ class TqqqProcessor(Processor):
             if context.current_time >= position['entry_time'] + datetime.timedelta(minutes=wait_min):
                 return exit_position()
         if strategy == 'open_high_momentum':
-            if context.current_time.time() == datetime.time(16, 0):
+            stop_loss = context.current_price == np.min(intraday_closes)
+            if stop_loss or context.current_time.time() == datetime.time(16, 0):
                 return exit_position()
 
 
