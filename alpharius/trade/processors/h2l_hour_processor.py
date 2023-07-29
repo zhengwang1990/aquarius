@@ -4,7 +4,7 @@ from typing import List, Optional
 import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DATETIME_TYPE)
+    Position, ProcessorAction, Mode, DATETIME_TYPE, DAYS_IN_A_QUARTER)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -67,6 +67,8 @@ class H2lHourProcessor(Processor):
             return
         intraday_opens = context.intraday_lookback['Open'][market_open_index:]
         if intraday_opens[-1] > context.prev_day_close > intraday_closes[-1]:
+            return
+        if interday_closes[-1] > 10 * np.min(interday_closes[-DAYS_IN_A_QUARTER:]):
             return
         h2l_avg = context.h2l_avg
         h2l_std = context.h2l_std
