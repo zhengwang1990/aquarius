@@ -130,6 +130,8 @@ class TqqqProcessor(Processor):
         change_from_close = context.current_price / context.prev_day_close - 1
         h2l = context.h2l_avg
         if change_from_open < 0.7 * h2l or change_from_close < 2 * h2l:
+            self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] Last hour momentum strategy. '
+                               f'Current price: {context.current_price}.')
             return _open_position('short')
         l2h = context.l2h_avg
         intraday_closes = context.intraday_lookback['Close'][market_open_index:]
