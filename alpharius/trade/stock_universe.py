@@ -1,4 +1,5 @@
 import datetime
+import functools
 import hashlib
 import inspect
 import json
@@ -32,6 +33,17 @@ class StockUniverse:
             market_day.date).date() for market_day in calendar]
         self._cache_dir = None
 
+    def get_interday_lookback(self, symbol: str, view_time: DATETIME_TYPE):
+        hist = self._historical_data.get(symbol)
+        if hist is None:
+            return
+        prev_day = self.get_prev_day(view_time)
+        prev_day_ind = timestamp_to_index(hist.index, prev_day)
+        if prev_day_ind is None:
+            return
+        return hist.iloc[:prev_day_ind + 1]
+
+    @functools.lru_cache(maxsize=100)
     def get_prev_day(self, view_time: DATETIME_TYPE):
         prev_day = view_time.date() - datetime.timedelta(days=1)
         while prev_day not in self._market_dates:

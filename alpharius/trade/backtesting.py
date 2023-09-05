@@ -80,6 +80,7 @@ class Backtesting:
         self._intraday_load_time = 0
         self._stock_universe_load_time = 0
         self._context_prep_time = 0
+        self._transactions = []
         self._processor_time = collections.defaultdict(int)
 
     def _safe_exit(self, signum, frame) -> None:
@@ -366,6 +367,7 @@ class Backtesting:
             processor_stats = self._processor_stats.setdefault(processor_name,
                                                                {'profit': 0.0, 'num_win': 0, 'num_lose': 0})
             processor_stats['profit'] = (processor_stats['profit'] + 1) * (1 + profit) - 1
+        self._transactions.extend(executed_actions)
         return executed_actions
 
     def _open_positions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> None:
@@ -418,11 +420,11 @@ class Backtesting:
         outputs = [get_header(day.date())]
         if executed_closes:
             table_list = [[t.symbol, t.processor, t.entry_time.time(), t.exit_time.time(),
-                           'long' if t.is_long else 'short', f'{t.qty:.2g}', t.entry_price, t.exit_price,
+                           'long' if t.is_long else 'short', t.entry_price, t.exit_price,
                            f'{t.gl_pct * 100:+.2f}%'] for t in executed_closes]
             trade_info = tabulate.tabulate(table_list,
                                            headers=['Symbol', 'Processor', 'Entry Time', 'Exit Time', 'Side',
-                                                    'Qty', 'Entry Price', 'Exit Price', 'Gain/Loss'],
+                                                    'Entry Price', 'Exit Price', 'Gain/Loss'],
                                            tablefmt='grid',
                                            disable_numparse=True)
             outputs.append('[ Trades ]')
@@ -485,6 +487,7 @@ class Backtesting:
                    ['Win Rate', f'{win_rate * 100:.2f}%'],
                    ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)'],
                    ['Output Dir', os.path.relpath(self._output_dir, BASE_DIR)]]
+        outputs.append('[ Basic Info ]')
         outputs.append(tabulate.tabulate(summary, tablefmt='grid'))
 
         processor_stats = [['Processor', 'Gain/Loss', 'Win Rate', 'Num of Trades']]
@@ -497,7 +500,25 @@ class Backtesting:
                 _profit_to_str(current_stats['profit']),
                 f'{processor_win_rate * 100:.2f}%',
                 f'{processor_n_trade} ({processor_n_trade / len(market_dates):.2f} per day)'])
+        outputs.append('[ Processor Performance ]')
         outputs.append(tabulate.tabulate(processor_stats, tablefmt='grid'))
+
+        self._transactions.sort(key=lambda s: s.gl_pct)
+        for title, transactions, judge in zip(['[ Best Trades ]', '[ Worst Trades ]'],
+                                              [self._transactions[::-1][:5], self._transactions[:5]],
+                                              [lambda p: p > 0, lambda p: p < 0]):
+            tx_list = [[t.symbol, t.processor, t.entry_time.strftime('%F'), t.entry_time.time(),
+                        t.exit_time.time(), 'long' if t.is_long else 'short', f'{t.gl_pct * 100:+.2f}%']
+                       for t in transactions if judge(t.gl_pct)]
+            if not tx_list:
+                continue
+            tx_table = tabulate.tabulate(tx_list,
+                                         headers=['Symbol', 'Processor', 'Entry Date', 'Entry Time',
+                                                  'Exit Time', 'Side', 'Gain/Loss'],
+                                         tablefmt='grid',
+                                         disable_numparse=True)
+            outputs.append(title)
+            outputs.append(tx_table)
 
         print_symbols = ['QQQ', 'SPY', 'TQQQ']
         market_symbol = 'SPY'
@@ -582,6 +603,7 @@ class Backtesting:
         stats.append(drawdown_row)
         stats.append(drawdown_start_row)
         stats.append(drawdown_end_row)
+        outputs.append('[ Statistics ]')
         outputs.append(tabulate.tabulate(stats, tablefmt='grid', disable_numparse=True))
         self._summary_log.info('\n'.join(outputs))
 
