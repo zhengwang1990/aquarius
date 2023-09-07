@@ -5,10 +5,10 @@ import numpy as np
 from ..common import (
     ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
     Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DAYS_IN_A_YEAR, DATETIME_TYPE)
-from ..data_loader import get_shortable_symbols, load_tradable_history
-from ..stock_universe import TopVolumeUniverse
+from ..data_loader import get_shortable_symbols
+from ..stock_universe import IntradayVolatilityStockUniverse
 
-NUM_UNIVERSE_SYMBOLS = 500
+NUM_UNIVERSE_SYMBOLS = 25
 EXIT_TIME = datetime.time(16, 0)
 
 
@@ -21,12 +21,10 @@ class L2hProcessor(Processor):
                  output_dir: str) -> None:
         super().__init__(output_dir)
         self._positions = dict()
-        self._historical_data = load_tradable_history(
-            lookback_start_date, lookback_end_date, data_source)
-        self._stock_universe = TopVolumeUniverse(lookback_start_date,
-                                                 lookback_end_date,
-                                                 data_source,
-                                                 num_stocks=NUM_UNIVERSE_SYMBOLS)
+        self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
+                                                               lookback_end_date,
+                                                               data_source,
+                                                               num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._shortable_symbols = set(get_shortable_symbols())
 
     def get_trading_frequency(self) -> TradingFrequency:
@@ -39,21 +37,8 @@ class L2hProcessor(Processor):
             self._positions.pop(symbol)
 
     def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
-        top_volumes = self._stock_universe.get_stock_universe(view_time)
-        stock_universe = []
-        for symbol in top_volumes:
-            interday_lookback = self._stock_universe.get_interday_lookback(symbol, view_time)
-            if interday_lookback is None:
-                continue
-            if len(interday_lookback) < DAYS_IN_A_YEAR:
-                continue
-            prev_close = interday_lookback['Close'][-1]
-            month_close = interday_lookback['Close'][- DAYS_IN_A_MONTH]
-            if prev_close < month_close or prev_close > 2 * month_close:
-                continue
-            stock_universe.append(symbol)
-        return list(set(stock_universe + list(self._positions.keys()))
-                    & self._shortable_symbols)
+        return list(set(self._stock_universe.get_stock_universe(view_time) +
+                        list(self._positions.keys())) & self._shortable_symbols)
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
         if self.is_active(context.symbol):
