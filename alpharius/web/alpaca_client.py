@@ -21,7 +21,7 @@ from flask import Flask
 
 app = Flask(__name__)
 
-START_DATE = '2022-08-05'
+START_DATE = '2023-03-14'
 
 
 def get_time_vs_equity(history_equity: List[float],
@@ -370,6 +370,11 @@ class AlpacaClient:
                 portfolio_dates.append(
                     pd.to_datetime(t, utc=True, unit='s').tz_convert(TIME_ZONE).strftime('%F'))
                 portfolio_values.append(max(e - cash_reserve, 0))
+            # Alpaca bug. Last day may be reported twice
+            if portfolio_dates[-1] == portfolio_dates[-2]:
+                portfolio_dates.pop()
+                portfolio_values[-2] = portfolio_values[-1]
+                portfolio_values.pop()
             compare_symbols = ['QQQ', 'SPY']
             tasks = dict()
             for symbol in compare_symbols:
