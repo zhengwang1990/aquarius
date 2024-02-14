@@ -216,7 +216,7 @@ class AlpacaClient:
                 symbol_values[timeframe][-1] = current_symbol_value
         for timeframe in timeframes:
             if timeframe == '1d':
-                symbol_base = dict_5y[time_points[-2]]
+                symbol_base = dict_5y[time_points[-2]] if len(time_points) > 1 else dict_5y[time_points[-1]]
                 portfolio_base = portfolio_histories['prev_close']
             else:
                 symbol_base = symbol_values[timeframe][0] if symbol_values[timeframe] else current_symbol_value
