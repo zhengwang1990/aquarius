@@ -102,7 +102,11 @@ class AlpacaClient:
         # Current equity value is wrong from get_portfolio_history
         current_equity = max(float(self._alpaca.get_account().equity) - cash_reserve, 0)
         result['current_equity'] = f'{current_equity:,.2f}'
-        result['equity_5y'][-1] = current_equity
+        if result['time_5y'] != latest_day.strftime('%F'):
+            result['time_5y'].append(latest_day.strftime('%F'))
+            result['equity_5y'].append(current_equity)
+        else:
+            result['equity_5y'][-1] = current_equity
         result['equity_1d'][-1] = current_equity
         result['prev_close'] = (result['equity_5y'][-2]
                                 if len(result['equity_5y']) > 2 else math.nan)
@@ -354,29 +358,22 @@ class AlpacaClient:
         start = time.time()
         calendar = self.get_calendar()
         end_date = calendar[-1].date.strftime('%F')
-        with futures.ThreadPoolExecutor(max_workers=4) as pool:
-            portfolio_task = pool.submit(self._alpaca.get_portfolio_history,
-                                         date_start=START_DATE,
-                                         date_end=end_date,
-                                         timeframe='1D',
-                                         extended_hours=False)
-            portfolio_result = portfolio_task.result()
-            cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
-            portfolio_dates = []
-            portfolio_values = []
-            for t, e in zip(portfolio_result.timestamp, portfolio_result.equity):
-                if e is None:
-                    continue
-                portfolio_dates.append(
-                    pd.to_datetime(t, utc=True, unit='s').tz_convert(TIME_ZONE).strftime('%F'))
-                portfolio_values.append(max(e - cash_reserve, 0))
-            # Alpaca bug. Last day may be reported twice
-            if portfolio_dates[-1] == portfolio_dates[-2]:
-                portfolio_dates.pop()
-                portfolio_values[-2] = portfolio_values[-1]
-                portfolio_values.pop()
-            compare_symbols = ['QQQ', 'SPY']
-            tasks = dict()
+        portfolio_result = self._alpaca.get_portfolio_history(date_start=START_DATE,
+                                                              date_end=end_date,
+                                                              timeframe='1D',
+                                                              extended_hours=False)
+        cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
+        portfolio_dates = []
+        portfolio_values = []
+        for t, e in zip(portfolio_result.timestamp, portfolio_result.equity):
+            if e is None:
+                continue
+            portfolio_dates.append(
+                pd.to_datetime(t, utc=True, unit='s').tz_convert(TIME_ZONE).strftime('%F'))
+            portfolio_values.append(max(e - cash_reserve, 0))
+        compare_symbols = ['QQQ', 'SPY']
+        tasks, bars = dict(), dict()
+        with futures.ThreadPoolExecutor(max_workers=2) as pool:
             for symbol in compare_symbols:
                 tasks[symbol] = pool.submit(self._alpaca.get_bars,
                                             symbol=symbol,
@@ -384,19 +381,29 @@ class AlpacaClient:
                                             start=portfolio_dates[0],
                                             end=end_date,
                                             adjustment='split')
-            # Current equity value is wrong from get_portfolio_history
-            portfolio_values[-1] = max(float(self._alpaca.get_account().equity) - cash_reserve, 0)
-            start_index = 0
-            while start_index < len(portfolio_values) and portfolio_values[start_index] == 0:
-                start_index += 1
-            result = {'dates': portfolio_dates[start_index:],
-                      'symbols': ['My Portfolio'] + compare_symbols,
-                      'values': [portfolio_values[start_index:]]}
             for symbol in compare_symbols:
-                bars = tasks[symbol].result()
-                symbol_values = [bar.c for bar in bars]
-                assert len(symbol_values) == len(portfolio_values)
-                result['values'].append(symbol_values[start_index:])
+                bars[symbol] = tasks[symbol].result()
+        current_value = max(float(self._alpaca.get_account().equity) - cash_reserve, 0)
+        if portfolio_dates[-1] != end_date:
+            # Portfolio history may not include today's data
+            portfolio_dates.append(end_date)
+            portfolio_values.append(current_value)
+        else:
+            # Current equity value can be wrong from get_portfolio_history
+            portfolio_values[-1] = current_value
+        start_index = 0
+        while start_index < len(portfolio_values) and portfolio_values[start_index] == 0:
+            start_index += 1
+        result = {'dates': portfolio_dates[start_index:],
+                  'symbols': ['My Portfolio'] + compare_symbols,
+                  'values': [portfolio_values[start_index:]]}
+        for symbol in compare_symbols:
+            symbol_values = [bar.c for bar in bars[symbol]]
+            # In case symbol values do not include today's data
+            if bars[symbol][-1].t.tz_convert(TIME_ZONE).strftime('%F') != end_date:
+                symbol_values.append(self._alpaca.get_latest_trades([symbol])[symbol].p)
+            assert len(symbol_values) == len(portfolio_values)
+            result['values'].append(symbol_values[start_index:])
         app.logger.info('Time cost for get_daily_prices: [%.2fs]', time.time() - start)
         return result
 
