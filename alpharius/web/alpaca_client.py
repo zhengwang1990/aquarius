@@ -102,7 +102,7 @@ class AlpacaClient:
         # Current equity value is wrong from get_portfolio_history
         current_equity = max(float(self._alpaca.get_account().equity) - cash_reserve, 0)
         result['current_equity'] = f'{current_equity:,.2f}'
-        if result['time_5y'] != latest_day.strftime('%F'):
+        if result['time_5y'][-1] != latest_day.strftime('%F'):
             result['time_5y'].append(latest_day.strftime('%F'))
             result['equity_5y'].append(current_equity)
         else:
