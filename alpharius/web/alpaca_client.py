@@ -124,7 +124,7 @@ class AlpacaClient:
                     cut_i -= 1
                     cut = result['time_5y'][cut_i]
             else:
-                cut = (latest_day - time_delta).strftime('%F')
+                cut = (calendar[-1].date - time_delta).strftime('%F')
             time_str = 'time_' + time_period
             equity_str = 'equity_' + time_period
             result[time_str] = result[equity_str] = []
