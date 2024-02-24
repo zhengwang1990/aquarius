@@ -74,8 +74,8 @@
                             </td>
                             <td>{{ stat['gl'] | safe }}</td>
                             <td>{{ stat['gl_3m'] | safe }}</td>
-                            <td>{{ stat['win_rate'] }}</td>
-                            <td>{{ stat['win_rate_3m'] }}</td>
+                            <td>{{ stat['win_rate'] }} <span class="ci-font lg-hidden">{{ stat['win_rate_ci'] | safe }}</span></td>
+                            <td>{{ stat['win_rate_3m'] }} <span class="ci-font lg-hidden">{{ stat['win_rate_ci_3m'] | safe }}</span></td>
                             <td class="lg-hidden">{{ stat['cnt'] }}</td>
                             <td class="lg-hidden">{{ stat['cnt_3m'] }}</td>
                         </tr>

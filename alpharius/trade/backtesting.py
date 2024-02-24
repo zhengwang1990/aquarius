@@ -16,7 +16,9 @@ import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
 import tabulate
-from alpharius.utils import TIME_ZONE, Transaction, compute_risks, compute_drawdown
+from alpharius.utils import (
+    TIME_ZONE, Transaction, compute_risks, compute_drawdown, compute_bernoulli_ci95,
+)
 from .common import (
     Action, ActionType, Context, Position, Processor, ProcessorFactory, TimeInterval,
     TradingFrequency, Mode, BASE_DIR, DATETIME_TYPE, MARKET_OPEN, MARKET_CLOSE, OUTPUT_DIR,
@@ -495,10 +497,11 @@ class Backtesting:
             current_stats = self._processor_stats[processor_name]
             processor_n_trade = current_stats['num_win'] + current_stats['num_lose']
             processor_win_rate = current_stats['num_win'] / processor_n_trade
+            processor_win_rate_ci = compute_bernoulli_ci95(processor_win_rate, processor_n_trade)
             processor_stats.append([
                 processor_name,
                 _profit_to_str(current_stats['profit']),
-                f'{processor_win_rate * 100:.2f}%',
+                f'{processor_win_rate * 100:.2f}% \xB1 {processor_win_rate_ci * 100:.2f}%',
                 f'{processor_n_trade} ({processor_n_trade / len(market_dates):.2f} per day)'])
         outputs.append('[ Processor Performance ]')
         outputs.append(tabulate.tabulate(processor_stats, tablefmt='grid'))

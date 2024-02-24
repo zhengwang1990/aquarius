@@ -14,6 +14,7 @@ from alpharius.db import Aggregation, Db
 from alpharius.utils import (
     construct_charts_link, compute_drawdown, compute_risks, get_today,
     get_signed_percentage, get_colored_value, get_current_time, TIME_ZONE,
+    compute_bernoulli_ci95,
 )
 from .alpaca_client import AlpacaClient
 from .scheduler import get_job_status
@@ -169,9 +170,13 @@ def _get_stats(aggs: List[Aggregation]):
         stat['avg_slip_pct_3m'] = (get_signed_percentage(stat['slip_pct_acc_3m'] / stat['slip_cnt_3m'])
                                    if stat.get('slip_cnt_3m', 0) > 0 and processor != 'UNKNOWN' else 'N/A')
         win_rate = stat['win_cnt'] / stat['cnt'] if stat.get('cnt', 0) > 0 else None
+        win_rate_ci = compute_bernoulli_ci95(win_rate, stat['cnt']) if win_rate else None
         stat['win_rate'] = f'{win_rate * 100:.2f}%' if win_rate is not None else 'N/A'
+        stat['win_rate_ci'] = f'&plusmn; {win_rate_ci * 100:.2f}%' if win_rate_ci else ''
         win_rate_3m = stat['win_cnt_3m'] / stat['cnt_3m'] if stat.get('cnt_3m', 0) > 0 else None
+        win_rate_ci_3m = compute_bernoulli_ci95(win_rate_3m, stat['cnt_3m']) if win_rate_3m else None
         stat['win_rate_3m'] = f'{win_rate_3m * 100:.2f}%' if win_rate_3m is not None else 'N/A'
+        stat['win_rate_ci_3m'] = f'&plusmn; {win_rate_ci_3m * 100: .2f}%' if win_rate_ci_3m else ''
         for k in ['gl', 'slip', 'gl_3m', 'slip_3m']:
             v = stat.get(k, 0)
             color = 'green' if v >= 0 else 'red'

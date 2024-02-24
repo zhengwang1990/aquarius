@@ -221,3 +221,9 @@ def construct_charts_link(symbol: str, date: str):
     """Constructs link to charts page for the given symbol on a given day."""
     start_date = (pd.to_datetime(date) - datetime.timedelta(days=92)).strftime('%F')
     return f'charts?date={date}&start_date={start_date}&end_date={date}&symbol={symbol}'
+
+
+def compute_bernoulli_ci95(p: float, n: int):
+    """Gets 95% confidence interval for Bernoulli sampling."""
+    z = 1.96
+    return z * math.sqrt(p * (1 - p) / n)
