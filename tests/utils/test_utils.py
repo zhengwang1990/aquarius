@@ -1,7 +1,8 @@
 import datetime
 
 import pandas as pd
-from alpharius.utils import get_transactions, get_latest_day, compute_drawdown
+import pytest
+from alpharius.utils import get_transactions, get_latest_day, compute_drawdown, compute_bernoulli_ci95
 from tests.fakes import Order
 
 
@@ -41,3 +42,9 @@ def test_compute_drawdown():
     assert abs(d + 0.8) < 1E-7
     assert hi == 4
     assert li == 8
+
+
+def test_compute_bernoulli_ci95():
+    assert compute_bernoulli_ci95(0, 1) == 0
+    assert compute_bernoulli_ci95(1, 1) == 0
+    assert compute_bernoulli_ci95(0.5, 10) == pytest.approx(0.3099, rel=1E-3)
