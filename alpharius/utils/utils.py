@@ -162,7 +162,7 @@ def get_today() -> pd.Timestamp:
 
 
 def get_latest_day():
-    """Gets the latest day of trading.
+    """Gets the latest day in regular sense.
 
     If the time is before pre-market open it returns previous day.
     """
