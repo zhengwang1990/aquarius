@@ -60,8 +60,6 @@
                             </th>
                             <th scope="col">WIN <span class="lg-hidden">RATE</span><span class="lg-show">%</span> (ALL)</th>
                             <th scope="col">WIN <span class="lg-hidden">RATE</span><span class="lg-show">%</span> (3M)</th>
-                            <th scope="col" class="lg-hidden">COUNT (ALL)</th>
-                            <th scope="col" class="lg-hidden">COUNT (3M)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -74,10 +72,8 @@
                             </td>
                             <td>{{ stat['gl'] | safe }}</td>
                             <td>{{ stat['gl_3m'] | safe }}</td>
-                            <td>{{ stat['win_rate'] }} <span class="ci-font lg-hidden">{{ stat['win_rate_ci'] | safe }}</span></td>
-                            <td>{{ stat['win_rate_3m'] }} <span class="ci-font lg-hidden">{{ stat['win_rate_ci_3m'] | safe }}</span></td>
-                            <td class="lg-hidden">{{ stat['cnt'] }}</td>
-                            <td class="lg-hidden">{{ stat['cnt_3m'] }}</td>
+                            <td>{{ stat['win_rate'] }} <span class="win-rate-ci-font xs-hidden">{{ stat['win_rate_ci'] | safe }}</span></td>
+                            <td>{{ stat['win_rate_3m'] }} <span class="win-rate-ci-font xs-hidden">{{ stat['win_rate_ci_3m'] | safe }}</span></td>
                         </tr>
                         {% endfor %}
                     </tbody>

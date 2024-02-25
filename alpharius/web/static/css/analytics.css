@@ -25,6 +25,20 @@
     font-size: 15px;
 }
 
+.win-rate-ci-font {
+    font-size: 12px;
+}
+
+@media (max-width: 2000px) {
+    .card .card-body table {
+        font-size: 13px;
+    }
+
+    .win-rate-ci-font {
+        font-size: 9px;
+    }
+}
+
 @media (max-width: 1600px) {
     .card .card-body .lg-hidden {
         display: none;
@@ -52,8 +66,4 @@
     .card .card-body table {
         font-size: 9px;
     }
-}
-
-.ci-font {
-    font-size: 12px;
 }
