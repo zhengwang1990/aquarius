@@ -82,7 +82,7 @@ def test_small_position_not_open(mocker, mock_alpaca):
         trade.TradingFrequency.CLOSE_TO_OPEN)
     trading = trade.Trading(processor_factories=[fake_processor_factory])
     mocker.patch.object(FakeAlpaca, 'get_account',
-                        return_value=Account('2000', '0.1'))
+                        return_value=Account('2000', '0.1', '8000'))
 
     trading.run()
 

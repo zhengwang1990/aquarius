@@ -13,7 +13,7 @@ Clock = collections.namedtuple('Clock', ['next_open', 'next_close'])
 ClockTimestamp = collections.namedtuple('ClockTimestamp', ['timestamp'])
 Asset = collections.namedtuple('Asset', ['symbol', 'name', 'tradable', 'marginable',
                                          'shortable', 'easy_to_borrow', 'fractionable'])
-Account = collections.namedtuple('Account', ['equity', 'cash'])
+Account = collections.namedtuple('Account', ['equity', 'cash', 'daytrading_buying_power'])
 Position = collections.namedtuple('Position', ['symbol', 'qty', 'current_price',
                                                'market_value', 'cost_basis',
                                                'avg_entry_price', 'change_today',
@@ -59,7 +59,7 @@ class FakeAlpaca:
 
     def get_account(self):
         self.get_account_call_count += 1
-        return Account('2000', '2000')
+        return Account('2000', '2000', '8000')
 
     def list_assets(self):
         self.list_assets_call_count += 1

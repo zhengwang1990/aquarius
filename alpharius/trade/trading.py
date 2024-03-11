@@ -60,7 +60,8 @@ class Trading:
         account = self._alpaca.get_account()
         self._equity = float(account.equity)
         self._cash = float(account.cash)
-        self._logger.info('Account updated: equity [%s]; cash [%s].', self._equity, self._cash)
+        self._logger.info('Account updated: equity [%s]; cash [%s]; day trading bp [%s].',
+                          self._equity, self._cash, account.daytrading_buying_power)
 
     def _update_positions(self) -> None:
         alpaca_positions = self._alpaca.list_positions()
