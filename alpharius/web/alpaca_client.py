@@ -98,7 +98,6 @@ class AlpacaClient:
             histories['1D'].timestamp,
             '%F',
             cash_reserve)
-        time_points = copy.copy(result['time_5y'])
         # Current equity value is wrong from get_portfolio_history
         current_equity = max(float(self._alpaca.get_account().equity) - cash_reserve, 0)
         result['current_equity'] = f'{current_equity:,.2f}'
@@ -107,6 +106,7 @@ class AlpacaClient:
             result['equity_5y'].append(current_equity)
         else:
             result['equity_5y'][-1] = current_equity
+        time_points = copy.copy(result['time_5y'])
         result['equity_1d'][-1] = current_equity
         result['prev_close'] = (result['equity_5y'][-2]
                                 if len(result['equity_5y']) > 2 else math.nan)
