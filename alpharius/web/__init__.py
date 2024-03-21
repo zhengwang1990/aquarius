@@ -1,10 +1,14 @@
 import logging
 import os
 
-
-from flask import Flask
+from flask import Flask, render_template
 from . import scheduler
 from . import web
+
+
+def handle_exception(e):
+    return render_template('exception.html',
+                           error_message=str(e))
 
 
 def create_app(test_config=None):
@@ -18,5 +22,7 @@ def create_app(test_config=None):
     app.logger.setLevel(logging.INFO)
     app.register_blueprint(web.bp)
     app.register_blueprint(scheduler.bp)
+    if secret_key != 'dev':
+        app.register_error_handler(Exception, handle_exception)
 
     return app
