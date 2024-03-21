@@ -22,7 +22,7 @@ def create_app(test_config=None):
     app.logger.setLevel(logging.INFO)
     app.register_blueprint(web.bp)
     app.register_blueprint(scheduler.bp)
-    if secret_key != 'dev':
-        app.register_error_handler(Exception, handle_exception)
+    # if secret_key != 'dev':
+    app.register_error_handler(Exception, handle_exception)
 
     return app
