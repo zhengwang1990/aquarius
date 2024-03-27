@@ -22,6 +22,7 @@ scheduler.init_app(app)
 scheduler.start()
 lock = threading.RLock()
 job_status = 'idle'
+DISABLE_SCHEDULING = True
 
 
 def email_on_exception(func):
@@ -88,6 +89,8 @@ def get_job_status():
 @scheduler.task('cron', id='trade', day_of_week='mon-fri',
                 hour='9-15', minute='*/15', timezone='America/New_York')
 def trade():
+    if DISABLE_SCHEDULING:
+        return
     if job_status != 'running':
         t = threading.Thread(target=_trade_impl)
         t.start()
@@ -97,6 +100,8 @@ def trade():
                 hour='16,17,22', minute=10, timezone='America/New_York')
 @email_on_exception
 def backfill():
+    if DISABLE_SCHEDULING:
+        return
     app.logger.info('Start backfilling')
     Db().backfill()
     app.logger.info('Finish backfilling')
@@ -105,6 +110,8 @@ def backfill():
 @scheduler.task('cron', id='backtest', day_of_week='mon-fri',
                 hour=16, minute=15, timezone='America/New_York')
 def backtest():
+    if DISABLE_SCHEDULING:
+        return
     app.logger.info('Start backtesting')
     with futures.ProcessPoolExecutor(max_workers=1) as pool:
         pool.submit(_backtest_run).result()
