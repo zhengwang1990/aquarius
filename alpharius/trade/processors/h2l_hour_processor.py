@@ -51,21 +51,21 @@ class H2lHourProcessor(Processor):
         t = context.current_time.time()
         if t >= EXIT_TIME:
             return
-        interday_closes = context.interday_lookback['Close']
+        interday_closes = context.interday_lookback['Close'].tolist()
         # Avoid short squeeze caused by retail trader
         if max(interday_closes[-1], context.current_price) / interday_closes[-5] > 4:
             return
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
-        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
         if len(intraday_closes) < 10:
             return
         if context.current_price > np.min(intraday_closes):
             return
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
             return
-        intraday_opens = context.intraday_lookback['Open'][market_open_index:]
+        intraday_opens = context.intraday_lookback['Open'].tolist()[market_open_index:]
         if intraday_opens[-1] > context.prev_day_close > intraday_closes[-1]:
             return
         if interday_closes[-1] > 10 * np.min(interday_closes[-DAYS_IN_A_QUARTER:]):

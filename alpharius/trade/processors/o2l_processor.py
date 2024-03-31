@@ -66,13 +66,13 @@ class O2lProcessor(Processor):
         if t >= EXIT_TIME:
             return
         interday_closes = context.interday_lookback['Close']
-        if context.current_price < interday_closes[-DAYS_IN_A_MONTH]:
+        if context.current_price < interday_closes.iloc[-DAYS_IN_A_MONTH]:
             return
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
-        market_open_price = context.intraday_lookback['Open'][market_open_index]
-        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        market_open_price = context.intraday_lookback['Open'].iloc[market_open_index]
+        intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
         if intraday_closes[-1] > np.min(intraday_closes):
             return
         if context.current_price < context.prev_day_close < market_open_price and t <= datetime.time(10, 0):

@@ -49,10 +49,10 @@ class FirstHourM6mProcessor(Processor):
 
     def _open_long_position(self, context: Context) -> Optional[ProcessorAction]:
         market_open_index = context.market_open_index
-        intraday_highs = context.intraday_lookback['High'][market_open_index:]
-        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
-        interday_closes = context.interday_lookback['Close']
-        interday_opens = context.interday_lookback['Open']
+        intraday_highs = context.intraday_lookback['High'].tolist()[market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
+        interday_closes = context.interday_lookback['Close'].tolist()
+        interday_opens = context.interday_lookback['Open'].tolist()
         if len(interday_closes) < DAYS_IN_A_QUARTER:
             return
         if interday_closes[-1] < 1.3 * interday_closes[-DAYS_IN_A_MONTH]:
@@ -87,11 +87,11 @@ class FirstHourM6mProcessor(Processor):
         if t != datetime.time(10, 0):
             return
         market_open_index = context.market_open_index
-        intraday_highs = context.intraday_lookback['High'][market_open_index:]
-        intraday_lows = context.intraday_lookback['Low'][market_open_index:]
-        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
-        intraday_opens = context.intraday_lookback['Open'][market_open_index:]
-        interday_closes = context.interday_lookback['Close']
+        intraday_highs = context.intraday_lookback['High'].tolist()[market_open_index:]
+        intraday_lows = context.intraday_lookback['Low'].tolist()[market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
+        intraday_opens = context.intraday_lookback['Open'].tolist()[market_open_index:]
+        interday_closes = context.interday_lookback['Close'].tolist()
         if len(interday_closes) < DAYS_IN_A_QUARTER:
             return
         if interday_closes[-1] > 0.8 * interday_closes[-DAYS_IN_A_MONTH]:

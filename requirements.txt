@@ -1,5 +1,6 @@
 Flask-APScheduler
 alpaca-trade-api
+alpaca-py
 bs4
 flask
 GitPython

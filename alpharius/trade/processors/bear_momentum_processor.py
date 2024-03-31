@@ -52,7 +52,7 @@ class BearMomentumProcessor(Processor):
     def _get_interday_min_max(self, context: Context) -> Tuple[float, float]:
         key = context.symbol + context.current_time.strftime('%F')
         if key not in self._memo:
-            interday_closes = context.interday_lookback['Close'][-DAYS_IN_A_MONTH * 2:]
+            interday_closes = context.interday_lookback['Close'].iloc[-DAYS_IN_A_MONTH * 2:]
             min_value = np.min(interday_closes)
             max_value = np.max(interday_closes)
             self._memo[key] = (min_value, max_value)
@@ -65,7 +65,7 @@ class BearMomentumProcessor(Processor):
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
-        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'].iloc[market_open_index:]
         n = CONFIG.get(context.symbol, OTHER_N)
         if len(intraday_closes) < n + 1:
             return
@@ -77,8 +77,8 @@ class BearMomentumProcessor(Processor):
         if not allow_short and not allow_long:
             return
         no_up, no_down = 0, 0
-        intraday_high = context.intraday_lookback['High']
-        intraday_low = context.intraday_lookback['Low']
+        intraday_high = list(context.intraday_lookback['High'])
+        intraday_low = list(context.intraday_lookback['Low'])
         for i in range(-1, -n - 1, -1):
             if intraday_low[i] >= intraday_low[i - 1]:
                 no_down += 1

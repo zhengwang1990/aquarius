@@ -85,7 +85,7 @@ class OvernightProcessor(Processor):
         interday_lookback = context.interday_lookback
         if len(interday_lookback) < DAYS_IN_A_YEAR:
             return 0
-        closes = interday_lookback['Close'][-DAYS_IN_A_YEAR:]
+        closes = interday_lookback['Close'].tolist()[-DAYS_IN_A_YEAR:]
         if context.current_price / closes[-DAYS_IN_A_WEEK] - 1 < -0.5:
             return 0
         values = np.append(closes, context.current_price)
@@ -96,7 +96,7 @@ class OvernightProcessor(Processor):
         if (profits[-1] - r) / std < -1:
             return 0
         today_open = context.today_open
-        opens = np.append(interday_lookback['Open'][-DAYS_IN_A_YEAR + 1:], today_open)
+        opens = np.append(interday_lookback['Open'].iloc[-DAYS_IN_A_YEAR + 1:], today_open)
         overnight_returns = []
         for close_price, open_price in zip(closes, opens):
             overnight_returns.append(np.log(open_price / close_price))

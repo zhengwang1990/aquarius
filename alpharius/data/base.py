@@ -1,0 +1,50 @@
+import abc
+import datetime
+import os
+from enum import Enum
+from typing import Dict, List
+
+import pandas as pd
+from alpharius.utils import TIME_ZONE
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+CACHE_DIR = os.path.join(BASE_DIR, 'cache')
+
+DATA_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume']
+
+
+class TimeInterval(Enum):
+    FIVE_MIN = 1
+    HOUR = 2
+    DAY = 3
+
+    def __str__(self):
+        return self.name
+
+
+class DataError(Exception):
+    """Error in data loading."""
+
+
+class Data(abc.ABC):
+
+    def get_daily(self, symbol: str, day: pd.Timestamp, time_interval: TimeInterval) -> pd.DataFrame:
+        """Loads data of a given day."""
+        start_time = pd.Timestamp(year=day.year, month=day.month,
+                                  day=day.day, hour=0, minute=0).tz_localize(tz=TIME_ZONE)
+        end_time = start_time + datetime.timedelta(days=1)
+        return self.get_data(symbol, start_time, end_time, time_interval)
+
+    @abc.abstractmethod
+    def get_data(self,
+                 symbol: str,
+                 start_time: pd.Timestamp,
+                 end_time: pd.Timestamp,
+                 time_interval: TimeInterval) -> pd.DataFrame:
+        """Loads data with specified start and end time."""
+        pass
+
+    @abc.abstractmethod
+    def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
+        """Gets the last trade prices of a list of symbols."""
+        pass

@@ -49,9 +49,9 @@ class TqqqProcessor(Processor):
         t = context.current_time.time()
         if t <= datetime.time(11, 15) or t >= datetime.time(15, 0):
             return
-        interday_closes = context.interday_lookback['Close']
+        interday_closes = context.interday_lookback['Close'].tolist()
         market_open_index = context.market_open_index
-        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
         # short
         l2h = context.l2h_avg
         short_t = 26
@@ -86,9 +86,9 @@ class TqqqProcessor(Processor):
         if t != datetime.time(10, 0):
             return
         market_open_index = context.market_open_index
-        intraday_highs = context.intraday_lookback['High'][market_open_index:]
-        intraday_opens = context.intraday_lookback['Open'][market_open_index:]
-        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        intraday_highs = context.intraday_lookback['High'].tolist()[market_open_index:]
+        intraday_opens = context.intraday_lookback['Open'].tolist()[market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
         if len(intraday_highs) != 6:
             return
         cnt = 0
@@ -121,11 +121,11 @@ class TqqqProcessor(Processor):
         t = context.current_time.time()
         if t <= datetime.time(15, 0) or t >= datetime.time(15, 30):
             return
-        interday_closes = context.interday_lookback['Close']
+        interday_closes = list(context.interday_lookback['Close'])
         if interday_closes[-1] > np.max(interday_closes[-DAYS_IN_A_MONTH:]) * 0.9:
             return
         market_open_index = context.market_open_index
-        intraday_opens = context.intraday_lookback['Open'][market_open_index:]
+        intraday_opens = context.intraday_lookback['Open'].tolist()[market_open_index:]
         change_from_open = context.current_price / intraday_opens[0] - 1
         change_from_close = context.current_price / context.prev_day_close - 1
         h2l = context.h2l_avg
@@ -172,7 +172,7 @@ class TqqqProcessor(Processor):
         if context.current_price > context.prev_day_close:
             return
         for i in range(-1, -4, -1):
-            day_change = interday_closes[i] / interday_closes[i - 1] - 1
+            day_change = interday_closes.iloc[i] / interday_closes.iloc[i - 1] - 1
             if day_change > 0.3 * context.h2l_avg:
                 return
         market_open_index = context.market_open_index
@@ -216,15 +216,15 @@ class TqqqProcessor(Processor):
         if not datetime.time(11, 0) <= t < datetime.time(16, 0):
             return
         interday_closes = context.interday_lookback['Close']
-        if interday_closes[-1] / interday_closes[-2] - 1 > context.l2h_avg:
+        if interday_closes.iloc[-1] / interday_closes.iloc[-2] - 1 > context.l2h_avg:
             return
         market_open_index = context.market_open_index
-        intraday_opens = context.intraday_lookback['Open'][market_open_index:]
+        intraday_opens = context.intraday_lookback['Open'].tolist()[market_open_index:]
         open_price = intraday_opens[0]
         open_gain = open_price / context.prev_day_close - 1
         if open_gain < context.l2h_avg:
             return
-        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
         if len(intraday_closes) < 19:
             return
         for i in [-1, -7, -13]:

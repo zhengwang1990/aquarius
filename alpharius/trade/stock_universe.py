@@ -95,7 +95,7 @@ class TopVolumeUniverse(StockUniverse):
 
     def _get_dollar_volume(self, symbol: str, prev_day_ind: int) -> float:
         hist = self._historical_data[symbol]
-        pv = [hist['VWAP'][i] * hist['Volume'][i]
+        pv = [hist['VWAP'].iloc[i] * hist['Volume'].iloc[i]
               for i in range(max(prev_day_ind - DAYS_IN_A_MONTH + 1, 0), prev_day_ind + 1)]
         return np.average(pv) if pv else 0
 
@@ -110,7 +110,7 @@ class TopVolumeUniverse(StockUniverse):
             prev_day_ind = timestamp_to_index(hist.index, prev_day)
             if prev_day_ind < DAYS_IN_A_MONTH:
                 continue
-            prev_close = hist['Close'][prev_day_ind]
+            prev_close = hist['Close'].iloc[prev_day_ind]
             if prev_close < 5:
                 continue
             dollar_volumes.append((symbol, self._get_dollar_volume(symbol, prev_day_ind)))
@@ -139,9 +139,9 @@ class IntradayVolatilityStockUniverse(StockUniverse):
         hist = self._historical_data[symbol]
         res = []
         for i in range(max(prev_day_ind - DAYS_IN_A_MONTH + 1, 1), prev_day_ind + 1):
-            h = hist['High'][i]
-            l = hist['Low'][i]
-            c = hist['Close'][i - 1]
+            h = hist['High'].iloc[i]
+            l = hist['Low'].iloc[i]
+            c = hist['Close'].iloc[i - 1]
             res.append((h - l) / c)
         return np.average(res) if res else 0
 
@@ -160,7 +160,7 @@ class IntradayVolatilityStockUniverse(StockUniverse):
             prev_day_ind = timestamp_to_index(hist.index, prev_day)
             if prev_day_ind < DAYS_IN_A_MONTH:
                 continue
-            prev_close = hist['Close'][prev_day_ind]
+            prev_close = hist['Close'].iloc[prev_day_ind]
             start_ind = max(prev_day_ind - DAYS_IN_A_QUARTER, 0)
             if prev_close < 0.4 * np.max(hist['Close'][start_ind:prev_day_ind + 1]):
                 continue

@@ -53,14 +53,14 @@ class L2hProcessor(Processor):
         interday_closes = context.interday_lookback['Close']
         if len(interday_closes) < DAYS_IN_A_YEAR:
             return
-        if (context.current_price < 1.2 * interday_closes[-DAYS_IN_A_MONTH] or
-                context.current_price > interday_closes[-DAYS_IN_A_MONTH] * 2):
+        if (context.current_price < 1.2 * interday_closes.iloc[-DAYS_IN_A_MONTH] or
+                context.current_price > interday_closes.iloc[-DAYS_IN_A_MONTH] * 2):
             return
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
-        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
-        intraday_opens = context.intraday_lookback['Open'][market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
+        intraday_opens = context.intraday_lookback['Open'].tolist()[market_open_index:]
         if len(intraday_closes) < 10:
             return
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
@@ -87,7 +87,7 @@ class L2hProcessor(Processor):
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
-        intraday_closes = context.intraday_lookback['Close']
+        intraday_closes = list(context.intraday_lookback['Close'])
         take_profit = (context.current_time == position['entry_time'] + datetime.timedelta(minutes=10) and
                        len(intraday_closes) >= 3 and intraday_closes[-1] < intraday_closes[-3])
         # If profit isn't taken after 10 min and the last bar still increases

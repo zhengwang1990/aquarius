@@ -53,17 +53,17 @@ class OpenHighProcessor(Processor):
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
-        interday_closes = context.interday_lookback['Close']
+        interday_closes = context.interday_lookback['Close'].tolist()
         if interday_closes[-1] < np.min(interday_closes[-20:]) * 1.4:
             return
-        intraday_opens = context.intraday_lookback['Open'][market_open_index:]
+        intraday_opens = context.intraday_lookback['Open'].tolist()[market_open_index:]
         open_price = intraday_opens[0]
         open_gain = open_price / context.prev_day_close - 1
         if open_gain < context.l2h_avg:
             return
         if context.current_price < context.prev_day_close:
             return
-        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
         n = 4
         if len(intraday_closes) < n:
             return

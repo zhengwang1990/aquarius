@@ -162,7 +162,7 @@ class Trading:
                 if not len(intraday_lookback):
                     self._logger.warning('[%s] intraday data not available', symbol)
                     continue
-                current_price = intraday_lookback['Close'][-1]
+                current_price = intraday_lookback['Close'].iloc[-1]
                 context = Context(symbol=symbol,
                                   current_time=checkpoint_time,
                                   current_price=current_price,
@@ -218,7 +218,7 @@ class Trading:
             if len(intraday_lookback) == 0:
                 self._logger.warning('[%s] intraday data not available', symbol)
                 continue
-            old_value = intraday_lookback['Close'][-1]
+            old_value = intraday_lookback['Close'].iloc[-1]
             if abs(price / old_value - 1) > 0.01:
                 self._logger.info('[%s] Current price is updated from [%.5g] to [%.5g]',
                                   symbol, old_value, price)

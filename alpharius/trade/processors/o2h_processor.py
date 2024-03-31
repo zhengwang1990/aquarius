@@ -52,7 +52,7 @@ class O2hProcessor(Processor):
         t = context.current_time.time()
         if t >= EXIT_TIME:
             return
-        interday_closes = context.interday_lookback['Close'][-DAYS_IN_A_MONTH:]
+        interday_closes = context.interday_lookback['Close'].tolist()[-DAYS_IN_A_MONTH:]
         if (context.current_price < 0.8 * interday_closes[-DAYS_IN_A_MONTH] or
                 context.current_price > 1.5 * interday_closes[-DAYS_IN_A_MONTH]):
             return
@@ -62,8 +62,8 @@ class O2hProcessor(Processor):
         if key in self._memo:
             o2h_avg, o2h_std = self._memo[key]
         else:
-            interday_opens = context.interday_lookback['Open'][-DAYS_IN_A_MONTH:]
-            interday_highs = context.interday_lookback['High'][-DAYS_IN_A_MONTH:]
+            interday_opens = context.interday_lookback['Open'].iloc[-DAYS_IN_A_MONTH:]
+            interday_highs = context.interday_lookback['High'].iloc[-DAYS_IN_A_MONTH:]
             o2h_gains = [h / o - 1 for o, h in zip(interday_opens, interday_highs)]
             o2h_avg = np.average(o2h_gains)
             o2h_std = np.std(o2h_gains)
@@ -71,7 +71,7 @@ class O2hProcessor(Processor):
         market_open_price = context.today_open
         if market_open_price is None:
             return
-        intraday_closes = context.intraday_lookback['Close']
+        intraday_closes = context.intraday_lookback['Close'].tolist()
         if len(intraday_closes) < 3:
             return
         if context.current_price < context.prev_day_close:

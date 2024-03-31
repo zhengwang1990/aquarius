@@ -68,8 +68,8 @@ class CrossCloseProcessor(Processor):
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
-        intraday_opens = context.intraday_lookback['Open'][market_open_index:]
-        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        intraday_opens = context.intraday_lookback['Open'].tolist()[market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
         if len(intraday_closes) < 3:
             return
         if abs(context.current_price / context.prev_day_close - 1) > 0.5:
@@ -97,7 +97,7 @@ class CrossCloseProcessor(Processor):
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
-        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
         if len(intraday_closes) < n_long + 1:
             return
         level = None
@@ -136,14 +136,14 @@ class CrossCloseProcessor(Processor):
         t = context.current_time.time()
         if t >= datetime.time(11, 0):
             return
-        interday_closes = context.interday_lookback['Close']
+        interday_closes = list(context.interday_lookback['Close'])
         if len(interday_closes) < DAYS_IN_A_MONTH or interday_closes[-1] < 0.5 * interday_closes[-DAYS_IN_A_MONTH]:
             return
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
-        intraday_highs = context.intraday_lookback['High'][market_open_index:]
-        intraday_closes = context.intraday_lookback['Close'][market_open_index:]
+        intraday_highs = context.intraday_lookback['High'].tolist()[market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
         if len(intraday_closes) < n_long + 1:
             return
         level = None

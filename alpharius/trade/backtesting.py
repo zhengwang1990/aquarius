@@ -268,7 +268,7 @@ class Backtesting:
                 interday_lookback = self._prepare_interday_lookback(day, symbol)
                 if interday_lookback is None or len(interday_lookback) == 0:
                     continue
-                current_price = intraday_lookback['Close'][-1]
+                current_price = intraday_lookback['Close'].iloc[-1]
                 context = Context(symbol=symbol,
                                   current_time=current_time,
                                   current_price=current_price,
@@ -439,9 +439,9 @@ class Backtesting:
                 interday_ind = timestamp_to_index(interday_data.index, day)
                 close_price, daily_change = None, None
                 if interday_ind is not None:
-                    close_price = interday_data['Close'][interday_ind]
+                    close_price = interday_data['Close'].iloc[interday_ind]
                     if interday_ind > 0:
-                        daily_change = (close_price / interday_data['Close'][interday_ind - 1] - 1) * 100
+                        daily_change = (close_price / interday_data['Close'].iloc[interday_ind - 1] - 1) * 100
                 change = (close_price / position.entry_price - 1) * 100 if close_price is not None else None
                 value = close_price * position.qty if close_price is not None else None
                 position_info.append([position.symbol, f'{position.qty:.2g}', position.entry_price,
@@ -533,7 +533,7 @@ class Backtesting:
                 continue
             year_market_last_day_index = timestamp_to_index(
                 self._interday_data[market_symbol].index, date)
-            year_market_values = self._interday_data[market_symbol]['Close'][
+            year_market_values = self._interday_data[market_symbol]['Close'].tolist()[
                                  year_market_last_day_index - (i - current_start) - 1:year_market_last_day_index + 1]
             year_profit_number = self._daily_equity[i + 1] / self._daily_equity[current_start] - 1
             year_profit = [f'{current_year} Gain/Loss', _profit_to_str(year_profit_number)]
@@ -546,8 +546,8 @@ class Backtesting:
                     continue
                 last_day_index = timestamp_to_index(
                     self._interday_data[symbol].index, date)
-                symbol_values = list(self._interday_data[symbol]['Close'][
-                                     last_day_index - (i - current_start) - 1:last_day_index + 1])
+                symbol_values = self._interday_data[symbol]['Close'].tolist()[
+                                last_day_index - (i - current_start) - 1:last_day_index + 1]
                 symbol_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
                 _, _, symbol_sharpe = compute_risks(
                     symbol_values, year_market_values)
@@ -563,7 +563,7 @@ class Backtesting:
             self._interday_data[market_symbol].index, market_dates[0])
         market_last_day_index = timestamp_to_index(
             self._interday_data[market_symbol].index, market_dates[-1])
-        market_values = self._interday_data[market_symbol]['Close'][
+        market_values = self._interday_data[market_symbol]['Close'].tolist()[
                         market_first_day_index - 1:market_last_day_index + 1]
         my_alpha, my_beta, my_sharpe_ratio = compute_risks(self._daily_equity, market_values)
         my_drawdown, my_hi, my_li = compute_drawdown(self._daily_equity)
@@ -581,8 +581,7 @@ class Backtesting:
                 self._interday_data[symbol].index, market_dates[0])
             last_day_index = timestamp_to_index(
                 self._interday_data[symbol].index, market_dates[-1])
-            symbol_values = self._interday_data[symbol]['Close'][first_day_index -
-                                                                 1:last_day_index + 1]
+            symbol_values = self._interday_data[symbol]['Close'].tolist()[first_day_index - 1:last_day_index + 1]
             symbol_total_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
             total_profit.append(f'{symbol_total_profit_pct:+.2f}%')
             symbol_alpha, symbol_beta, symbol_sharpe_ratio = compute_risks(

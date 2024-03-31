@@ -165,7 +165,7 @@ class Context:
 
     @property
     def prev_day_close(self) -> float:
-        return self.interday_lookback['Close'][-1]
+        return self.interday_lookback['Close'].iloc[-1]
 
     @property
     def market_open_index(self) -> Optional[int]:
@@ -180,7 +180,7 @@ class Context:
     @property
     def today_open(self) -> float:
         p = self.market_open_index
-        return self.intraday_lookback['Open'][p] if p is not None else None
+        return self.intraday_lookback['Open'].iloc[p] if p is not None else None
 
     @property
     def h2l_avg(self) -> float:
