@@ -3,6 +3,7 @@ import os
 import alpaca_trade_api as tradeapi
 import pytest
 import sqlalchemy
+
 from alpharius.web import create_app
 from .. import fakes
 
@@ -36,3 +37,10 @@ def mock_engine(mocker):
     engine = fakes.FakeDbEngine()
     mocker.patch.object(sqlalchemy, 'create_engine', return_value=engine)
     return engine
+
+
+@pytest.fixture(autouse=True)
+def mock_data(mocker):
+    data = fakes.FakeData()
+    mocker.patch('alpharius.data.FmpData', return_value=data)
+    return data

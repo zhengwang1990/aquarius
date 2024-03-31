@@ -16,7 +16,7 @@ from alpharius.utils import (
     get_signed_percentage, get_colored_value, get_current_time, TIME_ZONE,
     compute_bernoulli_ci95,
 )
-from .alpaca_client import AlpacaClient
+from .client import Client
 from .scheduler import get_job_status
 
 bp = flask.Blueprint('web', __name__)
@@ -28,7 +28,7 @@ BACKTEST_FINISH_TIME = datetime.time(16, 30)
 
 
 def _get_dashboard_data():
-    client = AlpacaClient()
+    client = Client()
     tasks = dict()
     with futures.ThreadPoolExecutor(max_workers=4) as pool:
         tasks['histories'] = pool.submit(client.get_portfolio_histories)
@@ -285,7 +285,7 @@ def _get_risks(daily_prices):
 
 @bp.route('/analytics')
 def analytics():
-    alpaca_client = AlpacaClient()
+    alpaca_client = Client()
     with futures.ThreadPoolExecutor(max_workers=1) as pool:
         get_daily_price_task = pool.submit(alpaca_client.get_daily_prices)
     db_client = Db()
@@ -371,7 +371,7 @@ def logs():
 
 @bp.route('/charts')
 def charts():
-    client = AlpacaClient()
+    client = Client()
     date = flask.request.args.get('date')
     start_date = flask.request.args.get('start_date')
     end_date = flask.request.args.get('end_date')
@@ -396,7 +396,7 @@ def charts():
 
 @bp.route('/charts_data')
 def charts_data():
-    client = AlpacaClient()
+    client = Client()
     timeframe = flask.request.args.get('timeframe')
     if timeframe == 'intraday':
         start_date = flask.request.args.get('date')

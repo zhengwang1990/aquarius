@@ -12,12 +12,14 @@ import alpaca_trade_api as tradeapi
 import numpy as np
 import pandas as pd
 import retrying
+from dateutil.relativedelta import relativedelta
+from flask import Flask
+
+import alpharius.data as data
 from alpharius.utils import (
     construct_charts_link, get_signed_percentage, get_colored_value,
     get_latest_day, TIME_ZONE,
 )
-from dateutil.relativedelta import relativedelta
-from flask import Flask
 
 app = Flask(__name__)
 
@@ -54,10 +56,11 @@ def round_time(t: pd.Timestamp, time_fmt_with_year: bool):
     return (t + datetime.timedelta(minutes=1)).strftime(fmt)
 
 
-class AlpacaClient:
+class Client:
 
     def __init__(self):
         self._alpaca = tradeapi.REST()
+        self._data = data.FmpData()
 
     def get_calendar(self):
         latest_day = get_latest_day()
@@ -82,6 +85,7 @@ class AlpacaClient:
                 tasks[timeframe] = pool.submit(self._alpaca.get_portfolio_history,
                                                date_start=market_dates[start_index].strftime('%F'),
                                                date_end=market_dates[-1].strftime('%F'),
+                                               period=None,
                                                timeframe=timeframe,
                                                extended_hours=extended_hours)
             histories = dict()
@@ -185,26 +189,32 @@ class AlpacaClient:
                            time_points,
                            portfolio_histories,
                            lock: threading.RLock):
-        day_bars = self._alpaca.get_bars(
+        day_bars = self._data.get_data(
             symbol,
-            tradeapi.TimeFrame(5, tradeapi.TimeFrameUnit.Minute),
-            pd.Timestamp.combine(latest_day, datetime.time(0, 0)).tz_localize(TIME_ZONE).isoformat(),
-            pd.Timestamp.combine(latest_day, datetime.time(23, 0)).tz_localize(TIME_ZONE).isoformat())
+            pd.Timestamp.combine(latest_day, datetime.time(0, 0)).tz_localize(TIME_ZONE),
+            pd.Timestamp.combine(latest_day, datetime.time(23, 0)).tz_localize(TIME_ZONE),
+            data.TimeInterval.FIVE_MIN,
+        )
         dict_1d = dict()
-        for bar in day_bars:
-            t = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime('%H:%M')
-            dict_1d[t] = bar.o
-        year_bars = self._alpaca.get_bars(
+        for index, bar in day_bars.iterrows():
+            index: pd.Timestamp
+            t_open = index.strftime('%H:%M')
+            t_close = (index + datetime.timedelta(minutes=5)).strftime('%H:%M')
+            if t_open not in dict_1d:
+                dict_1d[t_open] = bar['Open']
+            dict_1d[t_close] = bar['Close']
+        year_bars = self._data.get_data(
             symbol,
-            tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
-            time_points[0],
-            time_points[-1])
+            pd.Timestamp(time_points[0]),
+            pd.Timestamp(time_points[-1]),
+            data.TimeInterval.DAY)
         dict_5y = dict()
-        for bar in year_bars:
-            t = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime('%F')
-            dict_5y[t] = bar.c
+        for index, bar in year_bars.iterrows():
+            index: pd.Timestamp
+            t = index.strftime('%F')
+            dict_5y[t] = bar['Close']
         symbol_values = dict()
-        current_symbol_value = day_bars[-1].c
+        current_symbol_value = day_bars['Close'].iloc[-1]
         timeframes = ['1d', '1w', '2w', '1m', '6m', 'ytd', '1y', '5y']
         for timeframe in timeframes:
             symbol_values[timeframe] = []
@@ -321,23 +331,21 @@ class AlpacaClient:
             return dict()
         result = dict()
         calendar = self.get_calendar()
-        trades = self._alpaca.get_latest_trades(symbols)
-        current_prices = {symbol: trade.p for symbol, trade in trades.items()}
+        current_prices = self._data.get_last_trades(symbols)
         prev_day = calendar[-2].date.strftime('%F')
         tasks = dict()
         with futures.ThreadPoolExecutor(max_workers=4) as pool:
             for symbol in symbols:
-                tasks[symbol] = pool.submit(self._alpaca.get_bars,
+                tasks[symbol] = pool.submit(self._data.get_daily,
                                             symbol=symbol,
-                                            timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
-                                            start=prev_day,
-                                            end=prev_day)
+                                            day=pd.Timestamp(prev_day),
+                                            time_interval=data.TimeInterval.DAY)
             today_str = datetime.datetime.today().astimezone(TIME_ZONE).strftime('%b %d')
             trading_day = calendar[-1].date.strftime('%b %d')
             for symbol in symbols:
                 bars = tasks[symbol].result()
                 result[symbol] = {'price': current_prices[symbol],
-                                  'change': current_prices[symbol] / bars[0].c - 1,
+                                  'change': current_prices[symbol] / bars['Close'].iloc[0] - 1,
                                   'date': trading_day if trading_day != today_str else 'Today'}
         return result
 
@@ -375,12 +383,11 @@ class AlpacaClient:
         tasks, bars = dict(), dict()
         with futures.ThreadPoolExecutor(max_workers=2) as pool:
             for symbol in compare_symbols:
-                tasks[symbol] = pool.submit(self._alpaca.get_bars,
+                tasks[symbol] = pool.submit(self._data.get_data,
                                             symbol=symbol,
-                                            timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
-                                            start=portfolio_dates[0],
-                                            end=end_date,
-                                            adjustment='split')
+                                            start_time=pd.Timestamp(portfolio_dates[0]),
+                                            end_time=pd.Timestamp(end_date),
+                                            time_interval=data.TimeInterval.DAY)
             for symbol in compare_symbols:
                 bars[symbol] = tasks[symbol].result()
         current_value = max(float(self._alpaca.get_account().equity) - cash_reserve, 0)
@@ -398,9 +405,9 @@ class AlpacaClient:
                   'symbols': ['My Portfolio'] + compare_symbols,
                   'values': [portfolio_values[start_index:]]}
         for symbol in compare_symbols:
-            symbol_values = [bar.c for bar in bars[symbol]]
+            symbol_values = bars[symbol]['Close'].tolist()
             # In case symbol values do not include today's data
-            if bars[symbol][-1].t.tz_convert(TIME_ZONE).strftime('%F') != end_date:
+            if bars[symbol].index[-1].strftime('%F') != end_date:
                 symbol_values.append(self._alpaca.get_latest_trades([symbol])[symbol].p)
             assert len(symbol_values) == len(portfolio_values)
             result['values'].append(symbol_values[start_index:])
@@ -414,20 +421,18 @@ class AlpacaClient:
         end_time = pd.to_datetime(
             pd.Timestamp.combine(pd.to_datetime(end_date).date(), datetime.time(23, 59))).tz_localize(TIME_ZONE)
         if timeframe == 'intraday':
-            tf = tradeapi.TimeFrame(5, tradeapi.TimeFrameUnit.Minute)
+            time_interval = data.TimeInterval.FIVE_MIN
         else:
-            tf = tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day)
-        bars = self._alpaca.get_bars(symbol=symbol,
-                                     timeframe=tf,
-                                     start=start_time.isoformat(),
-                                     end=end_time.isoformat(),
-                                     adjustment='split')
+            time_interval = data.TimeInterval.DAY
+        bars = self._data.get_data(symbol=symbol,
+                                   start_time=start_time,
+                                   end_time=end_time,
+                                   time_interval=time_interval)
         if timeframe == 'intraday':
-            prev_close = self._alpaca.get_bars(symbol=symbol,
-                                               timeframe=tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day),
-                                               start=(start_time - datetime.timedelta(days=7)).strftime('%F'),
-                                               end=(start_time - datetime.timedelta(days=1)).strftime('%F'),
-                                               adjustment='split')[-1].c
+            prev_close = self._data.get_data(symbol=symbol,
+                                             start_time=start_time - datetime.timedelta(days=7),
+                                             end_time=start_time,
+                                             time_interval=data.TimeInterval.DAY)['Close'].iloc[-1]
         else:
             prev_close = None
         name = self._alpaca.get_asset(symbol).name
@@ -438,15 +443,16 @@ class AlpacaClient:
             time_format = '%H:%M'
         else:
             time_format = '%m-%d' if len(bars) < 200 else '%F'
-        for bar in bars:
-            label = pd.to_datetime(bar.t).tz_convert(TIME_ZONE).strftime(time_format)
+        for index, bar in bars.iterrows():
+            index: pd.Timestamp
+            label = index.strftime(time_format)
             if timeframe == 'intraday' and not '04:00' <= label <= '19:55':
                 continue
             labels.append(label)
-            price = {'h': bar.h, 'l': bar.l, 'o': bar.o, 'c': bar.c,
-                     'x': label, 's': [bar.o, bar.c]}
+            price = {'h': bar['High'], 'l': bar['Low'], 'o': bar['Open'], 'c': bar['Close'],
+                     'x': label, 's': [bar['Open'], bar['Close']]}
             prices.append(price)
-            volume = {'x': label, 's': bar.v, 'g': int(bar.c >= bar.o)}
+            volume = {'x': label, 's': bar['Volume'], 'g': int(bar['Close'] >= bar['Open'])}
             volumes.append(volume)
         return {'labels': labels, 'prices': prices, 'volumes': volumes,
                 'prev_close': prev_close, 'name': name}

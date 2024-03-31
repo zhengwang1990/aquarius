@@ -15,7 +15,7 @@ _BASE_URL = 'https://financialmodelingprep.com/api/v3/'
 class FmpData(Data):
 
     def __init__(self, api_key: Optional[str] = None) -> None:
-        """Instantiates a FMP Data Client.
+        """Instantiates an FMP Data Client.
 
         Parameters:
             api_key: FMP API key.

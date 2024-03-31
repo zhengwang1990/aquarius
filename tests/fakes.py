@@ -4,9 +4,11 @@ import datetime
 import itertools
 import time
 import unittest.mock as mock
+from typing import List, Dict
 
 import pandas as pd
 from alpharius import trade
+from alpharius.data import Data, TimeInterval, DATA_COLUMNS
 from alpharius.utils import TIME_ZONE
 
 Clock = collections.namedtuple('Clock', ['next_open', 'next_close'])
@@ -269,3 +271,45 @@ class FakeDbEngine:
             yield self.conn
         finally:
             self.disconnect_cnt += 1
+
+
+class FakeData(Data):
+    def __init__(self):
+        self.get_data_call_count = 0
+        self.get_last_trades_call_count = 0
+        self._value_cycle = itertools.cycle([42, 40, 41, 43, 42, 41.5, 40,
+                                             41, 42, 38, 41, 42])
+
+    def get_data(self,
+                 symbol: str,
+                 start_time: pd.Timestamp,
+                 end_time: pd.Timestamp,
+                 time_interval: TimeInterval) -> pd.DataFrame:
+        self.get_data_call_count += 1
+        if time_interval == TimeInterval.DAY:
+            time_seconds = 86400
+        elif time_interval == TimeInterval.HOUR:
+            time_seconds = 3600
+        elif time_interval == TimeInterval.FIVE_MIN:
+            time_seconds = 300
+        else:
+            raise ValueError(f'time_interval {time_interval} not supported')
+        if not start_time.tzinfo:
+            start_time = start_time.tz_localize(TIME_ZONE)
+        if not end_time.tzinfo:
+            end_time = end_time.tz_localize(TIME_ZONE)
+        start_timestamp = int(start_time.timestamp())
+        end_timestamp = int(end_time.timestamp())
+        index = []
+        data = []
+        for t in range(start_timestamp, end_timestamp, time_seconds):
+            pd_timestamp = pd.to_datetime(t, unit='s', utc=True).tz_convert(TIME_ZONE)
+            if pd_timestamp.isoweekday() < 6:
+                index.append(pd_timestamp)
+                data.append([42.0, 50.01, 35.02, float(next(self._value_cycle)), 40.123])
+        return pd.DataFrame(data, index=index, columns=DATA_COLUMNS)
+
+    def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
+        self.get_last_trades_call_count += 1
+        value = next(self._value_cycle) + 10 * (-1) ** self.get_last_trades_call_count
+        return {symbol: value for symbol in symbols}

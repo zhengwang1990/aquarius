@@ -11,7 +11,7 @@ from alpharius.trade import PROCESSOR_FACTORIES, Backtesting, Trading
 from alpharius.notification.email_sender import EmailSender
 from alpharius.utils import get_latest_day
 from flask_apscheduler import APScheduler
-from .alpaca_client import AlpacaClient
+from .client import Client
 
 app = flask.Flask(__name__)
 bp = flask.Blueprint('scheduler', __name__)
@@ -67,7 +67,7 @@ def _trade_impl():
 @email_on_exception
 def _backtest_run():
     latest_day = get_latest_day()
-    calendar = AlpacaClient().get_calendar()
+    calendar = Client().get_calendar()
     if len(calendar) < 2 or calendar[-1].date.strftime('%F') != latest_day.strftime('%F'):
         return
     start_date = calendar[-2].date.strftime('%F')

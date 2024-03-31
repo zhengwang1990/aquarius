@@ -8,11 +8,12 @@ from alpharius.web import web
 
 @pytest.mark.parametrize('route',
                          ['/', '/dashboard_data'])
-def test_dashboard(route, client, mock_alpaca):
+def test_dashboard(route, client, mock_alpaca, mock_data):
     assert client.get(route).status_code == 200
     assert mock_alpaca.get_portfolio_history_call_count > 0
     assert mock_alpaca.list_orders_call_count > 0
     assert mock_alpaca.list_positions_call_count > 0
+    assert mock_data.get_data_call_count > 0
 
 
 @pytest.mark.parametrize('route',
@@ -40,7 +41,7 @@ def test_transactions(route, client, mock_engine):
     assert mock_engine.conn.execute.call_count == 3
 
 
-def test_analytics(client, mock_alpaca, mock_engine):
+def test_analytics(client, mock_alpaca, mock_engine, mock_data):
     mock_engine.conn.execute.return_value = [
         (pd.to_datetime('2022-11-02').date(), 'Processor1',
          100, 0.01, 0, 0, 3, 2, 1, 0, 1000),
@@ -52,7 +53,7 @@ def test_analytics(client, mock_alpaca, mock_engine):
     assert client.get('/analytics').status_code == 200
     assert mock_engine.conn.execute.call_count == 1
     assert mock_alpaca.get_portfolio_history_call_count == 1
-    assert mock_alpaca.get_bars_call_count > 0
+    assert mock_data.get_data_call_count > 0
 
 
 def test_logs(client, mock_engine):
@@ -120,9 +121,9 @@ def test_charts(route, client):
 @pytest.mark.parametrize('route',
                          ['/charts_data?date=2022-11-18&symbol=QQQ&timeframe=intraday',
                           '/charts_data?start_date=2022-11-13&end_date=2022-11-23&symbol=QQQ&timeframe=daily'])
-def test_charts_data(route, client, mock_alpaca):
+def test_charts_data(route, client, mock_data):
     assert client.get(route).status_code == 200
-    assert mock_alpaca.get_bars_call_count > 0
+    assert mock_data.get_data_call_count > 0
 
 
 def test_backtest(client, mock_engine, mocker):
