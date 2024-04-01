@@ -37,7 +37,7 @@ class FmpData(Data):
         if time_interval == TimeInterval.FIVE_MIN:
             url += 'historical-chart/5min/'
         elif time_interval == TimeInterval.HOUR:
-            url += 'historical-chart/60min/'
+            url += 'historical-chart/1hour/'
         elif time_interval == TimeInterval.DAY:
             url += 'historical-price-full/'
         else:

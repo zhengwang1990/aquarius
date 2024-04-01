@@ -8,7 +8,7 @@ import requests
 import alpharius.data as data
 
 
-def fake_get(url, params, *args, **kwargs):
+def fake_get(url, *args, **kwargs):
     comps = url.split('//')[-1].split('/')
     if 'historical-chart' in url:
         content = [
