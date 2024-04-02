@@ -2,17 +2,15 @@ import functools
 import os
 import sys
 from concurrent import futures
-from typing import Dict, List, Optional, Callable
+from typing import Dict, List, Callable
 
 import pandas as pd
 import retrying
 from tqdm import tqdm
 
 from .base import DataClient, CACHE_DIR, TimeInterval
-from .fmp_client import FmpClient
 
 _MAX_WORKERS = 10
-_DEFAULT_DATA_CLIENT = FmpClient()
 
 
 @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=500)
@@ -32,7 +30,7 @@ def _load_cached_symbol(symbol: str,
 def load_interday_dataset(symbols: List[str],
                           start_time: pd.Timestamp,
                           end_time: pd.Timestamp,
-                          data_client: Optional[DataClient] = _DEFAULT_DATA_CLIENT) -> Dict[str, pd.DataFrame]:
+                          data_client: DataClient) -> Dict[str, pd.DataFrame]:
     cache_dir = os.path.join(CACHE_DIR, str(TimeInterval.DAY),
                              start_time.strftime('%F'), end_time.strftime('%F'))
     os.makedirs(cache_dir, exist_ok=True)
@@ -54,7 +52,7 @@ def load_interday_dataset(symbols: List[str],
 
 def load_intraday_dataset(symbols: List[str],
                           day: pd.Timestamp,
-                          data_client: Optional[DataClient] = _DEFAULT_DATA_CLIENT) -> Dict[str, pd.DataFrame]:
+                          data_client: DataClient) -> Dict[str, pd.DataFrame]:
     cache_dir = os.path.join(CACHE_DIR, str(TimeInterval.FIVE_MIN), day.strftime('%F'))
     os.makedirs(cache_dir, exist_ok=True)
     res = {}
