@@ -8,7 +8,7 @@ from typing import List, Dict
 
 import pandas as pd
 from alpharius import trade
-from alpharius.data import Data, TimeInterval, DATA_COLUMNS
+from alpharius.data import DataClient, TimeInterval, DATA_COLUMNS
 from alpharius.utils import TIME_ZONE
 
 Clock = collections.namedtuple('Clock', ['next_open', 'next_close'])
@@ -273,7 +273,7 @@ class FakeDbEngine:
             self.disconnect_cnt += 1
 
 
-class FakeData(Data):
+class FakeDataClient(DataClient):
     def __init__(self):
         self.get_data_call_count = 0
         self.get_last_trades_call_count = 0

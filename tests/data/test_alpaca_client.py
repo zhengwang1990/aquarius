@@ -1,9 +1,7 @@
 import os
-import json
 
 import pandas as pd
 import pytest
-import requests
 from alpaca.data.models import BarSet, Trade
 from alpaca.data.historical import StockHistoricalDataClient
 
@@ -52,7 +50,7 @@ def mock_api_key(mocker):
                           data.TimeInterval.HOUR,
                           data.TimeInterval.DAY])
 def test_get_data(time_interval):
-    client = data.AlpacaData()
+    client = data.AlpacaClient()
     d = client.get_data('AAPL',
                         start_time=pd.Timestamp('2024-03-26'),
                         end_time=pd.Timestamp('2024-03-27'),
@@ -61,6 +59,6 @@ def test_get_data(time_interval):
 
 
 def test_get_last_trades():
-    client = data.AlpacaData()
+    client = data.AlpacaClient()
     prices = client.get_last_trades(['AAPL'])
     assert len(prices) == 1

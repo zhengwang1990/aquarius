@@ -5,14 +5,14 @@ import pandas as pd
 import requests
 import retrying
 
-from .base import DATA_COLUMNS, Data, TimeInterval
+from .base import DATA_COLUMNS, DataClient, TimeInterval
 from alpharius.utils import TIME_ZONE
 
 _FMP_API_KEY_ENV = 'FMP_API_KEY'
 _BASE_URL = 'https://financialmodelingprep.com/api/v3/'
 
 
-class FmpData(Data):
+class FmpClient(DataClient):
 
     def __init__(self, api_key: Optional[str] = None) -> None:
         """Instantiates an FMP Data Client.

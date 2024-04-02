@@ -8,14 +8,14 @@ from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest, StockLatestTradeRequest
 from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
 
-from .base import DATA_COLUMNS, Data, TimeInterval
+from .base import DATA_COLUMNS, DataClient, TimeInterval
 from alpharius.utils import TIME_ZONE
 
 _ALPACA_API_KEY_ENV = 'APCA_API_KEY_ID'
 _ALPACA_SECRET_KEY_ENV = 'APCA_API_SECRET_KEY'
 
 
-class AlpacaData(Data):
+class AlpacaClient(DataClient):
 
     def __init__(self,
                  api_key: Optional[str] = None,

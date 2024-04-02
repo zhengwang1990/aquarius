@@ -75,7 +75,7 @@ def mock_api_key(mocker):
                           data.TimeInterval.HOUR,
                           data.TimeInterval.DAY])
 def test_get_data(time_interval):
-    client = data.FmpData()
+    client = data.FmpClient()
     d = client.get_data('AAPL',
                         start_time=pd.Timestamp('2024-03-26'),
                         end_time=pd.Timestamp('2024-03-27'),
@@ -84,12 +84,12 @@ def test_get_data(time_interval):
 
 
 def test_get_daily():
-    client = data.FmpData()
+    client = data.FmpClient()
     d = client.get_daily('AAPL', pd.Timestamp('2024-03-26'), data.TimeInterval.FIVE_MIN)
     assert len(d) > 0
 
 
 def test_get_last_trades():
-    client = data.FmpData()
+    client = data.FmpClient()
     prices = client.get_last_trades(['AAPL', 'MSFT'])
     assert len(prices) == 2

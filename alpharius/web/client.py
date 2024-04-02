@@ -60,7 +60,7 @@ class Client:
 
     def __init__(self):
         self._alpaca = tradeapi.REST()
-        self._data = data.FmpData()
+        self._data = data.FmpClient()
 
     def get_calendar(self):
         latest_day = get_latest_day()

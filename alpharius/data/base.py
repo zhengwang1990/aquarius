@@ -26,7 +26,7 @@ class DataError(Exception):
     """Error in data loading."""
 
 
-class Data(abc.ABC):
+class DataClient(abc.ABC):
 
     def get_daily(self, symbol: str, day: pd.Timestamp, time_interval: TimeInterval) -> pd.DataFrame:
         """Loads data of a given day."""

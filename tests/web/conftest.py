@@ -40,7 +40,7 @@ def mock_engine(mocker):
 
 
 @pytest.fixture(autouse=True)
-def mock_data(mocker):
-    data = fakes.FakeData()
-    mocker.patch('alpharius.data.FmpData', return_value=data)
-    return data
+def mock_data_client(mocker):
+    client = fakes.FakeDataClient()
+    mocker.patch('alpharius.data.FmpClient', return_value=client)
+    return client

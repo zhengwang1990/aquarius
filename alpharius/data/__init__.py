@@ -1,8 +1,12 @@
-from .alpaca_data import AlpacaData
-from .fmp_data import FmpData
+from .alpaca_client import AlpacaClient
+from .fmp_client import FmpClient
 from .base import (
     TimeInterval,
     DataError,
     DATA_COLUMNS,
-    Data,
+    DataClient,
+)
+from .utils import (
+    load_interday_dataset,
+    load_intraday_dataset,
 )
