@@ -28,7 +28,10 @@ class FmpClient(DataClient):
                  start_time: pd.Timestamp,
                  end_time: pd.Timestamp,
                  time_interval: TimeInterval) -> pd.DataFrame:
-        """Loads data with specified start and end time."""
+        """Loads data with specified start and end time.
+
+        start_time and end_time are inclusive.
+        """
         if not start_time.tzinfo:
             start_time = start_time.tz_localize(TIME_ZONE)
         if not end_time.tzinfo:

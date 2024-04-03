@@ -41,7 +41,10 @@ class DataClient(abc.ABC):
                  start_time: pd.Timestamp,
                  end_time: pd.Timestamp,
                  time_interval: TimeInterval) -> pd.DataFrame:
-        """Loads data with specified start and end time."""
+        """Loads data with specified start and end time.
+
+        start_time and end_time are inclusive.
+        """
         pass
 
     @abc.abstractmethod
