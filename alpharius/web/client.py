@@ -214,7 +214,7 @@ class Client:
             t = index.strftime('%F')
             dict_5y[t] = bar['Close']
         symbol_values = dict()
-        current_symbol_value = day_bars['Close'].iloc[-1]
+        current_symbol_value = day_bars['Close'].iloc[-1] if len(day_bars) else year_bars['Close'].iloc[-1]
         timeframes = ['1d', '1w', '2w', '1m', '6m', 'ytd', '1y', '5y']
         for timeframe in timeframes:
             symbol_values[timeframe] = []
@@ -222,7 +222,7 @@ class Client:
             dict_ref = dict_1d if timeframe == '1d' else dict_5y
             for t in timeline:
                 symbol_values[timeframe].append(dict_ref.get(t))
-            if symbol_values[timeframe]:
+            if symbol_values[timeframe] and symbol_values[timeframe][-1]:
                 symbol_values[timeframe][-1] = current_symbol_value
         for timeframe in timeframes:
             if timeframe == '1d':
