@@ -56,7 +56,7 @@ class FmpClient(DataClient):
         bars = []
         for bar in raw_bars:
             t = pd.Timestamp(bar['date']).tz_localize(TIME_ZONE)
-            if start_time <= t < end_time:
+            if time_interval == time_interval.DAY or start_time <= t <= end_time:
                 bars.append(bar)
         bars.sort(key=lambda b: b['date'])
         index = pd.DatetimeIndex([pd.Timestamp(b['date']).tz_localize(TIME_ZONE) for b in bars])
@@ -74,4 +74,3 @@ class FmpClient(DataClient):
         response = requests.get(url, params=params)
         response.raise_for_status()
         return response.json()[0]['price']
-
