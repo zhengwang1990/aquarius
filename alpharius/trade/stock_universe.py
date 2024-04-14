@@ -30,12 +30,13 @@ class BaseStockUniverse:
         api_key = os.environ[ALPACA_API_KEY_ENV]
         secret_key = os.environ[ALPACA_SECRET_KEY_ENV]
         trading_client = trading.TradingClient(api_key, secret_key)
-        self._all_symbols = get_all_symbols()
         calendar = trading_client.get_calendar(
             filters=trading.GetCalendarRequest(
                 start=lookback_start_date.date(),
                 end=lookback_end_date.date(),
             ))
+        self._lookback_start_date = lookback_start_date
+        self._lookback_end_date = lookback_end_date
         self._market_dates = [day.date for day in calendar]
         self._cache_dir = None
 
@@ -49,7 +50,7 @@ class BaseStockUniverse:
         return pd.Timestamp(prev_day)
 
     def get_stock_universe(self, view_time: pd.Timestamp) -> List[str]:
-        return self._all_symbols
+        return get_all_symbols()
 
 
 class CachedStockUniverse(BaseStockUniverse):
@@ -102,7 +103,9 @@ class DataBasedStockUniverse(BaseStockUniverse):
                  lookback_end_date: pd.Timestamp,
                  data_client: DataClient) -> None:
         super().__init__(lookback_start_date, lookback_end_date)
-        self._historical_data = load_interday_dataset(self._all_symbols, lookback_start_date, lookback_end_date,
+        self._historical_data = load_interday_dataset(get_all_symbols(),
+                                                      lookback_start_date,
+                                                      lookback_end_date,
                                                       data_client)
 
 
