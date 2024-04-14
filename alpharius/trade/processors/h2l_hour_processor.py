@@ -2,9 +2,12 @@ import datetime
 from typing import List, Optional
 
 import numpy as np
+import pandas as pd
+
+from alpharius.data import DataClient
 from ..common import (
-    ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DATETIME_TYPE, DAYS_IN_A_QUARTER)
+    ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
+    Position, PositionStatus, ProcessorAction, Mode, DAYS_IN_A_QUARTER)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -16,27 +19,27 @@ PARAMS = [(10, 1), (13, 1), (25, 1.75), (30, 2.25), (37, 2.25)]
 class H2lHourProcessor(Processor):
 
     def __init__(self,
-                 lookback_start_date: DATETIME_TYPE,
-                 lookback_end_date: DATETIME_TYPE,
-                 data_source: DataSource,
+                 lookback_start_date: pd.Timestamp,
+                 lookback_end_date: pd.Timestamp,
+                 data_client: DataClient,
                  output_dir: str) -> None:
         super().__init__(output_dir)
         self._positions = dict()
         self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
                                                                lookback_end_date,
-                                                               data_source,
+                                                               data_client,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
 
-    def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
+    def setup(self, hold_positions: List[Position], current_time: Optional[pd.Timestamp]) -> None:
         to_remove = [symbol for symbol, position in self._positions.items()
-                     if position['status'] != 'active']
+                     if position['status'] != PositionStatus.ACTIVE]
         for symbol in to_remove:
             self._positions.pop(symbol)
 
-    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+    def get_stock_universe(self, view_time: pd.Timestamp) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
                         list(self._positions.keys())))
 
@@ -44,7 +47,7 @@ class H2lHourProcessor(Processor):
         if self.is_active(context.symbol):
             return self._close_position(context)
         elif (context.symbol not in self._positions or
-              self._positions[context.symbol]['status'] == 'pending'):
+              self._positions[context.symbol]['status'] == PositionStatus.PENDING):
             return self._open_position(context)
 
     def _open_position(self, context: Context) -> Optional[ProcessorAction]:
@@ -87,7 +90,7 @@ class H2lHourProcessor(Processor):
                                    f'Current price {context.current_price}.')
             if is_trade:
                 self._positions[context.symbol] = {'entry_time': context.current_time,
-                                                   'status': 'pending', 'n': n}
+                                                   'status': PositionStatus.PENDING, 'n': n}
                 return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
@@ -104,19 +107,9 @@ class H2lHourProcessor(Processor):
                 context.current_time.time() >= EXIT_TIME):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Closing position. Current price {context.current_price}.')
-            position['status'] = 'inactive'
+            position['status'] = PositionStatus.CLOSED
             return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
 
 
 class H2lHourProcessorFactory(ProcessorFactory):
-
-    def __init__(self):
-        super().__init__()
-
-    def create(self,
-               lookback_start_date: DATETIME_TYPE,
-               lookback_end_date: DATETIME_TYPE,
-               data_source: DataSource,
-               output_dir: str,
-               *args, **kwargs) -> H2lHourProcessor:
-        return H2lHourProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
+    processor_class = H2lHourProcessor

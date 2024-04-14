@@ -7,6 +7,8 @@ from .base import (
     DataClient,
 )
 from .utils import (
+    get_default_data_client,
+    get_transactions,
     load_interday_dataset,
     load_intraday_dataset,
 )

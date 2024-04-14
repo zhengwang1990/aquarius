@@ -2,10 +2,12 @@ import datetime
 from typing import List, Optional
 
 import numpy as np
+import pandas as pd
+
+from alpharius.data import DataClient
 from ..common import (
-    ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DAYS_IN_A_MONTH, DAYS_IN_A_YEAR, DATETIME_TYPE)
-from ..data_loader import get_shortable_symbols
+    ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
+    Position, PositionStatus, ProcessorAction, Mode, DAYS_IN_A_MONTH, DAYS_IN_A_YEAR)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 25
@@ -15,30 +17,29 @@ EXIT_TIME = datetime.time(16, 0)
 class L2hProcessor(Processor):
 
     def __init__(self,
-                 lookback_start_date: DATETIME_TYPE,
-                 lookback_end_date: DATETIME_TYPE,
-                 data_source: DataSource,
+                 lookback_start_date: pd.Timestamp,
+                 lookback_end_date: pd.Timestamp,
+                 data_client: DataClient,
                  output_dir: str) -> None:
         super().__init__(output_dir)
         self._positions = dict()
         self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
                                                                lookback_end_date,
-                                                               data_source,
+                                                               data_client,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
-        self._shortable_symbols = set(get_shortable_symbols())
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
 
-    def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
+    def setup(self, hold_positions: List[Position], current_time: Optional[pd.Timestamp]) -> None:
         to_remove = [symbol for symbol, position in self._positions.items()
                      if position['status'] != 'active']
         for symbol in to_remove:
             self._positions.pop(symbol)
 
-    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+    def get_stock_universe(self, view_time: pd.Timestamp) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
-                        list(self._positions.keys())) & self._shortable_symbols)
+                        list(self._positions.keys())))
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
         if self.is_active(context.symbol):
@@ -82,7 +83,7 @@ class L2hProcessor(Processor):
                                f'Current price {context.current_price}.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
-                                               'status': 'pending'}
+                                               'status': PositionStatus.PENDING}
             return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
@@ -99,19 +100,9 @@ class L2hProcessor(Processor):
         if is_close:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Closing position. Current price {context.current_price}.')
-            position['status'] = 'inactive'
+            position['status'] = PositionStatus.CLOSED
             return ProcessorAction(context.symbol, ActionType.BUY_TO_CLOSE, 1)
 
 
 class L2hProcessorFactory(ProcessorFactory):
-
-    def __init__(self):
-        super().__init__()
-
-    def create(self,
-               lookback_start_date: DATETIME_TYPE,
-               lookback_end_date: DATETIME_TYPE,
-               data_source: DataSource,
-               output_dir: str,
-               *args, **kwargs) -> L2hProcessor:
-        return L2hProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
+    processor_class = L2hProcessor

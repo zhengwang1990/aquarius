@@ -1,3 +1,4 @@
+import abc
 import collections
 import datetime
 import functools
@@ -5,15 +6,16 @@ import logging
 import os
 import re
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
 
+from alpharius.data import DataClient
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 CACHE_DIR = os.path.join(BASE_DIR, 'cache')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'outputs')
-DATETIME_TYPE = Union[pd.Timestamp, pd.DatetimeIndex, datetime.datetime]
 DAYS_IN_A_WEEK = 5
 DAYS_IN_A_MONTH = 20
 CALENDAR_DAYS_IN_A_MONTH = 35
@@ -25,23 +27,6 @@ MARKET_CLOSE = datetime.time(16, 0)
 SHORT_RESERVE_RATIO = 1
 INTERDAY_LOOKBACK_LOAD = CALENDAR_DAYS_IN_A_YEAR
 BID_ASK_SPREAD = 0.001
-
-
-class TimeInterval(Enum):
-    FIVE_MIN = 1
-    HOUR = 2
-    DAY = 3
-
-    def __str__(self):
-        return self.name
-
-
-class DataSource(Enum):
-    POLYGON = 1
-    ALPACA = 2
-
-    def __str__(self):
-        return self.name
 
 
 class ActionType(Enum):
@@ -71,18 +56,26 @@ class TradingFrequency(Enum):
         return self.name
 
 
+class PositionStatus(Enum):
+    ACTIVE = 1
+    PENDING = 2
+    CLOSED = 3
+
+    def __str__(self):
+        return self.name
+
+
 ProcessorAction = collections.namedtuple('ProcessorAction', ['symbol', 'type', 'percent'])
 Action = collections.namedtuple('Action', ['symbol', 'type', 'percent', 'price', 'processor'])
 Position = collections.namedtuple('Position', ['symbol', 'qty', 'entry_price', 'entry_time', 'entry_portion'])
-DEFAULT_DATA_SOURCE = DataSource.ALPACA
 
 
-def timestamp_to_index(index: pd.Index, timestamp: DATETIME_TYPE) -> Optional[int]:
-    pd_timestamp = pd.to_datetime(timestamp).timestamp()
+def timestamp_to_index(index: pd.Index, timestamp: pd.Timestamp) -> Optional[int]:
+    pd_timestamp = timestamp.timestamp()
     left, right = 0, len(index) - 1
     while left <= right:
         mid = (left + right) // 2
-        mid_timestamp = pd.to_datetime(index[mid]).timestamp()
+        mid_timestamp = index[mid].timestamp()
         if mid_timestamp == pd_timestamp:
             return mid
         elif mid_timestamp < pd_timestamp:
@@ -92,7 +85,7 @@ def timestamp_to_index(index: pd.Index, timestamp: DATETIME_TYPE) -> Optional[in
     return None
 
 
-def timestamp_to_prev_index(index: pd.Index, timestamp: DATETIME_TYPE) -> Optional[int]:
+def timestamp_to_prev_index(index: pd.Index, timestamp: pd.Timestamp) -> Optional[int]:
     if len(index) == 0:
         return None
     p = len(index) - 1
@@ -150,7 +143,7 @@ class Context:
 
     def __init__(self,
                  symbol: str,
-                 current_time: DATETIME_TYPE,
+                 current_time: pd.Timestamp,
                  current_price: float,
                  interday_lookback: pd.DataFrame,
                  intraday_lookback: Optional[pd.DataFrame],
@@ -216,7 +209,7 @@ class Context:
         return self.interday_lookback.attrs[key]
 
 
-class Processor:
+class Processor(abc.ABC):
 
     def __init__(self, output_dir: str) -> None:
         split = re.findall('[A-Z][^A-Z]*', type(self).__name__)
@@ -234,7 +227,8 @@ class Processor:
         assert processor_name.endswith(suffix)
         return processor_name[:-len(suffix)]
 
-    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+    @abc.abstractmethod
+    def get_stock_universe(self, view_time: pd.Timestamp) -> List[str]:
         raise NotImplementedError('Calling parent interface')
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
@@ -248,28 +242,36 @@ class Processor:
                 actions.append(action)
         return actions
 
-    def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
+    def setup(self, hold_positions: List[Position], current_time: Optional[pd.Timestamp]) -> None:
         return
 
     def teardown(self) -> None:
         return
 
+    @abc.abstractmethod
     def get_trading_frequency(self) -> TradingFrequency:
         raise NotImplementedError('Calling parent interface')
 
     def ack(self, symbol: str) -> None:
+        """Acknowledges the action is taken and updates position status."""
         if symbol in self._positions:
-            self._positions[symbol]['status'] = 'active'
+            self._positions[symbol]['status'] = PositionStatus.ACTIVE
             self._logger.debug('[%s] acked.', symbol)
 
     def is_active(self, symbol: str) -> bool:
-        return symbol in self._positions and self._positions[symbol].get('status') == 'active'
+        return symbol in self._positions and self._positions[symbol].get('status') == PositionStatus.ACTIVE
 
 
-class ProcessorFactory:
+class ProcessorFactory(abc.ABC):
+    processor_class: type = None
 
-    def __init__(self) -> None:
-        return
-
-    def create(self, *args, **kwargs) -> Processor:
-        raise NotImplementedError('Calling parent interface')
+    def create(self,
+               lookback_start_date: pd.Timestamp,
+               lookback_end_date: pd.Timestamp,
+               data_client: DataClient,
+               output_dir: str,
+               *args, **kwargs) -> Processor:
+        if self.processor_class is not None:
+            return self.processor_class(lookback_start_date, lookback_end_date, data_client, output_dir)
+        else:
+            raise NotImplementedError(f'processor_class or create of {self.__class__} not defined')

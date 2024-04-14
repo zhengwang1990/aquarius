@@ -176,7 +176,7 @@ class Client:
             lock = threading.RLock()
             for symbol in compare_symbols:
                 tasks[symbol] = pool.submit(self.get_compare_symbol, symbol,
-                                            market_dates[-1].date(), time_points,
+                                            market_dates[-1], time_points,
                                             result, lock)
             for symbol in compare_symbols:
                 tasks[symbol].result()
@@ -254,13 +254,13 @@ class Client:
         orders_used = [False] * len(orders)
         positions = self._alpaca.list_positions()
         position_symbols = set([position.symbol for position in positions])
-        cut_time = calendar[calendar_index].date.tz_localize(TIME_ZONE)
+        cut_time = calendar[calendar_index].date
         for i in range(len(orders)):
             order = orders[i]
             if order.filled_at is None:
                 continue
             filled_at = order.filled_at.tz_convert(TIME_ZONE)
-            if filled_at < cut_time:
+            if filled_at.date() < cut_time:
                 break
             price = float(order.filled_avg_price)
             qty = float(order.filled_qty)

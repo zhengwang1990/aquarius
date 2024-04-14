@@ -2,10 +2,12 @@ import datetime
 from typing import List, Optional
 
 import numpy as np
+import pandas as pd
+
+from alpharius.data import DataClient
 from ..common import (
-    ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    ProcessorAction, DATETIME_TYPE, DAYS_IN_A_MONTH, DAYS_IN_A_QUARTER)
-from ..data_loader import get_shortable_symbols
+    ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
+    PositionStatus, ProcessorAction, DAYS_IN_A_MONTH, DAYS_IN_A_QUARTER)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -14,22 +16,21 @@ NUM_UNIVERSE_SYMBOLS = 20
 class FirstHourM6mProcessor(Processor):
 
     def __init__(self,
-                 lookback_start_date: DATETIME_TYPE,
-                 lookback_end_date: DATETIME_TYPE,
-                 data_source: DataSource,
+                 lookback_start_date: pd.Timestamp,
+                 lookback_end_date: pd.Timestamp,
+                 data_client: DataClient,
                  output_dir: str) -> None:
         super().__init__(output_dir)
         self._positions = dict()
         self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
                                                                lookback_end_date,
-                                                               data_source,
+                                                               data_client,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
-        self._shortable_symbols = set(get_shortable_symbols())
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
 
-    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+    def get_stock_universe(self, view_time: pd.Timestamp) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
                         list(self._positions.keys())))
 
@@ -72,7 +73,7 @@ class FirstHourM6mProcessor(Processor):
         for i in range(len(intraday_highs) - 1):
             if intraday_highs[i] > intraday_highs[i + 1] and intraday_closes[i] > intraday_closes[i + 1]:
                 return
-        self._positions[context.symbol] = {'status': 'pending',
+        self._positions[context.symbol] = {'status': PositionStatus.PENDING,
                                            'entry_time': context.current_time,
                                            'side': 'long'}
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
@@ -81,8 +82,6 @@ class FirstHourM6mProcessor(Processor):
         return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _open_short_position(self, context: Context) -> Optional[ProcessorAction]:
-        if context.symbol not in self._shortable_symbols:
-            return
         t = context.current_time.time()
         if t != datetime.time(10, 0):
             return
@@ -115,7 +114,7 @@ class FirstHourM6mProcessor(Processor):
             min_down = min(min_down, intraday_closes[i] - intraday_opens[i])
         if max_up > -min_down:
             return
-        self._positions[context.symbol] = {'status': 'pending',
+        self._positions[context.symbol] = {'status': PositionStatus.PENDING,
                                            'entry_time': context.current_time,
                                            'side': 'short'}
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
@@ -136,14 +135,4 @@ class FirstHourM6mProcessor(Processor):
 
 
 class FirstHourM6mProcessorFactory(ProcessorFactory):
-
-    def __init__(self):
-        super().__init__()
-
-    def create(self,
-               lookback_start_date: DATETIME_TYPE,
-               lookback_end_date: DATETIME_TYPE,
-               data_source: DataSource,
-               output_dir: str,
-               *args, **kwargs) -> FirstHourM6mProcessor:
-        return FirstHourM6mProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
+    processor_class = FirstHourM6mProcessor

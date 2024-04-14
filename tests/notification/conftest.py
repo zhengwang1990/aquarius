@@ -3,18 +3,9 @@ import email.mime.multipart as multipart
 import os
 import smtplib
 
-import alpaca_trade_api as tradeapi
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import pytest
-from .. import fakes
-
-
-@pytest.fixture(autouse=True)
-def mock_alpaca(mocker):
-    client = fakes.FakeAlpaca()
-    mocker.patch.object(tradeapi, 'REST', return_value=client)
-    return client
 
 
 @pytest.fixture(autouse=True)

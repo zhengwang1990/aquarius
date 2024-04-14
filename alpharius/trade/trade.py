@@ -3,6 +3,8 @@ import datetime
 
 import matplotlib
 from dateutil.relativedelta import relativedelta
+
+from alpharius.data import get_default_data_client
 from alpharius.trade import Backtesting, Trading, processors
 from alpharius.utils import get_latest_day
 
@@ -38,6 +40,7 @@ def main():
     parser.add_argument('--ack_all', action='store_true',
                         help='Ack all trade actions. Only used in backtest mode.')
     args = parser.parse_args()
+    data_client = get_default_data_client()
 
     if args.mode == 'backtest':
         latest_day = get_latest_day()
@@ -47,10 +50,12 @@ def main():
         end_date = args.end_date or default_end_date
         runner = Backtesting(start_date=start_date, end_date=end_date,
                              processor_factories=PROCESSOR_FACTORIES,
+                             data_client=data_client,
                              ack_all=args.ack_all)
         runner.run()
     else:
-        runner = Trading(processor_factories=PROCESSOR_FACTORIES)
+        runner = Trading(processor_factories=PROCESSOR_FACTORIES,
+                         data_client=data_client)
         runner.run()
 
 

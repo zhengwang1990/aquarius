@@ -2,14 +2,20 @@ import datetime
 from typing import List, Optional
 
 import numpy as np
+import pandas as pd
+
+from alpharius.data import DataClient
 from ..common import (
     ProcessorAction, ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
-    DATETIME_TYPE, DAYS_IN_A_MONTH)
+    DAYS_IN_A_MONTH)
 
 
 class TqqqProcessor(Processor):
 
     def __init__(self,
+                 lookback_start_date: pd.Timestamp,
+                 lookback_end_date: pd.Timestamp,
+                 data_client: DataClient,
                  output_dir: str) -> None:
         super().__init__(output_dir)
         self._positions = dict()
@@ -17,7 +23,7 @@ class TqqqProcessor(Processor):
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
 
-    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+    def get_stock_universe(self, view_time: pd.Timestamp) -> List[str]:
         return ['TQQQ']
 
     def process_data(self, context: Context) -> Optional[ProcessorAction]:
@@ -272,11 +278,4 @@ class TqqqProcessor(Processor):
 
 
 class TqqqProcessorFactory(ProcessorFactory):
-
-    def __init__(self):
-        super().__init__()
-
-    def create(self,
-               output_dir: str,
-               *args, **kwargs) -> TqqqProcessor:
-        return TqqqProcessor(output_dir)
+    processor_class = TqqqProcessor

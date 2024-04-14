@@ -2,10 +2,12 @@ import datetime
 from typing import List, Optional
 
 import numpy as np
+import pandas as pd
+
+from alpharius.data import DataClient
 from ..common import (
-    ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DATETIME_TYPE, DAYS_IN_A_MONTH)
-from ..data_loader import get_shortable_symbols
+    ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
+    Position, PositionStatus, ProcessorAction, Mode, DAYS_IN_A_MONTH)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -20,28 +22,27 @@ class CrossCloseProcessor(Processor):
     """Strategy acting on 5-min bar crossing previous day close."""
 
     def __init__(self,
-                 lookback_start_date: DATETIME_TYPE,
-                 lookback_end_date: DATETIME_TYPE,
-                 data_source: DataSource,
+                 lookback_start_date: pd.Timestamp,
+                 lookback_end_date: pd.Timestamp,
+                 data_client: DataClient,
                  output_dir: str) -> None:
         super().__init__(output_dir)
         self._positions = dict()
         self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
                                                                lookback_end_date,
-                                                               data_source,
+                                                               data_client,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
-        self._shortable_symbols = set(get_shortable_symbols())
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
 
-    def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
+    def setup(self, hold_positions: List[Position], current_time: Optional[pd.Timestamp]) -> None:
         to_remove = [symbol for symbol, position in self._positions.items()
-                     if position['status'] != 'active']
+                     if position['status'] != PositionStatus.ACTIVE]
         for symbol in to_remove:
             self._positions.pop(symbol)
 
-    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+    def get_stock_universe(self, view_time: pd.Timestamp) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
                         list(self._positions.keys()) + ['TQQQ']))
 
@@ -59,8 +60,6 @@ class CrossCloseProcessor(Processor):
             return action
 
     def _open_break_short_position(self, context: Context) -> Optional[ProcessorAction]:
-        if context.symbol not in self._shortable_symbols:
-            return
         t = context.current_time.time()
         if not (t < datetime.time(10, 0) or
                 datetime.time(10, 30) <= t < datetime.time(11, 0)):
@@ -88,7 +87,7 @@ class CrossCloseProcessor(Processor):
                                'Side: short.')
         if is_trade:
             self._positions[context.symbol] = {'entry_time': context.current_time,
-                                               'status': 'pending',
+                                               'status': PositionStatus.PENDING,
                                                'side': 'short'}
             return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
 
@@ -125,13 +124,11 @@ class CrossCloseProcessor(Processor):
                            f'Level: {level}. '
                            f'Current price: {context.current_price}. Side: long.')
         self._positions[context.symbol] = {'entry_time': context.current_time,
-                                           'status': 'active',
+                                           'status': PositionStatus.PENDING,
                                            'side': 'long'}
         return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
     def _open_reject_short_position(self, context: Context) -> Optional[ProcessorAction]:
-        if context.symbol not in self._shortable_symbols:
-            return
         n_long = 6
         t = context.current_time.time()
         if t >= datetime.time(11, 0):
@@ -168,7 +165,7 @@ class CrossCloseProcessor(Processor):
                            f'Level: {level}. High: {intraday_highs[-1]}. '
                            f'Current price: {context.current_price}. Side: short.')
         self._positions[context.symbol] = {'entry_time': context.current_time,
-                                           'status': 'active',
+                                           'status': PositionStatus.PENDING,
                                            'side': 'short'}
         return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
 
@@ -191,20 +188,10 @@ class CrossCloseProcessor(Processor):
         if is_close:
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Closing position. Current price {context.current_price}.')
-            position['status'] = 'inactive'
+            position['status'] = PositionStatus.CLOSED
             action_type = ActionType.BUY_TO_CLOSE if side == 'short' else ActionType.SELL_TO_CLOSE
             return ProcessorAction(context.symbol, action_type, 1)
 
 
 class CrossCloseProcessorFactory(ProcessorFactory):
-
-    def __init__(self):
-        super().__init__()
-
-    def create(self,
-               lookback_start_date: DATETIME_TYPE,
-               lookback_end_date: DATETIME_TYPE,
-               data_source: DataSource,
-               output_dir: str,
-               *args, **kwargs) -> CrossCloseProcessor:
-        return CrossCloseProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
+    processor_class = CrossCloseProcessor

@@ -1,9 +1,10 @@
 import git
 import pandas as pd
 import pytest
+
 from alpharius import trade
 from alpharius.trade import PROCESSOR_FACTORIES
-from ..fakes import FakeProcessorFactory
+from ..fakes import FakeProcessorFactory, FakeDataClient
 
 
 @pytest.fixture(autouse=True)
@@ -27,7 +28,8 @@ def test_run_success(trading_frequency):
     fake_processor = fake_processor_factory.processor
     backtesting = trade.Backtesting(start_date=pd.to_datetime('2021-03-17'),
                                     end_date=pd.to_datetime('2021-03-24'),
-                                    processor_factories=[fake_processor_factory])
+                                    processor_factories=[fake_processor_factory],
+                                    data_client=FakeDataClient())
 
     backtesting.run()
 
@@ -38,6 +40,7 @@ def test_run_success(trading_frequency):
 def test_run_with_processors():
     backtesting = trade.Backtesting(start_date=pd.to_datetime('2021-03-17'),
                                     end_date=pd.to_datetime('2021-03-18'),
-                                    processor_factories=PROCESSOR_FACTORIES)
+                                    processor_factories=PROCESSOR_FACTORIES,
+                                    data_client=FakeDataClient())
 
     backtesting.run()

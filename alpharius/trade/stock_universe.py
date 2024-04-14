@@ -1,109 +1,133 @@
+import abc
 import datetime
 import functools
-import hashlib
 import inspect
 import json
 import os
+import re
 from typing import List
 
-import alpaca_trade_api as tradeapi
+import alpaca.trading as trading
 import numpy as np
 import pandas as pd
-from .common import (DataSource, DATETIME_TYPE, DAYS_IN_A_QUARTER,
-                     DAYS_IN_A_MONTH, CACHE_DIR, timestamp_to_index)
+
+from alpharius.data import DataClient, load_interday_dataset
+from alpharius.utils import ALPACA_API_KEY_ENV, ALPACA_SECRET_KEY_ENV, hash_str, get_all_symbols
+from .common import (
+    DAYS_IN_A_QUARTER, DAYS_IN_A_MONTH, CACHE_DIR, timestamp_to_index,
+)
 from .constants import COMPANY_SYMBOLS
-from .data_loader import load_tradable_history
 
 _STOCK_UNIVERSE_CACHE_ROOT = os.path.join(CACHE_DIR, 'stock_universe')
 
 
-class StockUniverse:
+class BaseStockUniverse:
+    """Stock universe returns all tradable symbols."""
 
     def __init__(self,
-                 history_start: DATETIME_TYPE,
-                 end_time: DATETIME_TYPE,
-                 data_source: DataSource) -> None:
-        self._historical_data = load_tradable_history(
-            history_start, end_time, data_source)
-
-        alpaca = tradeapi.REST()
-        calendar = alpaca.get_calendar(start=history_start.strftime('%F'),
-                                       end=end_time.strftime('%F'))
-        self._market_dates = [pd.to_datetime(
-            market_day.date).date() for market_day in calendar]
+                 lookback_start_date: pd.Timestamp,
+                 lookback_end_date: pd.Timestamp) -> None:
+        api_key = os.environ[ALPACA_API_KEY_ENV]
+        secret_key = os.environ[ALPACA_SECRET_KEY_ENV]
+        trading_client = trading.TradingClient(api_key, secret_key)
+        self._all_symbols = get_all_symbols()
+        calendar = trading_client.get_calendar(
+            filters=trading.GetCalendarRequest(
+                start=lookback_start_date.date(),
+                end=lookback_end_date.date(),
+            ))
+        self._market_dates = [day.date for day in calendar]
         self._cache_dir = None
 
-    def get_interday_lookback(self, symbol: str, view_time: DATETIME_TYPE):
-        hist = self._historical_data.get(symbol)
-        if hist is None:
-            return
-        prev_day = self.get_prev_day(view_time)
-        prev_day_ind = timestamp_to_index(hist.index, prev_day)
-        if prev_day_ind is None:
-            return
-        return hist.iloc[:prev_day_ind + 1]
-
     @functools.lru_cache(maxsize=100)
-    def get_prev_day(self, view_time: DATETIME_TYPE):
+    def get_prev_day(self, view_time: pd.Timestamp) -> pd.Timestamp:
         prev_day = view_time.date() - datetime.timedelta(days=1)
         while prev_day not in self._market_dates:
             prev_day -= datetime.timedelta(days=1)
             if prev_day < self._market_dates[0]:
                 raise ValueError(f'{view_time} is too early')
-        return pd.to_datetime(prev_day.strftime('%F'))
+        return pd.Timestamp(prev_day)
 
-    def set_cache_dir(self, suffix: str) -> None:
-        source_file = inspect.getfile(self.__class__)
-        with open(source_file, 'r') as f:
-            content = f.read()
-        class_name = self.__class__.__name__
-        cache_name = '_'.join([class_name,
-                               hashlib.md5(content.encode('utf-8')).hexdigest(),
-                               suffix])
-        self._cache_dir = os.path.join(_STOCK_UNIVERSE_CACHE_ROOT, cache_name)
-        os.makedirs(self._cache_dir, exist_ok=True)
+    def get_stock_universe(self, view_time: pd.Timestamp) -> List[str]:
+        return self._all_symbols
 
-    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
-        cache_file = None
+
+class CachedStockUniverse(BaseStockUniverse):
+    """Cache mixin for stock universe."""
+
+    def get_source(self) -> str:
+
+        def get_nested(cls) -> str:
+            content = inspect.getsource(cls)
+            for base_cls in cls.__bases__:
+                if base_cls.__module__ == cls.__module__:
+                    content += get_nested(base_cls)
+            return content
+
+        return get_nested(self.__class__)
+
+    def get_cache_dir(self) -> str:
         if self._cache_dir:
-            cache_file = os.path.join(self._cache_dir,
-                                      view_time.strftime('%F') + '.json')
-            if os.path.isfile(cache_file):
-                with open(cache_file, 'r') as f:
-                    return json.load(f)
+            return self._cache_dir
+        content = self.get_source()
+        class_name = self.__class__.__name__
+        for attr in sorted(self.__dict__.keys()):
+            value = repr(self.__dict__[attr])
+            value = re.sub(r' object at [0-9A-Za-z]+', '', value)
+            content += f'\n{attr}={value}'
+        cache_name = class_name + '_' + hash_str(content)
+        self._cache_dir = os.path.join(_STOCK_UNIVERSE_CACHE_ROOT, cache_name)
+        return self._cache_dir
+
+    def get_stock_universe(self, view_time: pd.Timestamp) -> List[str]:
+        cache_file = os.path.join(self.get_cache_dir(),
+                                  view_time.strftime('%F') + '.json')
+        if os.path.isfile(cache_file):
+            with open(cache_file, 'r') as f:
+                return json.load(f)
         stock_universe = self.get_stock_universe_impl(view_time)
-        if cache_file:
-            with open(cache_file, 'w') as f:
-                json.dump(stock_universe, f)
+        with open(cache_file, 'w') as f:
+            json.dump(stock_universe, f)
         return stock_universe
 
-    def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
-        raise NotImplementedError('Calling parent interface')
+    @abc.abstractmethod
+    def get_stock_universe_impl(self, view_time: pd.Timestamp) -> List[str]:
+        raise NotImplementedError()
 
 
-class TopVolumeUniverse(StockUniverse):
+class DataBasedStockUniverse(BaseStockUniverse):
 
     def __init__(self,
-                 lookback_start_date: DATETIME_TYPE,
-                 lookback_end_date: DATETIME_TYPE,
-                 data_source: DataSource,
-                 num_stocks: int = 100):
-        super().__init__(lookback_start_date, lookback_end_date, data_source)
-        self._stock_symbols = set(COMPANY_SYMBOLS)
-        self.set_cache_dir(str(num_stocks))
+                 lookback_start_date: pd.Timestamp,
+                 lookback_end_date: pd.Timestamp,
+                 data_client: DataClient) -> None:
+        super().__init__(lookback_start_date, lookback_end_date)
+        self._historical_data = load_interday_dataset(self._all_symbols, lookback_start_date, lookback_end_date,
+                                                      data_client)
+
+
+class TopVolumeUniverse(DataBasedStockUniverse, CachedStockUniverse):
+
+    def __init__(self,
+                 lookback_start_date: pd.Timestamp,
+                 lookback_end_date: pd.Timestamp,
+                 data_client: DataClient,
+                 num_stocks: int = 100) -> None:
+        super().__init__(lookback_start_date, lookback_end_date, data_client)
+        self._company_symbols = set(COMPANY_SYMBOLS)
         self._num_stocks = num_stocks
 
     def _get_dollar_volume(self, symbol: str, prev_day_ind: int) -> float:
         hist = self._historical_data[symbol]
-        pv = [hist['VWAP'].iloc[i] * hist['Volume'].iloc[i]
+        pv = [hist['Close'].iloc[i] * hist['Volume'].iloc[i]
               for i in range(max(prev_day_ind - DAYS_IN_A_MONTH + 1, 0), prev_day_ind + 1)]
         return np.average(pv) if pv else 0
 
-    def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
+    def get_stock_universe_impl(self, view_time: pd.Timestamp) -> List[str]:
         prev_day = self.get_prev_day(view_time)
         dollar_volumes = []
         for symbol, hist in self._historical_data.items():
-            if symbol not in self._stock_symbols:
+            if symbol not in self._company_symbols:
                 continue
             if prev_day not in hist.index:
                 continue
@@ -118,21 +142,17 @@ class TopVolumeUniverse(StockUniverse):
         return [s[0] for s in dollar_volumes[:self._num_stocks]]
 
 
-class IntradayVolatilityStockUniverse(StockUniverse):
+class IntradayVolatilityStockUniverse(DataBasedStockUniverse, CachedStockUniverse):
 
     def __init__(self,
-                 lookback_start_date: DATETIME_TYPE,
-                 lookback_end_date: DATETIME_TYPE,
-                 data_source: DataSource,
+                 lookback_start_date: pd.Timestamp,
+                 lookback_end_date: pd.Timestamp,
+                 data_client: DataClient,
                  num_stocks: int = 50,
                  num_top_volume: int = 500):
-        super().__init__(lookback_start_date, lookback_end_date, data_source)
-        self._stock_symbols = set(COMPANY_SYMBOLS)
-        self._top_volumes = TopVolumeUniverse(lookback_start_date,
-                                              lookback_end_date,
-                                              data_source,
-                                              num_top_volume)
-        self.set_cache_dir(f'{num_stocks}_{num_top_volume}')
+        super().__init__(lookback_start_date, lookback_end_date, data_client)
+        self._top_volume = TopVolumeUniverse(lookback_start_date, lookback_end_date, data_client, num_top_volume)
+        self._company_symbols = set(COMPANY_SYMBOLS)
         self._num_stocks = num_stocks
 
     def _get_intraday_range(self, symbol: str, prev_day_ind: int) -> float:
@@ -145,13 +165,12 @@ class IntradayVolatilityStockUniverse(StockUniverse):
             res.append((h - l) / c)
         return np.average(res) if res else 0
 
-    def get_stock_universe_impl(self, view_time: DATETIME_TYPE) -> List[str]:
+    def get_stock_universe_impl(self, view_time: pd.Timestamp) -> List[str]:
         prev_day = self.get_prev_day(view_time)
-        intraday_volatilities = []
-        top_volume_symbols = set(
-            self._top_volumes.get_stock_universe_impl(view_time))
+        intraday_volatility_list = []
+        top_volume_symbols = set(self._top_volume.get_stock_universe(view_time))
         for symbol, hist in self._historical_data.items():
-            if symbol not in self._stock_symbols:
+            if symbol not in self._company_symbols:
                 continue
             if symbol not in top_volume_symbols:
                 continue
@@ -165,7 +184,7 @@ class IntradayVolatilityStockUniverse(StockUniverse):
             if prev_close < 0.4 * np.max(hist['Close'][start_ind:prev_day_ind + 1]):
                 continue
             intraday_volatility = self._get_intraday_range(symbol, prev_day_ind)
-            intraday_volatilities.append((symbol, intraday_volatility))
+            intraday_volatility_list.append((symbol, intraday_volatility))
 
-        intraday_volatilities.sort(key=lambda s: s[1], reverse=True)
-        return [s[0] for s in intraday_volatilities[:self._num_stocks]]
+        intraday_volatility_list.sort(key=lambda s: s[1], reverse=True)
+        return [s[0] for s in intraday_volatility_list[:self._num_stocks]]

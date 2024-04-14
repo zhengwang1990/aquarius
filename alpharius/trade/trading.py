@@ -1,31 +1,31 @@
 import collections
 import datetime
+import os
 import socket
 import threading
 import time
-import os
 from concurrent import futures
-from typing import List, Optional
+from typing import List, Optional, Set
 
 import alpaca_trade_api as tradeapi
 import pandas as pd
 import retrying
 import sqlalchemy
+
+from alpharius.data import DataClient, TimeInterval, get_transactions, load_interday_dataset
 from alpharius.db import Db
-from alpharius.utils import get_transactions, get_today, TIME_ZONE
+from alpharius.utils import get_today, get_all_symbols, TIME_ZONE
 from .common import (
     Action, ActionType, ProcessorFactory, TradingFrequency, Context, Mode,
-    TimeInterval, Position, MARKET_OPEN, DATETIME_TYPE, DEFAULT_DATA_SOURCE,
-    INTERDAY_LOOKBACK_LOAD, OUTPUT_DIR, SHORT_RESERVE_RATIO,
-    logging_config, get_unique_actions)
-from .data_loader import load_tradable_history, DataLoader
+    Position, MARKET_OPEN, INTERDAY_LOOKBACK_LOAD, OUTPUT_DIR,
+    SHORT_RESERVE_RATIO, logging_config, get_unique_actions)
 
 _MAX_WORKERS = 10
 
 
 class Trading:
 
-    def __init__(self, processor_factories: List[ProcessorFactory]) -> None:
+    def __init__(self, processor_factories: List[ProcessorFactory], data_client: DataClient) -> None:
         self._output_dir = os.path.join(OUTPUT_DIR, 'trading',
                                         datetime.datetime.now().strftime('%F'))
         os.makedirs(self._output_dir, exist_ok=True)
@@ -48,6 +48,7 @@ class Trading:
         self._intraday_data = dict()
         self._latest_trades = dict()
         self._db_thread = None
+        self._data_client = data_client
         clock = self._alpaca.get_clock()
         self._market_open = clock.next_open.timestamp()
         self._market_close = clock.next_close.timestamp()
@@ -70,12 +71,12 @@ class Trading:
                            for position in alpaca_positions]
         self._logger.info('Positions updated: [%d] open positions.', len(self._positions))
 
-    def _init_processors(self, history_start: DATETIME_TYPE) -> None:
+    def _init_processors(self, history_start: pd.Timestamp) -> None:
         self._processors = []
         for factory in self._processor_factories:
             processor = factory.create(lookback_start_date=history_start,
                                        lookback_end_date=self._today,
-                                       data_source=DEFAULT_DATA_SOURCE,
+                                       data_client=self._data_client,
                                        output_dir=self._output_dir)
             self._processors.append(processor)
             self._frequency_to_processor[processor.get_trading_frequency()].append(processor)
@@ -105,7 +106,10 @@ class Trading:
 
         # Initialize
         history_start = self._today - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
-        self._interday_data = load_tradable_history(history_start, self._today, DEFAULT_DATA_SOURCE)
+        self._interday_data = load_interday_dataset(get_all_symbols(),
+                                                    history_start,
+                                                    self._today,
+                                                    self._data_client)
         self._init_processors(history_start)
         self._init_stock_universe()
         self._upload_log()
@@ -136,7 +140,7 @@ class Trading:
         if self._db_thread:
             self._db_thread.join(timeout=100)
 
-    def _process(self, checkpoint_time: DATETIME_TYPE) -> None:
+    def _process(self, checkpoint_time: pd.Timestamp) -> None:
         self._logger.info('Process starts for [%s]', checkpoint_time.time())
         frequency_to_process = [TradingFrequency.FIVE_MIN]
         if checkpoint_time.timestamp() == self._market_open + 300:
@@ -198,21 +202,20 @@ class Trading:
     def _update_intraday_data(self, frequency_to_process: List[TradingFrequency]) -> None:
         update_start = time.time()
         tasks = dict()
-        data_loader = DataLoader(TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
-        all_symbols = set()
+        all_symbols: Set[str] = set()
         for frequency, symbols in self._stock_universe.items():
             if frequency not in frequency_to_process:
                 continue
             all_symbols.update(symbols)
-        all_symbols = list(all_symbols)
+        all_symbols: List[str] = list(all_symbols)
         with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
             for symbol in all_symbols:
-                t = pool.submit(data_loader.load_daily_data,
-                                symbol, self._today)
+                t = pool.submit(self._data_client.get_daily,
+                                symbol, self._today, TimeInterval.FIVE_MIN)
                 tasks[symbol] = t
             for symbol, t in tasks.items():
                 self._intraday_data[symbol] = t.result()
-        latest_trades = data_loader.get_last_trades(all_symbols)
+        latest_trades = self._data_client.get_last_trades(all_symbols)
         for symbol, price in latest_trades.items():
             intraday_lookback = self._intraday_data[symbol]
             if len(intraday_lookback) == 0:
@@ -365,7 +368,7 @@ class Trading:
         self._upload_log()
         time.sleep(15)
         if executed_closes:
-            transactions = get_transactions(self._today.strftime('%F'))
+            transactions = get_transactions(self._today.strftime('%F'), self._data_client)
             actions = {action.symbol: action for action in executed_closes}
             for transaction in transactions:
                 symbol = transaction.symbol

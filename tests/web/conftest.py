@@ -1,18 +1,10 @@
 import os
 
-import alpaca_trade_api as tradeapi
 import pytest
 import sqlalchemy
 
 from alpharius.web import create_app
 from .. import fakes
-
-
-@pytest.fixture(autouse=True)
-def mock_alpaca(mocker):
-    client = fakes.FakeAlpaca()
-    mocker.patch.object(tradeapi, 'REST', return_value=client)
-    return client
 
 
 @pytest.fixture

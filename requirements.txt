@@ -2,6 +2,7 @@ Flask-APScheduler
 alpaca-trade-api
 alpaca-py
 bs4
+cachetools
 flask
 GitPython
 matplotlib
@@ -13,6 +14,7 @@ pytest
 pytest-mock
 python-dateutil
 pytz
+ratelimiter
 recordclass
 requests
 retrying

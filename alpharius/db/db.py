@@ -9,7 +9,9 @@ import pandas as pd
 import retrying
 import sqlalchemy
 from tqdm import tqdm
-from alpharius.utils import Transaction, TIME_ZONE, get_transactions, get_today
+
+from alpharius.data import get_transactions, get_default_data_client
+from alpharius.utils import Transaction, TIME_ZONE, get_today
 
 INSERT_TRANSACTION_QUERY = sqlalchemy.text("""
 INSERT INTO transaction (
@@ -311,7 +313,7 @@ class Db:
         today = get_today()
         start_date = start_date or today.strftime('%F')
         # Backfill transaction table
-        transactions = get_transactions(start_date)
+        transactions = get_transactions(start_date, get_default_data_client())
         iterator = tqdm(transactions, ncols=80) if sys.stdout.isatty() else transactions
         for transaction in iterator:
             if transaction.gl_pct is not None:

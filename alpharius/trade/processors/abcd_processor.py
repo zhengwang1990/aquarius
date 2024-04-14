@@ -2,10 +2,12 @@ import datetime
 from typing import List, Optional
 
 import numpy as np
+import pandas as pd
+
+from alpharius.data import DataClient
 from ..common import (
-    ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, Mode, DATETIME_TYPE)
-from ..data_loader import get_shortable_symbols
+    ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
+    Position, ProcessorAction, PositionStatus, Mode)
 from ..stock_universe import IntradayVolatilityStockUniverse
 
 NUM_UNIVERSE_SYMBOLS = 20
@@ -14,28 +16,27 @@ NUM_UNIVERSE_SYMBOLS = 20
 class AbcdProcessor(Processor):
 
     def __init__(self,
-                 lookback_start_date: DATETIME_TYPE,
-                 lookback_end_date: DATETIME_TYPE,
-                 data_source: DataSource,
+                 lookback_start_date: pd.Timestamp,
+                 lookback_end_date: pd.Timestamp,
+                 data_client: DataClient,
                  output_dir: str) -> None:
         super().__init__(output_dir)
         self._positions = dict()
         self._stock_universe = IntradayVolatilityStockUniverse(lookback_start_date,
                                                                lookback_end_date,
-                                                               data_source,
+                                                               data_client,
                                                                num_stocks=NUM_UNIVERSE_SYMBOLS)
-        self._shortable_symbols = set(get_shortable_symbols())
 
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.FIVE_MIN
 
-    def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
+    def setup(self, hold_positions: List[Position], current_time: Optional[pd.Timestamp]) -> None:
         to_remove = [symbol for symbol, position in self._positions.items()
                      if position['status'] != 'active']
         for symbol in to_remove:
             self._positions.pop(symbol)
 
-    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+    def get_stock_universe(self, view_time: pd.Timestamp) -> List[str]:
         return list(set(self._stock_universe.get_stock_universe(view_time) +
                         list(self._positions.keys()) + ['TQQQ']))
 
@@ -57,7 +58,6 @@ class AbcdProcessor(Processor):
                 return self._open_long_position(context, 1, 0.6)
         if (datetime.time(12, 0) <= t <= datetime.time(15, 30) and
                 context.current_price < context.prev_day_close and
-                context.symbol in self._shortable_symbols and
                 context.symbol != 'TQQQ'):
             return self._open_short_position(context)
 
@@ -87,7 +87,7 @@ class AbcdProcessor(Processor):
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'L2h: {l2h}. Intraday high: {intraday_high}. Current price: {context.current_price}.')
         self._positions[context.symbol] = {'entry_time': context.current_time,
-                                           'status': 'pending',
+                                           'status': PositionStatus.PENDING,
                                            'side': 'long'}
         return ProcessorAction(context.symbol, ActionType.BUY_TO_OPEN, 1)
 
@@ -125,7 +125,7 @@ class AbcdProcessor(Processor):
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'H2l: {h2l}. Intraday low: {intraday_low}. Current price: {context.current_price}.')
         self._positions[context.symbol] = {'entry_time': context.current_time,
-                                           'status': 'active',
+                                           'status': PositionStatus.PENDING,
                                            'side': 'short'}
         return ProcessorAction(context.symbol, ActionType.SELL_TO_OPEN, 1)
 
@@ -145,20 +145,10 @@ class AbcdProcessor(Processor):
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'Closing position: {is_close}. Current price {context.current_price}.')
         if is_close:
-            position['status'] = 'inactive'
+            position['status'] = PositionStatus.CLOSED
             action_type = ActionType.SELL_TO_CLOSE if side == 'long' else ActionType.BUY_TO_CLOSE
             return ProcessorAction(context.symbol, action_type, 1)
 
 
 class AbcdProcessorFactory(ProcessorFactory):
-
-    def __init__(self):
-        super().__init__()
-
-    def create(self,
-               lookback_start_date: DATETIME_TYPE,
-               lookback_end_date: DATETIME_TYPE,
-               data_source: DataSource,
-               output_dir: str,
-               *args, **kwargs) -> AbcdProcessor:
-        return AbcdProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
+    processor_class = AbcdProcessor

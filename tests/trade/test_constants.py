@@ -1,6 +1,7 @@
 import pandas as pd
 import pytest
-from alpharius import trade
+
+import alpharius.trade as trade
 
 
 @pytest.mark.parametrize("view_time", ['2015-01-01', '2022-01-01'])

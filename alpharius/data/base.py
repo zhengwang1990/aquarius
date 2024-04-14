@@ -45,9 +45,9 @@ class DataClient(abc.ABC):
 
         start_time and end_time are inclusive.
         """
-        pass
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
         """Gets the last trade prices of a list of symbols."""
-        pass
+        raise NotImplementedError()

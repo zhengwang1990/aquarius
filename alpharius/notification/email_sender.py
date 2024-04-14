@@ -17,7 +17,9 @@ import numpy as np
 import pandas as pd
 import pytz
 import retrying
-from alpharius.utils import get_transactions, get_today, TIME_ZONE
+
+from alpharius.data import get_transactions, get_default_data_client, DataClient, TimeInterval
+from alpharius.utils import get_today, TIME_ZONE
 
 _TIME_ZONE = pytz.timezone('America/New_York')
 _SMTP_HOST = 'smtp.163.com'
@@ -26,7 +28,9 @@ _HTML_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'html')
 
 
 class EmailSender:
-    def __init__(self, logger: Optional[logging.Logger] = None) -> None:
+    def __init__(self,
+                 data_client: DataClient,
+                 logger: Optional[logging.Logger] = None) -> None:
         username = os.environ.get('EMAIL_USERNAME')
         password = os.environ.get('EMAIL_PASSWORD')
         receiver = os.environ.get('EMAIL_RECEIVER')
@@ -38,6 +42,7 @@ class EmailSender:
         self._client = self._create_client(username, password)
         self._sender = f'Stock Trading System <{username}@163.com>'
         self._receiver = receiver
+        self._data_client = data_client
         self._alpaca = tradeapi.REST()
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
@@ -86,7 +91,7 @@ class EmailSender:
                                '</td>\n')
 
         transactions_html = ''
-        transactions = get_transactions(market_dates[-1].strftime('%F'))
+        transactions = get_transactions(market_dates[-1].strftime('%F'), self._data_client)
         for transaction in transactions:
             gl_str = ''
             if transaction.gl_pct is not None:
@@ -133,15 +138,12 @@ class EmailSender:
         historical_date = [market_day for market_day in market_dates[-history_length:]]
         market_symbols = ['DIA', 'SPY', 'QQQ']
         market_values = {}
-        timeframe = tradeapi.TimeFrame(1, tradeapi.TimeFrameUnit.Day)
         for symbol in market_symbols:
-            bars = self._alpaca.get_bars(
-                symbol,
-                timeframe,
-                historical_date[0].tz_localize(TIME_ZONE).isoformat(),
-                historical_date[-1].tz_localize(TIME_ZONE).isoformat(),
-                adjustment='split')
-            symbol_close = np.array([bar.c for bar in bars])
+            df = self._data_client.get_data(symbol,
+                                            pd.Timestamp(historical_date[0]),
+                                            pd.Timestamp(historical_date[-1]),
+                                            TimeInterval.DAY)
+            symbol_close = np.array(df['Close'])
             market_values[symbol] = symbol_close
 
         intraday_gain = account_equity - history.equity[-1]
@@ -247,11 +249,12 @@ def main():
     parser.add_argument('--error_message',
                         help='Error message. Only used in alert mode.')
     args = parser.parse_args()
+    data_client = get_default_data_client()
 
     if args.mode == 'summary':
-        EmailSender().send_summary()
+        EmailSender(data_client).send_summary()
     else:
-        EmailSender().send_alert(args.error_message)
+        EmailSender(data_client).send_alert(args.error_message)
 
 
 if __name__ == '__main__':

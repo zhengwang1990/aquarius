@@ -3,16 +3,17 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 import retrying
-from alpaca.data.enums import Adjustment
-from alpaca.data.historical import StockHistoricalDataClient
-from alpaca.data.requests import StockBarsRequest, StockLatestTradeRequest
-from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
+from alpaca.data import (
+    Adjustment,
+    StockBarsRequest,
+    StockLatestTradeRequest,
+    StockHistoricalDataClient,
+    TimeFrame,
+    TimeFrameUnit,
+)
 
 from .base import DATA_COLUMNS, DataClient, TimeInterval
-from alpharius.utils import TIME_ZONE
-
-_ALPACA_API_KEY_ENV = 'APCA_API_KEY_ID'
-_ALPACA_SECRET_KEY_ENV = 'APCA_API_SECRET_KEY'
+from alpharius.utils import TIME_ZONE, ALPACA_API_KEY_ENV, ALPACA_SECRET_KEY_ENV
 
 
 class AlpacaClient(DataClient):
@@ -26,8 +27,8 @@ class AlpacaClient(DataClient):
             api_key: Alpaca API key.
             secret_key: Alpaca API secret key.
         """
-        api_key = api_key or os.environ[_ALPACA_API_KEY_ENV]
-        secret_key = secret_key or os.environ[_ALPACA_SECRET_KEY_ENV]
+        api_key = api_key or os.environ[ALPACA_API_KEY_ENV]
+        secret_key = secret_key or os.environ[ALPACA_SECRET_KEY_ENV]
         self._client = StockHistoricalDataClient(api_key=api_key, secret_key=secret_key)
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)

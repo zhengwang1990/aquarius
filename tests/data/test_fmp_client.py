@@ -1,5 +1,7 @@
-import os
+import itertools
 import json
+import os
+import time
 
 import pandas as pd
 import pytest
@@ -93,3 +95,14 @@ def test_get_last_trades():
     client = data.FmpClient()
     prices = client.get_last_trades(['AAPL', 'MSFT'])
     assert len(prices) == 2
+
+
+def test_rate_limited(mocker):
+    client = data.FmpClient()
+    mock_sleep = mocker.patch.object(time, 'sleep')
+    mocker.patch.object(time, 'time', side_effect=[100] * 1000 + [1000] * 1000)
+
+    for _ in range(400):
+        client.get_daily('AAPL', pd.Timestamp('2024-03-26'), data.TimeInterval.FIVE_MIN)
+
+    assert mock_sleep.call_count > 0

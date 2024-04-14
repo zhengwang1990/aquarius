@@ -4,9 +4,12 @@ import datetime
 import itertools
 import time
 import unittest.mock as mock
+import uuid
 from typing import List, Dict
 
+import alpaca.trading as trading
 import pandas as pd
+
 from alpharius import trade
 from alpharius.data import DataClient, TimeInterval, DATA_COLUMNS
 from alpharius.utils import TIME_ZONE
@@ -25,7 +28,6 @@ Order = collections.namedtuple('Order', ['id', 'symbol', 'side', 'qty', 'notiona
                                          'submitted_at', 'status'])
 Bar = collections.namedtuple('Bar', ['t', 'o', 'h', 'l', 'c', 'vw', 'v'])
 History = collections.namedtuple('History', ['equity', 'timestamp'])
-Calendar = collections.namedtuple('Calendar', ['date', 'open', 'close'])
 Trade = collections.namedtuple('Trade', ['p'])
 Agg = collections.namedtuple(
     'Agg', ['timestamp', 'open', 'high', 'low', 'close', 'vwap', 'volume'])
@@ -171,8 +173,9 @@ class FakeAlpaca:
         date = start_date
         while date <= end_date:
             if date.isoweekday() < 6:
-                calendar.append(
-                    Calendar(date, datetime.time(9, 30), datetime.time(16, 0)))
+                calendar.append(trading.Calendar(date=date.strftime('%F'),
+                                                 open='09:30',
+                                                 close='16:00'))
             date += datetime.timedelta(days=1)
         return calendar
 
@@ -182,38 +185,38 @@ class FakeAlpaca:
         return {symbol: Trade(value) for symbol in symbols}
 
 
-class FakePolygon:
-
+class FakeTradingClient:
     def __init__(self):
-        self.get_aggs_call_count = 0
-        self.get_last_trade_call_count = 0
-        self._value_cycle = itertools.cycle([42, 40, 41, 43, 42, 41.5, 40,
-                                             41, 42, 35, 41, 42])
+        self.get_calendar_call_count = 0
+        self.list_assets_call_count = 0
 
-    def get_aggs(self, ticker, multiplier, timespan, from_, to, *args, **kwargs):
-        self.get_aggs_call_count += 1
-        start = pd.to_datetime(from_, unit='ms', utc=True)
-        end = pd.to_datetime(to, unit='ms', utc=True)
-        if multiplier == 1 and timespan == 'day':
-            time_interval = 86400
-        elif multiplier == 1 and timespan == 'hour':
-            time_interval = 3600
-        elif multiplier == 5 and timespan == 'minute':
-            time_interval = 300
-        else:
-            raise ValueError('Time frame must be 5 min, 1 hour or 1 day.')
-        start_timestamp = int(start.timestamp())
-        start_timestamp -= start_timestamp % time_interval
-        return [Agg(t * 1000, 42, 50, 35, next(self._value_cycle), 40.123, 10)
-                for t in range(start_timestamp,
-                               int(end.timestamp()) + time_interval,
-                               time_interval)
-                if pd.to_datetime(t, unit='s', utc=True).tz_convert(TIME_ZONE).isoweekday() < 6]
+    def get_calendar(self, filters: trading.GetCalendarRequest) -> List[trading.Calendar]:
+        self.get_calendar_call_count += 1
+        start_date = pd.Timestamp(filters.start)
+        end_date = pd.Timestamp(filters.end)
+        calendar = []
+        date = start_date
+        while date <= end_date:
+            if date.isoweekday() < 6:
+                calendar.append(trading.Calendar(date=date.strftime('%F'),
+                                                 open='09:30',
+                                                 close='16:00'))
+            date += datetime.timedelta(days=1)
+        return calendar
 
-    def get_last_trade(self, symbol, *args, **kwargs):
-        self.get_last_trade_call_count += 1
-        value = next(self._value_cycle) + 10 * (-1) ** self.get_last_trade_call_count
-        return LastTrade(value)
+    def get_all_assets(self, filter: trading.GetAssetsRequest):
+        self.list_assets_call_count += 1
+        return [trading.Asset(id=uuid.uuid4(),
+                              exchange=trading.AssetExchange.NASDAQ,
+                              symbol=symbol,
+                              status=trading.AssetStatus.ACTIVE,
+                              tradable=True,
+                              marginable=True,
+                              shortable=True,
+                              easy_to_borrow=True,
+                              fractionable=True,
+                              **{'class': trading.AssetClass.US_EQUITY})
+                for symbol in ['QQQ', 'SPY', 'DIA', 'TQQQ', 'GOOG', 'AAPL', 'MSFT']]
 
 
 class FakeProcessor(trade.Processor):

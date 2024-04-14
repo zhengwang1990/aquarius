@@ -2,10 +2,13 @@ import datetime
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+import pandas as pd
 import tabulate
+
+from alpharius.data import DataClient
 from ..common import (
-    ActionType, Context, DataSource, Processor, ProcessorFactory, TradingFrequency,
-    Position, ProcessorAction, DATETIME_TYPE, DAYS_IN_A_YEAR, DAYS_IN_A_QUARTER,
+    ActionType, Context, Processor, ProcessorFactory, TradingFrequency,
+    Position, ProcessorAction, DAYS_IN_A_YEAR, DAYS_IN_A_QUARTER,
     DAYS_IN_A_MONTH, DAYS_IN_A_WEEK, get_header)
 from ..stock_universe import TopVolumeUniverse
 
@@ -16,12 +19,14 @@ NUM_DIRECTIONAL_SYMBOLS = 5
 class OvernightProcessor(Processor):
 
     def __init__(self,
-                 lookback_start_date: DATETIME_TYPE,
-                 lookback_end_date: DATETIME_TYPE,
-                 data_source: DataSource,
+                 lookback_start_date: pd.Timestamp,
+                 lookback_end_date: pd.Timestamp,
+                 data_client: DataClient,
                  output_dir: str) -> None:
         super().__init__(output_dir)
-        self._stock_universe = TopVolumeUniverse(lookback_start_date, lookback_end_date, data_source,
+        self._stock_universe = TopVolumeUniverse(lookback_start_date,
+                                                 lookback_end_date,
+                                                 data_client,
                                                  num_stocks=NUM_UNIVERSE_SYMBOLS)
         self._universe_symbols = []
         self._hold_positions = []
@@ -30,10 +35,10 @@ class OvernightProcessor(Processor):
     def get_trading_frequency(self) -> TradingFrequency:
         return TradingFrequency.CLOSE_TO_OPEN
 
-    def setup(self, hold_positions: List[Position], current_time: Optional[DATETIME_TYPE]) -> None:
+    def setup(self, hold_positions: List[Position], current_time: Optional[pd.Timestamp]) -> None:
         self._hold_positions = hold_positions
 
-    def get_stock_universe(self, view_time: DATETIME_TYPE) -> List[str]:
+    def get_stock_universe(self, view_time: pd.Timestamp) -> List[str]:
         hold_symbols = [position.symbol for position in self._hold_positions]
         self._universe_symbols = self._stock_universe.get_stock_universe(view_time)
         return list(set(hold_symbols + self._universe_symbols))
@@ -71,7 +76,7 @@ class OvernightProcessor(Processor):
     def _logging(self,
                  performances: List[Tuple[str, float]],
                  current_prices: Dict[str, float],
-                 current_time: DATETIME_TYPE) -> None:
+                 current_time: pd.Timestamp) -> None:
         performance_info = []
         for symbol, metric in performances[:NUM_DIRECTIONAL_SYMBOLS + 15]:
             price = current_prices[symbol]
@@ -111,14 +116,4 @@ class OvernightProcessor(Processor):
 
 
 class OvernightProcessorFactory(ProcessorFactory):
-
-    def __init__(self):
-        super().__init__()
-
-    def create(self,
-               lookback_start_date: DATETIME_TYPE,
-               lookback_end_date: DATETIME_TYPE,
-               data_source: DataSource,
-               output_dir: str,
-               *args, **kwargs) -> OvernightProcessor:
-        return OvernightProcessor(lookback_start_date, lookback_end_date, data_source, output_dir)
+    processor_class = OvernightProcessor

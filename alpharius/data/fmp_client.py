@@ -1,12 +1,14 @@
+import collections
 import os
+import time
 from typing import Dict, List, Optional
 
 import pandas as pd
 import requests
 import retrying
 
-from .base import DATA_COLUMNS, DataClient, TimeInterval
 from alpharius.utils import TIME_ZONE
+from .base import DATA_COLUMNS, DataClient, TimeInterval
 
 _FMP_API_KEY_ENV = 'FMP_API_KEY'
 _BASE_URL = 'https://financialmodelingprep.com/api/v3/'
@@ -21,6 +23,21 @@ class FmpClient(DataClient):
             api_key: FMP API key.
         """
         self._api_key = api_key or os.environ[_FMP_API_KEY_ENV]
+        self._call_history = collections.deque()
+        self._max_calls = 300
+        self._period = 60
+
+    def rate_limit_block(self):
+        def remove_queue():
+            while self._call_history and self._call_history[0] < time.time() - self._period:
+                self._call_history.popleft()
+
+        remove_queue()
+        while len(self._call_history) >= self._max_calls:
+            wait_time = max(self._call_history[0] + 60 - time.time(), 0)
+            time.sleep(wait_time)
+            remove_queue()
+        self._call_history.append(time.time())
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
     def get_data(self,
@@ -49,6 +66,7 @@ class FmpClient(DataClient):
         end = end_time.strftime('%F')
         url += symbol
         params = {'from': start, 'to': end, 'apikey': self._api_key}
+        self.rate_limit_block()
         response = requests.get(url, params=params)
         response.raise_for_status()
         response_json = response.json()
@@ -74,6 +92,7 @@ class FmpClient(DataClient):
     def _get_last_trade(self, symbol: str) -> float:
         url = _BASE_URL + 'quote-short/' + symbol
         params = {'apikey': self._api_key}
+        self.rate_limit_block()
         response = requests.get(url, params=params)
         response.raise_for_status()
         return response.json()[0]['price']

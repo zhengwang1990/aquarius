@@ -1,27 +1,9 @@
 import os
 
-import alpaca_trade_api as tradeapi
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
 import pandas as pd
-import polygon
 import pytest
-from .. import fakes
-
-
-@pytest.fixture(autouse=True)
-def mock_alpaca(mocker):
-    client = fakes.FakeAlpaca()
-    mocker.patch.object(tradeapi, 'REST', return_value=client)
-    return client
-
-
-@pytest.fixture(autouse=True)
-def mock_polygon(mocker):
-    mocker.patch.dict(os.environ, {'POLYGON_API_KEY': 'fake_polygon_api_key'})
-    client = fakes.FakePolygon()
-    mocker.patch.object(polygon, 'RESTClient', return_value=client)
-    return client
 
 
 @pytest.fixture(autouse=True)

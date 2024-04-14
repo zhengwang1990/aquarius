@@ -6,25 +6,27 @@ import math
 import os
 import signal
 import time
-from concurrent import futures
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import alpaca_trade_api as tradeapi
 import git
-import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tabulate
+
+from alpharius.data import (
+    DataClient, load_intraday_dataset, load_interday_dataset,
+)
 from alpharius.utils import (
-    TIME_ZONE, Transaction, compute_risks, compute_drawdown, compute_bernoulli_ci95,
+    TIME_ZONE, Transaction, compute_risks, compute_drawdown, compute_bernoulli_ci95, get_all_symbols,
 )
 from .common import (
-    Action, ActionType, Context, Position, Processor, ProcessorFactory, TimeInterval,
-    TradingFrequency, Mode, BASE_DIR, DATETIME_TYPE, MARKET_OPEN, MARKET_CLOSE, OUTPUT_DIR,
-    DEFAULT_DATA_SOURCE, INTERDAY_LOOKBACK_LOAD, BID_ASK_SPREAD, SHORT_RESERVE_RATIO,
+    Action, ActionType, Context, Position, Processor, ProcessorFactory,
+    TradingFrequency, Mode, BASE_DIR, MARKET_OPEN, MARKET_CLOSE, OUTPUT_DIR,
+    INTERDAY_LOOKBACK_LOAD, BID_ASK_SPREAD, SHORT_RESERVE_RATIO,
     logging_config, timestamp_to_index, get_unique_actions, get_header)
-from .data_loader import load_cached_daily_data, load_tradable_history
 
 _MAX_WORKERS = 20
 
@@ -32,9 +34,10 @@ _MAX_WORKERS = 20
 class Backtesting:
 
     def __init__(self,
-                 start_date: Union[DATETIME_TYPE, str],
-                 end_date: Union[DATETIME_TYPE, str],
+                 start_date: Union[pd.Timestamp, str],
+                 end_date: Union[pd.Timestamp, str],
                  processor_factories: List[ProcessorFactory],
+                 data_client: DataClient,
                  ack_all: Optional[bool] = False) -> None:
         if isinstance(start_date, str):
             start_date = pd.to_datetime(start_date)
@@ -43,15 +46,16 @@ class Backtesting:
         self._start_date = start_date
         self._end_date = end_date
         self._processor_factories = processor_factories
-        self._processors = []
+        self._processors: List[Processor] = []
         self._positions = []
         self._daily_equity = [1]
         self._num_win, self._num_lose = 0, 0
         self._cash = 1
         self._cash_portion = 1
         self._processor_stats = dict()
-        self._interday_data = None
+        self._interday_dataset = None
         self._ack_all = ack_all
+        self._data_client = data_client
 
         backtesting_output_dir = os.path.join(OUTPUT_DIR, 'backtesting')
         self._output_num = 1
@@ -74,7 +78,7 @@ class Backtesting:
         calendar = alpaca.get_calendar(start=self._start_date.strftime('%F'),
                                        end=(self._end_date - datetime.timedelta(days=1)).strftime('%F'))
         self._market_dates = [market_day.date for market_day in calendar
-                              if market_day.date < self._end_date]
+                              if market_day.date < self._end_date.date()]
         signal.signal(signal.SIGINT, self._safe_exit)
 
         self._run_start_time = None
@@ -101,7 +105,7 @@ class Backtesting:
         for factory in self._processor_factories:
             processor = factory.create(lookback_start_date=history_start,
                                        lookback_end_date=self._end_date,
-                                       data_source=DEFAULT_DATA_SOURCE,
+                                       data_client=self._data_client,
                                        output_dir=self._output_dir)
             self._processors.append(processor)
 
@@ -140,8 +144,8 @@ class Backtesting:
             # Git doesn't work in some circumstances
             self._summary_log.warning(f'Diff can not be generated: {e}')
         history_start = self._start_date - datetime.timedelta(days=INTERDAY_LOOKBACK_LOAD)
-        self._interday_data = load_tradable_history(
-            history_start, self._end_date, DEFAULT_DATA_SOURCE)
+        self._interday_dataset = load_interday_dataset(
+            get_all_symbols(), history_start, self._end_date, self._data_client)
         self._interday_load_time += time.time() - self._run_start_time
         self._init_processors(history_start)
         transactions = []
@@ -151,17 +155,18 @@ class Backtesting:
         self._close()
         return transactions
 
-    def _load_stock_universe(self,
-                             day: DATETIME_TYPE) -> Tuple[Dict[str, List[str]], Dict[TradingFrequency, Set[str]]]:
+    def _load_stock_universe(
+            self,
+            day: datetime.date,
+    ) -> Tuple[Dict[str, List[str]], Dict[TradingFrequency, Set[str]]]:
         load_stock_universe_start = time.time()
         processor_stock_universes = dict()
         stock_universe = collections.defaultdict(set)
         for processor in self._processors:
             processor_name = processor.name
-            processor_stock_universe = processor.get_stock_universe(day)
+            processor_stock_universe = processor.get_stock_universe(pd.Timestamp(day))
             processor_stock_universes[processor_name] = processor_stock_universe
-            stock_universe[processor.get_trading_frequency()].update(
-                processor_stock_universe)
+            stock_universe[processor.get_trading_frequency()].update(processor_stock_universe)
         self._stock_universe_load_time += time.time() - load_stock_universe_start
         return processor_stock_universes, stock_universe
 
@@ -188,18 +193,18 @@ class Backtesting:
         return actions
 
     @functools.lru_cache()
-    def _prepare_interday_lookback(self, day: DATETIME_TYPE, symbol: str) -> Optional[pd.DataFrame]:
-        if symbol not in self._interday_data:
+    def _prepare_interday_lookback(self, day: pd.Timestamp, symbol: str) -> Optional[pd.DataFrame]:
+        if symbol not in self._interday_dataset:
             return
-        interday_data = self._interday_data[symbol]
-        interday_ind = timestamp_to_index(interday_data.index, day)
+        interday_data = self._interday_dataset[symbol]
+        interday_ind = timestamp_to_index(interday_data.index, pd.Timestamp(day).tz_localize(TIME_ZONE))
         if interday_ind is None:
             return
         interday_lookback = interday_data.iloc[:interday_ind]
         return interday_lookback
 
     @staticmethod
-    def _prepare_intraday_lookback(current_interval_start: DATETIME_TYPE, symbol: str,
+    def _prepare_intraday_lookback(current_interval_start: pd.Timestamp, symbol: str,
                                    intraday_datas: Dict[str, pd.DataFrame]) -> Optional[pd.DataFrame]:
         intraday_data = intraday_datas[symbol]
         intraday_ind = timestamp_to_index(intraday_data.index, current_interval_start)
@@ -209,36 +214,26 @@ class Backtesting:
         return intraday_lookback
 
     def _load_intraday_data(self,
-                            day: DATETIME_TYPE,
+                            day: pd.Timestamp,
                             stock_universe: Dict[TradingFrequency, Set[str]]) -> Dict[str, pd.DataFrame]:
         load_intraday_start = time.time()
-        intraday_datas = dict()
-        tasks = dict()
-        unique_stock_universe = set()
+        unique_symbols = set()
         for _, symbols in stock_universe.items():
-            unique_stock_universe.update(symbols)
-        with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
-            for symbol in unique_stock_universe:
-                t = pool.submit(load_cached_daily_data, symbol,
-                                day, TimeInterval.FIVE_MIN, DEFAULT_DATA_SOURCE)
-                tasks[symbol] = t
-            for symbol, t in tasks.items():
-                intraday_datas[symbol] = t.result()
+            unique_symbols.update(symbols)
+        intraday_dataset = load_intraday_dataset(unique_symbols, day, self._data_client)
         self._intraday_load_time += time.time() - load_intraday_start
-        return intraday_datas
+        return intraday_dataset
 
-    def _process(self, day: DATETIME_TYPE) -> List[Transaction]:
+    def _process(self, day: datetime.date) -> List[Transaction]:
         for processor in self._processors:
             processor.setup(self._positions, day)
 
         processor_stock_universes, stock_universe = self._load_stock_universe(day)
 
-        intraday_datas = self._load_intraday_data(day, stock_universe)
+        intraday_datas = self._load_intraday_data(pd.Timestamp(day), stock_universe)
 
-        market_open = pd.to_datetime(pd.Timestamp.combine(
-            day.date(), MARKET_OPEN)).tz_localize(TIME_ZONE)
-        market_close = pd.to_datetime(pd.Timestamp.combine(
-            day.date(), MARKET_CLOSE)).tz_localize(TIME_ZONE)
+        market_open = pd.to_datetime(pd.Timestamp.combine(day, MARKET_OPEN)).tz_localize(TIME_ZONE)
+        market_close = pd.to_datetime(pd.Timestamp.combine(day, MARKET_CLOSE)).tz_localize(TIME_ZONE)
         current_interval_start = market_open
 
         executed_actions = []
@@ -294,7 +289,7 @@ class Backtesting:
         self._log_day(day, executed_actions)
         return executed_actions
 
-    def _process_actions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> List[List[Any]]:
+    def _process_actions(self, current_time: pd.Timestamp, actions: List[Action]) -> List[List[Any]]:
         unique_actions = get_unique_actions(actions)
 
         close_actions = [action for action in unique_actions
@@ -320,7 +315,7 @@ class Backtesting:
                 return position
         return None
 
-    def _close_positions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> List[Transaction]:
+    def _close_positions(self, current_time: pd.Timestamp, actions: List[Action]) -> List[Transaction]:
         executed_actions = []
         one_time_processor_profit = collections.defaultdict(float)
         for action in actions:
@@ -372,7 +367,7 @@ class Backtesting:
         self._transactions.extend(executed_actions)
         return executed_actions
 
-    def _open_positions(self, current_time: DATETIME_TYPE, actions: List[Action]) -> None:
+    def _open_positions(self, current_time: pd.Timestamp, actions: List[Action]) -> None:
         tradable_cash = self._cash
         for position in self._positions:
             if position.qty < 0:
@@ -417,9 +412,9 @@ class Backtesting:
             self._cash -= action.price * qty
 
     def _log_day(self,
-                 day: DATETIME_TYPE,
+                 day: datetime.date,
                  executed_closes: List[Transaction]) -> None:
-        outputs = [get_header(day.date())]
+        outputs = [get_header(day)]
         if executed_closes:
             table_list = [[t.symbol, t.processor, t.entry_time.time(), t.exit_time.time(),
                            'long' if t.is_long else 'short', t.entry_price, t.exit_price,
@@ -435,8 +430,8 @@ class Backtesting:
         if self._positions:
             position_info = []
             for position in self._positions:
-                interday_data = self._interday_data[position.symbol]
-                interday_ind = timestamp_to_index(interday_data.index, day)
+                interday_data = self._interday_dataset[position.symbol]
+                interday_ind = timestamp_to_index(interday_data.index, pd.Timestamp(day).tz_localize(TIME_ZONE))
                 close_price, daily_change = None, None
                 if interday_ind is not None:
                     close_price = interday_data['Close'].iloc[interday_ind]
@@ -458,7 +453,7 @@ class Backtesting:
 
         equity = self._cash
         for position in self._positions:
-            interday_data = self._interday_data[position.symbol]
+            interday_data = self._interday_dataset[position.symbol]
             close_price = interday_data.loc[day]['Close'] if day in interday_data.index else position.entry_price
             equity += position.qty * close_price
         profit_pct = equity / self._daily_equity[-1] - 1 if self._daily_equity[-1] else 0
@@ -485,7 +480,7 @@ class Backtesting:
         market_dates = self._market_dates[:len(self._daily_equity) - 1]
         if not market_dates:
             return
-        summary = [['Time Range', f'{market_dates[0].date()} ~ {market_dates[-1].date()}'],
+        summary = [['Time Range', f'{market_dates[0]} ~ {market_dates[-1]}'],
                    ['Win Rate', f'{win_rate * 100:.2f}%'],
                    ['Num of Trades', f'{n_trades} ({n_trades / len(market_dates):.2f} per day)'],
                    ['Output Dir', os.path.relpath(self._output_dir, BASE_DIR)]]
@@ -531,9 +526,9 @@ class Backtesting:
         for i, date in enumerate(market_dates):
             if i != len(market_dates) - 1 and market_dates[i + 1].year != current_year + 1:
                 continue
-            year_market_last_day_index = timestamp_to_index(
-                self._interday_data[market_symbol].index, date)
-            year_market_values = self._interday_data[market_symbol]['Close'].tolist()[
+            year_market_last_day_index = timestamp_to_index(self._interday_dataset[market_symbol].index,
+                                                            pd.Timestamp(date).tz_localize(TIME_ZONE))
+            year_market_values = self._interday_dataset[market_symbol]['Close'].tolist()[
                                  year_market_last_day_index - (i - current_start) - 1:year_market_last_day_index + 1]
             year_profit_number = self._daily_equity[i + 1] / self._daily_equity[current_start] - 1
             year_profit = [f'{current_year} Gain/Loss', _profit_to_str(year_profit_number)]
@@ -542,11 +537,11 @@ class Backtesting:
             year_sharpe = [f'{current_year} Sharpe Ratio',
                            f'{year_sharpe_ratio:.2f}' if not math.isnan(year_sharpe_ratio) else 'N/A']
             for symbol in print_symbols:
-                if symbol not in self._interday_data:
+                if symbol not in self._interday_dataset:
                     continue
-                last_day_index = timestamp_to_index(
-                    self._interday_data[symbol].index, date)
-                symbol_values = self._interday_data[symbol]['Close'].tolist()[
+                last_day_index = timestamp_to_index(self._interday_dataset[symbol].index,
+                                                    pd.Timestamp(date).tz_localize(TIME_ZONE))
+                symbol_values = self._interday_dataset[symbol]['Close'].tolist()[
                                 last_day_index - (i - current_start) - 1:last_day_index + 1]
                 symbol_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
                 _, _, symbol_sharpe = compute_risks(
@@ -559,11 +554,11 @@ class Backtesting:
             current_year += 1
         total_profit_number = self._daily_equity[-1] / self._daily_equity[0] - 1
         total_profit = ['Total Gain/Loss', _profit_to_str(total_profit_number)]
-        market_first_day_index = timestamp_to_index(
-            self._interday_data[market_symbol].index, market_dates[0])
-        market_last_day_index = timestamp_to_index(
-            self._interday_data[market_symbol].index, market_dates[-1])
-        market_values = self._interday_data[market_symbol]['Close'].tolist()[
+        market_first_day_index = timestamp_to_index(self._interday_dataset[market_symbol].index,
+                                                    pd.Timestamp(market_dates[0]).tz_localize(TIME_ZONE))
+        market_last_day_index = timestamp_to_index(self._interday_dataset[market_symbol].index,
+                                                   pd.Timestamp(market_dates[-1]).tz_localize(TIME_ZONE))
+        market_values = self._interday_dataset[market_symbol]['Close'].tolist()[
                         market_first_day_index - 1:market_last_day_index + 1]
         my_alpha, my_beta, my_sharpe_ratio = compute_risks(self._daily_equity, market_values)
         my_drawdown, my_hi, my_li = compute_drawdown(self._daily_equity)
@@ -577,11 +572,12 @@ class Backtesting:
         drawdown_start_row = ['Drawdown Start', my_drawdown_start.strftime('%F')]
         drawdown_end_row = ['Drawdown End', my_drawdown_end.strftime('%F')]
         for symbol in print_symbols:
-            first_day_index = timestamp_to_index(
-                self._interday_data[symbol].index, market_dates[0])
-            last_day_index = timestamp_to_index(
-                self._interday_data[symbol].index, market_dates[-1])
-            symbol_values = self._interday_data[symbol]['Close'].tolist()[first_day_index - 1:last_day_index + 1]
+            print(sorted(self._interday_dataset.keys()))
+            first_day_index = timestamp_to_index(self._interday_dataset[symbol].index,
+                                                 pd.Timestamp(market_dates[0]).tz_localize(TIME_ZONE))
+            last_day_index = timestamp_to_index(self._interday_dataset[symbol].index,
+                                                pd.Timestamp(market_dates[-1]).tz_localize(TIME_ZONE))
+            symbol_values = self._interday_dataset[symbol]['Close'].tolist()[first_day_index - 1:last_day_index + 1]
             symbol_total_profit_pct = (symbol_values[-1] / symbol_values[0] - 1) * 100
             total_profit.append(f'{symbol_total_profit_pct:+.2f}%')
             symbol_alpha, symbol_beta, symbol_sharpe_ratio = compute_risks(
@@ -631,11 +627,11 @@ class Backtesting:
                      color='#28b4c8')
             yscale = 'linear'
             for symbol in plot_symbols:
-                if symbol not in self._interday_data:
+                if symbol not in self._interday_dataset:
                     continue
-                last_day_index = timestamp_to_index(
-                    self._interday_data[symbol].index, date)
-                symbol_values = list(self._interday_data[symbol]['Close'][
+                last_day_index = timestamp_to_index(self._interday_dataset[symbol].index,
+                                                    pd.Timestamp(date).tz_localize(TIME_ZONE))
+                symbol_values = list(self._interday_dataset[symbol]['Close'][
                                      last_day_index + 1 - len(dates):last_day_index + 1])
                 for j in range(len(symbol_values) - 1, -1, -1):
                     symbol_values[j] /= symbol_values[0]
