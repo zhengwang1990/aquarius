@@ -1,8 +1,8 @@
 import collections
 import datetime
 import difflib
-import math
 import json
+import math
 import re
 from concurrent import futures
 from typing import List
@@ -10,6 +10,7 @@ from typing import List
 import flask
 import numpy as np
 import pandas as pd
+
 from alpharius.db import Aggregation, Db
 from alpharius.utils import (
     construct_charts_link, compute_drawdown, compute_risks, get_today,

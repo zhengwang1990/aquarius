@@ -19,7 +19,7 @@ import pytz
 import retrying
 
 import alpharius.data as data
-from alpharius.utils import get_today, TIME_ZONE
+from alpharius.utils import get_today
 
 _TIME_ZONE = pytz.timezone('America/New_York')
 _SMTP_HOST = 'smtp.163.com'

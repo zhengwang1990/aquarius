@@ -23,7 +23,7 @@ from .common import (
 _MAX_WORKERS = 10
 
 
-class Trading:
+class Live:
 
     def __init__(self, processor_factories: List[ProcessorFactory], data_client: DataClient) -> None:
         self._output_dir = os.path.join(OUTPUT_DIR, 'trading',

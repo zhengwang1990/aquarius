@@ -31,7 +31,7 @@ from .common import (
 _MAX_WORKERS = 20
 
 
-class Backtesting:
+class Backtest:
 
     def __init__(self,
                  start_date: Union[pd.Timestamp, str],

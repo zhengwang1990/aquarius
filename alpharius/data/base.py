@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Dict, List
 
 import pandas as pd
+
 from alpharius.utils import TIME_ZONE
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))

@@ -1,10 +1,11 @@
-import os
 import itertools
+import os
 import time
 
 import pandas as pd
 import pytest
 import sqlalchemy
+
 from alpharius import trade
 from alpharius.trade import PROCESSOR_FACTORIES
 from ..fakes import Account, FakeAlpaca, FakeProcessor, FakeProcessorFactory, FakeDbEngine, FakeDataClient
@@ -30,7 +31,7 @@ def mock_engine(mocker):
 def test_run_success(mock_alpaca, trading_frequency):
     fake_processor_factory = FakeProcessorFactory(trading_frequency)
     fake_processor = fake_processor_factory.processor
-    trading = trade.Trading(processor_factories=[fake_processor_factory], data_client=FakeDataClient())
+    trading = trade.Live(processor_factories=[fake_processor_factory], data_client=FakeDataClient())
 
     trading.run()
 
@@ -43,7 +44,7 @@ def test_run_success(mock_alpaca, trading_frequency):
 
 
 def test_run_with_processors(mock_alpaca):
-    trading = trade.Trading(processor_factories=PROCESSOR_FACTORIES, data_client=FakeDataClient())
+    trading = trade.Live(processor_factories=PROCESSOR_FACTORIES, data_client=FakeDataClient())
 
     trading.run()
 
@@ -51,7 +52,7 @@ def test_run_with_processors(mock_alpaca):
 
 
 def test_not_run_on_market_close_day(mocker, mock_alpaca):
-    trading = trade.Trading(processor_factories=[], data_client=FakeDataClient())
+    trading = trade.Live(processor_factories=[], data_client=FakeDataClient())
     mocker.patch.object(FakeAlpaca, 'get_calendar', return_value=[])
 
     trading.run()
@@ -61,7 +62,7 @@ def test_not_run_on_market_close_day(mocker, mock_alpaca):
 
 
 def test_not_run_if_far_from_market_open(mocker, mock_alpaca):
-    trading = trade.Trading(processor_factories=[], data_client=FakeDataClient())
+    trading = trade.Live(processor_factories=[], data_client=FakeDataClient())
     mocker.patch.object(time, 'time',
                         return_value=mock_alpaca.get_clock().next_open.timestamp() - 4000)
 
@@ -74,7 +75,7 @@ def test_not_run_if_far_from_market_open(mocker, mock_alpaca):
 def test_small_position_not_open(mocker, mock_alpaca):
     fake_processor_factory = FakeProcessorFactory(
         trade.TradingFrequency.CLOSE_TO_OPEN)
-    trading = trade.Trading(processor_factories=[fake_processor_factory], data_client=FakeDataClient())
+    trading = trade.Live(processor_factories=[fake_processor_factory], data_client=FakeDataClient())
     mocker.patch.object(FakeAlpaca, 'get_account',
                         return_value=Account('2000', '0.1', '8000'))
 
@@ -84,7 +85,7 @@ def test_small_position_not_open(mocker, mock_alpaca):
 
 
 def test_trade_transactions_executed(mocker, mock_alpaca):
-    trading = trade.Trading(processor_factories=[], data_client=FakeDataClient())
+    trading = trade.Live(processor_factories=[], data_client=FakeDataClient())
     expected_transactions = [
         {'symbol': 'A', 'action_type': trade.ActionType.BUY_TO_OPEN,
          'qty': None, 'side': 'buy', 'notional': 900},
@@ -110,7 +111,7 @@ def test_trade_transactions_executed(mocker, mock_alpaca):
 
 
 def test_trade_transactions_skipped(mock_alpaca):
-    trading = trade.Trading(processor_factories=[], data_client=FakeDataClient())
+    trading = trade.Live(processor_factories=[], data_client=FakeDataClient())
     actions = [trade.Action('QQQ', trade.ActionType.BUY_TO_CLOSE, 1, 100,
                             FakeProcessor(trade.TradingFrequency.FIVE_MIN)),
                trade.Action('GOOG', trade.ActionType.SELL_TO_CLOSE, 1, 100,
@@ -129,7 +130,7 @@ def test_update_db(mocker, mock_engine):
     mocker.patch.object(os, 'listdir', return_value=['trading.txt'])
     mocker.patch('builtins.open', mocker.mock_open(read_data='data'))
     mocker.patch.object(time, 'time', return_value=exit_time.timestamp() + 30)
-    trading = trade.Trading(processor_factories=[], data_client=FakeDataClient())
+    trading = trade.Live(processor_factories=[], data_client=FakeDataClient())
     trading._update_db([trade.Action('QQQ', trade.ActionType.SELL_TO_CLOSE, 1, 100,
                                      FakeProcessor(trade.TradingFrequency.FIVE_MIN))])
 

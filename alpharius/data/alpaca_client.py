@@ -12,8 +12,8 @@ from alpaca.data import (
     TimeFrameUnit,
 )
 
-from .base import DATA_COLUMNS, DataClient, TimeInterval
 from alpharius.utils import TIME_ZONE, ALPACA_API_KEY_ENV, ALPACA_SECRET_KEY_ENV
+from .base import DATA_COLUMNS, DataClient, TimeInterval
 
 
 class AlpacaClient(DataClient):

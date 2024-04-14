@@ -6,11 +6,12 @@ import traceback
 from concurrent import futures
 
 import flask
-from alpharius.db import Db
-from alpharius.trade import PROCESSOR_FACTORIES, Backtesting, Trading
-from alpharius.notification.email_sender import EmailSender
-from alpharius.utils import get_latest_day
 from flask_apscheduler import APScheduler
+
+from alpharius.db import Db
+from alpharius.notification.email_sender import EmailSender
+from alpharius.trade import PROCESSOR_FACTORIES, Backtest, Live
+from alpharius.utils import get_latest_day
 from .client import Client
 
 app = flask.Flask(__name__)
@@ -41,7 +42,7 @@ def email_on_exception(func):
 
 @email_on_exception
 def _trade_run():
-    Trading(processor_factories=PROCESSOR_FACTORIES).run()
+    Live(processor_factories=PROCESSOR_FACTORIES).run()
 
 
 def _trade_impl():
@@ -72,9 +73,9 @@ def _backtest_run():
         return
     start_date = calendar[-2].date.strftime('%F')
     end_date = (latest_day + datetime.timedelta(days=1)).strftime('%F')
-    transactions = Backtesting(start_date=start_date,
-                               end_date=end_date,
-                               processor_factories=PROCESSOR_FACTORIES).run()
+    transactions = Backtest(start_date=start_date,
+                            end_date=end_date,
+                            processor_factories=PROCESSOR_FACTORIES).run()
     db_client = Db()
     for transaction in transactions:
         if transaction.exit_time.date() == latest_day:
