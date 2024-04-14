@@ -110,9 +110,6 @@ def test_email_send(mocker, method_name, mock_smtp, mock_alpaca, mock_engine):
         return
     mocker.patch.object(image, 'MIMEImage', autospec=True)
     mocker.patch.object(multipart.MIMEMultipart, 'as_string', return_value='')
-    mocker.patch.dict(os.environ, {'EMAIL_USERNAME': 'fake_user',
-                                   'EMAIL_PASSWORD': 'fake_password',
-                                   'EMAIL_RECEIVER': 'fake_receiver'})
     mocker.patch.object(mock_alpaca, 'get_calendar', side_effect=Exception())
     mocker.patch.object(mock_engine.conn, 'execute', side_effect=Exception())
     mocker.patch.object(time, 'sleep')

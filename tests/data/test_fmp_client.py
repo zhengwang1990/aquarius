@@ -1,4 +1,3 @@
-import itertools
 import json
 import os
 import time
@@ -65,11 +64,6 @@ def fake_get(url, *args, **kwargs):
 @pytest.fixture(autouse=True)
 def mock_requests(mocker):
     mocker.patch.object(requests, 'get', side_effect=fake_get)
-
-
-@pytest.fixture(autouse=True)
-def mock_api_key(mocker):
-    mocker.patch.dict(os.environ, {'FMP_API_KEY': 'fake_api_key'})
 
 
 @pytest.mark.parametrize('time_interval',

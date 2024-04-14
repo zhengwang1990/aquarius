@@ -18,7 +18,7 @@ import pandas as pd
 import pytz
 import retrying
 
-from alpharius.data import get_transactions, get_default_data_client, DataClient, TimeInterval
+import alpharius.data as data
 from alpharius.utils import get_today, TIME_ZONE
 
 _TIME_ZONE = pytz.timezone('America/New_York')
@@ -29,7 +29,7 @@ _HTML_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'html')
 
 class EmailSender:
     def __init__(self,
-                 data_client: DataClient,
+                 data_client: data.DataClient,
                  logger: Optional[logging.Logger] = None) -> None:
         username = os.environ.get('EMAIL_USERNAME')
         password = os.environ.get('EMAIL_PASSWORD')
@@ -91,7 +91,7 @@ class EmailSender:
                                '</td>\n')
 
         transactions_html = ''
-        transactions = get_transactions(market_dates[-1].strftime('%F'), self._data_client)
+        transactions = data.get_transactions(market_dates[-1].strftime('%F'), self._data_client)
         for transaction in transactions:
             gl_str = ''
             if transaction.gl_pct is not None:
@@ -142,8 +142,8 @@ class EmailSender:
             df = self._data_client.get_data(symbol,
                                             pd.Timestamp(historical_date[0]),
                                             pd.Timestamp(historical_date[-1]),
-                                            TimeInterval.DAY)
-            symbol_close = np.array(df['Close'])
+                                            data.TimeInterval.DAY)
+            symbol_close = df['Close'].to_numpy()
             market_values[symbol] = symbol_close
 
         intraday_gain = account_equity - history.equity[-1]
@@ -249,7 +249,7 @@ def main():
     parser.add_argument('--error_message',
                         help='Error message. Only used in alert mode.')
     args = parser.parse_args()
-    data_client = get_default_data_client()
+    data_client = data.get_default_data_client()
 
     if args.mode == 'summary':
         EmailSender(data_client).send_summary()

@@ -39,12 +39,6 @@ def mock_get_stock_latest_trade(mocker):
                         return_value={'AAPL': Trade('AAPL', raw_data)})
 
 
-@pytest.fixture(autouse=True)
-def mock_api_key(mocker):
-    mocker.patch.dict(os.environ, {'APCA_API_KEY_ID': 'fake_id',
-                                   'APCA_API_SECRET_KEY': 'fake_key'})
-
-
 @pytest.mark.parametrize('time_interval',
                          [data.TimeInterval.FIVE_MIN,
                           data.TimeInterval.HOUR,

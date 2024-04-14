@@ -20,10 +20,6 @@ def mock_matplotlib(mocker):
 def mock_email(mocker):
     mocker.patch.object(image, 'MIMEImage', autospec=True)
     mocker.patch.object(multipart.MIMEMultipart, 'as_string', return_value='')
-    mocker.patch.dict(os.environ, {'EMAIL_USERNAME': 'fake_user',
-                                   'EMAIL_PASSWORD': 'fake_password',
-                                   'EMAIL_RECEIVER': 'fake_receiver'})
-
 
 @pytest.fixture(autouse=True)
 def mock_smtp(mocker):

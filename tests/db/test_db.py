@@ -2,12 +2,15 @@ import os
 
 import pandas as pd
 import pytest
-from alpharius.utils import Transaction
 
-TEST_TRANSACTION = Transaction('SYMB', True, 'Processor', 10, 12,
-                               pd.to_datetime('2022-11-03T16:00:00'),
-                               pd.to_datetime('2022-11-04T09:35:00'),
-                               100, 11, 0.2, -11, -0.01)
+import alpharius.data as data
+import alpharius.utils as utils
+from ..fakes import FakeDataClient
+
+TEST_TRANSACTION = utils.Transaction('SYMB', True, 'Processor', 10, 12,
+                                     pd.to_datetime('2022-11-03T16:00:00'),
+                                     pd.to_datetime('2022-11-04T09:35:00'),
+                                     100, 11, 0.2, -11, -0.01)
 
 
 def test_insert_transaction(client, mock_engine):
@@ -46,7 +49,9 @@ def test_update_log(mocker, client, mock_engine):
     mock_engine.conn.execute.assert_called_once()
 
 
-def test_backfill(client, mock_engine):
+def test_backfill(mocker, client, mock_engine):
+    mocker.patch.object(data, 'get_default_data_client', return_value=FakeDataClient())
+
     client.backfill('2022-11-03')
 
     assert mock_engine.conn.execute.call_count > 0
