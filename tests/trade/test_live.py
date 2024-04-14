@@ -2,13 +2,13 @@ import itertools
 import os
 import time
 
+import alpaca.trading as trading
 import pandas as pd
 import pytest
 import sqlalchemy
 
-from alpharius import trade
-from alpharius.trade import PROCESSOR_FACTORIES
-from ..fakes import Account, FakeAlpaca, FakeProcessor, FakeProcessorFactory, FakeDbEngine, FakeDataClient
+import alpharius.trade as trade
+from ..fakes import Account, FakeTradingClient, FakeProcessor, FakeProcessorFactory, FakeDbEngine, FakeDataClient
 
 
 @pytest.fixture(autouse=True)
@@ -28,63 +28,65 @@ def mock_engine(mocker):
                          [trade.TradingFrequency.FIVE_MIN,
                           trade.TradingFrequency.CLOSE_TO_CLOSE,
                           trade.TradingFrequency.CLOSE_TO_OPEN])
-def test_run_success(mock_alpaca, trading_frequency):
+def test_run_success(mock_trading_client, trading_frequency):
     fake_processor_factory = FakeProcessorFactory(trading_frequency)
     fake_processor = fake_processor_factory.processor
     trading = trade.Live(processor_factories=[fake_processor_factory], data_client=FakeDataClient())
 
     trading.run()
 
-    assert mock_alpaca.get_order_call_count > 0
-    assert mock_alpaca.list_positions_call_count > 0
-    assert mock_alpaca.submit_order_call_count > 0
-    assert mock_alpaca.get_account_call_count > 0
+    assert mock_trading_client.get_order_call_count > 0
+    assert mock_trading_client.get_all_positions_call_count > 0
+    assert mock_trading_client.submit_order_call_count > 0
+    assert mock_trading_client.get_account_call_count > 0
     assert fake_processor.get_stock_universe_call_count > 0
     assert fake_processor.process_data_call_count > 0
 
 
-def test_run_with_processors(mock_alpaca):
-    trading = trade.Live(processor_factories=PROCESSOR_FACTORIES, data_client=FakeDataClient())
+def test_run_with_processors(mock_trading_client):
+    trading = trade.Live(processor_factories=trade.PROCESSOR_FACTORIES, data_client=FakeDataClient())
 
     trading.run()
 
-    assert mock_alpaca.get_account_call_count > 0
+    assert mock_trading_client.get_account_call_count > 0
 
 
-def test_not_run_on_market_close_day(mocker, mock_alpaca):
-    trading = trade.Live(processor_factories=[], data_client=FakeDataClient())
-    mocker.patch.object(FakeAlpaca, 'get_calendar', return_value=[])
+def test_not_run_on_market_close_day(mocker, mock_trading_client):
+    data_client = FakeDataClient()
+    trading = trade.Live(processor_factories=[], data_client=data_client)
+    mocker.patch.object(FakeTradingClient, 'get_calendar', return_value=[])
 
     trading.run()
 
-    assert mock_alpaca.get_account_call_count > 0
-    assert mock_alpaca.get_bars_call_count == 0
+    assert mock_trading_client.get_account_call_count > 0
+    assert data_client.get_data_call_count == 0
 
 
-def test_not_run_if_far_from_market_open(mocker, mock_alpaca):
-    trading = trade.Live(processor_factories=[], data_client=FakeDataClient())
+def test_not_run_if_far_from_market_open(mocker, mock_trading_client):
+    data_client = FakeDataClient()
+    trading = trade.Live(processor_factories=[], data_client=data_client)
     mocker.patch.object(time, 'time',
-                        return_value=mock_alpaca.get_clock().next_open.timestamp() - 4000)
+                        return_value=mock_trading_client.get_clock().next_open.timestamp() - 4000)
 
     trading.run()
 
-    assert mock_alpaca.get_account_call_count > 0
-    assert mock_alpaca.get_bars_call_count == 0
+    assert mock_trading_client.get_account_call_count > 0
+    assert data_client.get_data_call_count == 0
 
 
-def test_small_position_not_open(mocker, mock_alpaca):
+def test_small_position_not_open(mocker, mock_trading_client):
     fake_processor_factory = FakeProcessorFactory(
         trade.TradingFrequency.CLOSE_TO_OPEN)
     trading = trade.Live(processor_factories=[fake_processor_factory], data_client=FakeDataClient())
-    mocker.patch.object(FakeAlpaca, 'get_account',
+    mocker.patch.object(FakeTradingClient, 'get_account',
                         return_value=Account('2000', '0.1', '8000'))
 
     trading.run()
 
-    assert mock_alpaca.submit_order_call_count == 0
+    assert mock_trading_client.submit_order_call_count == 0
 
 
-def test_trade_transactions_executed(mocker, mock_alpaca):
+def test_trade_transactions_executed(mocker):
     trading = trade.Live(processor_factories=[], data_client=FakeDataClient())
     expected_transactions = [
         {'symbol': 'A', 'action_type': trade.ActionType.BUY_TO_OPEN,
@@ -92,25 +94,23 @@ def test_trade_transactions_executed(mocker, mock_alpaca):
         {'symbol': 'B', 'action_type': trade.ActionType.SELL_TO_OPEN,
          'qty': 9, 'side': 'sell', 'notional': None},
         {'symbol': 'QQQ', 'action_type': trade.ActionType.SELL_TO_CLOSE,
-         'qty': 10, 'side': 'sell', 'notional': None},
+         'qty': 10, 'side': 'sell'},
         {'symbol': 'GOOG', 'action_type': trade.ActionType.BUY_TO_CLOSE,
-         'qty': 10, 'side': 'buy', 'notional': None},
+         'qty': 10, 'side': 'buy'},
     ]
     actions = [trade.Action(t['symbol'], t['action_type'], 1, 100,
                             FakeProcessor(trade.TradingFrequency.FIVE_MIN))
                for t in expected_transactions]
-    mocker.patch.object(FakeAlpaca, 'submit_order')
+    mock_place_order = mocker.patch.object(trade.Live, '_place_order')
 
     trading._trade(actions)
 
     for t in expected_transactions:
-        mock_alpaca.submit_order.assert_any_call(
-            symbol=t['symbol'], qty=t['qty'], side=t['side'],
-            type='market', time_in_force='day', notional=t['notional'],
-            limit_price=None)
+        t.pop('action_type')
+        mock_place_order.assert_any_call(**t)
 
 
-def test_trade_transactions_skipped(mock_alpaca):
+def test_trade_transactions_skipped(mock_trading_client):
     trading = trade.Live(processor_factories=[], data_client=FakeDataClient())
     actions = [trade.Action('QQQ', trade.ActionType.BUY_TO_CLOSE, 1, 100,
                             FakeProcessor(trade.TradingFrequency.FIVE_MIN)),
@@ -121,7 +121,7 @@ def test_trade_transactions_skipped(mock_alpaca):
 
     trading._trade(actions)
 
-    assert mock_alpaca.submit_order_call_count == 0
+    assert mock_trading_client.submit_order_call_count == 0
 
 
 def test_update_db(mocker, mock_engine):

@@ -5,7 +5,7 @@ import itertools
 import time
 import unittest.mock as mock
 import uuid
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import alpaca.trading as trading
 import pandas as pd
@@ -14,25 +14,15 @@ from alpharius import trade
 from alpharius.data import DataClient, TimeInterval, DATA_COLUMNS
 from alpharius.utils import TIME_ZONE
 
-Clock = collections.namedtuple('Clock', ['next_open', 'next_close'])
-ClockTimestamp = collections.namedtuple('ClockTimestamp', ['timestamp'])
 Asset = collections.namedtuple('Asset', ['symbol', 'name', 'tradable', 'marginable',
                                          'shortable', 'easy_to_borrow', 'fractionable'])
 Account = collections.namedtuple('Account', ['equity', 'cash', 'daytrading_buying_power'])
-Position = collections.namedtuple('Position', ['symbol', 'qty', 'current_price',
-                                               'market_value', 'cost_basis',
-                                               'avg_entry_price', 'change_today',
-                                               'unrealized_plpc'])
 Order = collections.namedtuple('Order', ['id', 'symbol', 'side', 'qty', 'notional',
                                          'filled_qty', 'filled_at', 'filled_avg_price',
                                          'submitted_at', 'status'])
 Bar = collections.namedtuple('Bar', ['t', 'o', 'h', 'l', 'c', 'vw', 'v'])
 History = collections.namedtuple('History', ['equity', 'timestamp'])
 Trade = collections.namedtuple('Trade', ['p'])
-Agg = collections.namedtuple(
-    'Agg', ['timestamp', 'open', 'high', 'low', 'close', 'vwap', 'volume'])
-LastTrade = collections.namedtuple('LastTrade', ['price'])
-Future = collections.namedtuple('Future', ['result'])
 
 
 def _to_timestamp(t) -> int:
@@ -76,14 +66,31 @@ class FakeAlpaca:
 
     def list_positions(self):
         self.list_positions_call_count += 1
-        return [Position('QQQ', '10', '10.0', '100.0', '99.0', '9.9', '0.01', '0'),
-                Position('GOOG', '-10', '94.4', '100.0', '99.0', '10', '0.01', '0')]
+        params = {
+            'exchange': trading.AssetExchange.NASDAQ,
+            'asset_class': trading.AssetClass.US_EQUITY,
+            'avg_entry_price': '10.0',
+            'market_value': '99',
+            'cost_basis': '100',
+            'unrealized_pl': '-1',
+            'unrealized_plpc': '1',
+            'unrealized_intraday_pl': '-1',
+            'unrealized_intraday_plpc': '1',
+            'current_price': '9.9',
+            'lastday_price': '10.0',
+            'change_today': '-0.1',
+        }
+        return [trading.Position(asset_id=uuid.uuid4(), symbol='QQQ', qty='10',
+                                 side=trading.PositionSide.LONG, **params),
+                trading.Position(asset_id=uuid.uuid4(), symbol='GOOG', qty='-10',
+                                 side=trading.PositionSide.SHORT, **params)]
 
     def get_clock(self):
         self.get_clock_call_count += 1
-        next_open = ClockTimestamp(lambda: 1615987800)
-        next_close = ClockTimestamp(lambda: 1616011200)
-        return Clock(next_open, next_close)
+        current = pd.to_datetime(1615987000, utc=True, unit='s')
+        next_open = pd.to_datetime(1615987800, utc=True, unit='s')
+        next_close = pd.to_datetime(1616011200, utc=True, unit='s')
+        return trading.Clock(timestamp=current, next_open=next_open, next_close=next_close)
 
     def get_order(self, order_id):
         self.get_order_call_count += 1
@@ -185,10 +192,48 @@ class FakeAlpaca:
         return {symbol: Trade(value) for symbol in symbols}
 
 
+def get_order(symbol: str,
+              order_side: trading.OrderSide,
+              order_id: Optional[str] = None,
+              filled_at: Optional[pd.Timestamp] = None,
+              qty: Optional[str] = None):
+    submitted_at = (filled_at - datetime.timedelta(seconds=3)
+                    if filled_at else pd.to_datetime('2021-03-17T10:14:59.0Z'))
+    return trading.Order(
+        id=uuid.UUID(order_id) if isinstance(order_id, str) else uuid.uuid4(),
+        client_order_id=str(uuid.uuid4()),
+        created_at=submitted_at - datetime.timedelta(seconds=2),
+        updated_at=submitted_at - datetime.timedelta(seconds=1),
+        submitted_at=submitted_at,
+        filled_at=filled_at,
+        asset_id=uuid.uuid4(),
+        symbol=symbol,
+        asset_class=trading.AssetClass.US_EQUITY,
+        qty=qty,
+        filled_qty=qty if filled_at else None,
+        filled_avg_price='11.1' if filled_at else None,
+        order_class=trading.OrderClass.SIMPLE,
+        order_type=trading.OrderType.MARKET,
+        type=trading.OrderType.MARKET,
+        side=order_side,
+        time_in_force=trading.TimeInForce.DAY,
+        status=trading.OrderStatus.FILLED if filled_at else trading.OrderStatus.ACCEPTED,
+        extended_hours=False)
+
+
 class FakeTradingClient:
     def __init__(self):
         self.get_calendar_call_count = 0
         self.list_assets_call_count = 0
+        self.get_clock_call_count = 0
+        self.get_all_positions_call_count = 0
+        self.get_account_call_count = 0
+        self.get_order_call_count = 0
+        self.submit_order_call_count = 0
+
+    def get_account(self):
+        self.get_account_call_count += 1
+        return Account('2000', '2000', '8000')
 
     def get_calendar(self, filters: trading.GetCalendarRequest) -> List[trading.Calendar]:
         self.get_calendar_call_count += 1
@@ -217,6 +262,45 @@ class FakeTradingClient:
                               fractionable=True,
                               **{'class': trading.AssetClass.US_EQUITY})
                 for symbol in ['QQQ', 'SPY', 'DIA', 'TQQQ', 'GOOG', 'AAPL', 'MSFT']]
+
+    def get_clock(self):
+        self.get_clock_call_count += 1
+        current = pd.to_datetime(1615987000, utc=True, unit='s')
+        next_open = pd.to_datetime(1615987800, utc=True, unit='s')
+        next_close = pd.to_datetime(1616011200, utc=True, unit='s')
+        return trading.Clock(timestamp=current, next_open=next_open, next_close=next_close, is_open=False)
+
+    def get_all_positions(self):
+        self.get_all_positions_call_count += 1
+        params = {
+            'exchange': trading.AssetExchange.NASDAQ,
+            'asset_class': trading.AssetClass.US_EQUITY,
+            'avg_entry_price': '10.0',
+            'market_value': '99',
+            'cost_basis': '100',
+            'unrealized_pl': '-1',
+            'unrealized_plpc': '1',
+            'unrealized_intraday_pl': '-1',
+            'unrealized_intraday_plpc': '1',
+            'current_price': '9.9',
+            'lastday_price': '10.0',
+            'change_today': '-0.1',
+        }
+        return [trading.Position(asset_id=uuid.uuid4(), symbol='QQQ', qty='10',
+                                 side=trading.PositionSide.LONG, **params),
+                trading.Position(asset_id=uuid.uuid4(), symbol='GOOG', qty='-10',
+                                 side=trading.PositionSide.SHORT, **params)]
+
+    def get_order_by_id(self, order_id: str):
+        self.get_order_call_count += 1
+        filled_at = pd.to_datetime('2021-03-17T10:14:57.0Z')
+        if self.get_order_call_count % 3 == 0:
+            filled_at = None
+        return get_order('QQQ', trading.OrderSide.BUY, order_id, filled_at, '12', )
+
+    def submit_order(self, order_data: trading.OrderRequest):
+        self.submit_order_call_count += 1
+        return get_order(order_data.symbol, order_data.side, qty=str(order_data.qty))
 
 
 class FakeProcessor(trade.Processor):

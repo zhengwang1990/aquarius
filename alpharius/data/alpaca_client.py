@@ -31,7 +31,7 @@ class AlpacaClient(DataClient):
         secret_key = secret_key or os.environ[ALPACA_SECRET_KEY_ENV]
         self._client = StockHistoricalDataClient(api_key=api_key, secret_key=secret_key)
 
-    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
+    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=500)
     def get_data(self,
                  symbol: str,
                  start_time: pd.Timestamp,
@@ -69,7 +69,7 @@ class AlpacaClient(DataClient):
         data = [[b.open, b.high, b.low, b.close, b.volume] for b in bars]
         return pd.DataFrame(data, index=index, columns=DATA_COLUMNS)
 
-    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
+    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=500)
     def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
         """Gets the last trade prices of a list of symbols."""
         request = StockLatestTradeRequest(symbol_or_symbols=symbols)

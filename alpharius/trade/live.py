@@ -7,14 +7,22 @@ import time
 from concurrent import futures
 from typing import List, Optional, Set
 
-import alpaca_trade_api as tradeapi
+import alpaca.trading as trading
 import pandas as pd
 import retrying
 import sqlalchemy
+from alpaca.common import APIError
 
 from alpharius.data import DataClient, TimeInterval, get_transactions, load_interday_dataset
 from alpharius.db import Db
-from alpharius.utils import get_today, get_all_symbols, TIME_ZONE
+from alpharius.utils import (
+    get_today,
+    get_all_symbols,
+    ALPACA_API_KEY_ENV,
+    ALPACA_SECRET_KEY_ENV,
+    TIME_ZONE,
+
+)
 from .common import (
     Action, ActionType, ProcessorFactory, TradingFrequency, Context, Mode,
     Position, MARKET_OPEN, INTERDAY_LOOKBACK_LOAD, OUTPUT_DIR,
@@ -26,17 +34,19 @@ _MAX_WORKERS = 10
 class Live:
 
     def __init__(self, processor_factories: List[ProcessorFactory], data_client: DataClient) -> None:
-        self._output_dir = os.path.join(OUTPUT_DIR, 'trading',
+        self._output_dir = os.path.join(OUTPUT_DIR, 'live',
                                         datetime.datetime.now().strftime('%F'))
         os.makedirs(self._output_dir, exist_ok=True)
         self._logger = logging_config(os.path.join(self._output_dir, 'trading.txt'),
-                                      detail=True, name='trading')
+                                      detail=True, name='live')
         self._logger.info('Trading is running on [%s]', socket.gethostname())
         self._equity, self._cash = 0, 0
         self._cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         self._today = get_today()
         self._processor_factories = processor_factories
-        self._alpaca = tradeapi.REST()
+        api_key = os.environ[ALPACA_API_KEY_ENV]
+        secret_key = os.environ[ALPACA_SECRET_KEY_ENV]
+        self._alpaca = trading.TradingClient(api_key, secret_key)
         self._db = Db()
         self._update_account()
         self._update_positions()
@@ -65,7 +75,7 @@ class Live:
                           self._equity, self._cash, account.daytrading_buying_power)
 
     def _update_positions(self) -> None:
-        alpaca_positions = self._alpaca.list_positions()
+        alpaca_positions = self._alpaca.get_all_positions()
         self._positions = [Position(position.symbol, float(position.qty),
                                     float(position.avg_entry_price), None, None)
                            for position in alpaca_positions]
@@ -95,10 +105,10 @@ class Live:
 
     def run(self) -> None:
         # Check if today is a trading day
-        today_str = self._today.strftime('%F')
-        calendar = self._alpaca.get_calendar(start=today_str, end=today_str)
-        if not calendar or calendar[0].date.strftime('%F') != today_str:
-            self._logger.info('Market does not open on [%s]', today_str)
+        calendar = self._alpaca.get_calendar(trading.GetCalendarRequest(start=self._today.date(),
+                                                                        end=self._today.date()))
+        if not calendar or calendar[0].date != self._today.date():
+            self._logger.info('Market does not open on [%s]', self._today.date())
             return
         if time.time() < self._market_open - 3600:
             self._logger.info('Market open is more than one hour away')
@@ -271,7 +281,7 @@ class Live:
                 continue
             qty = abs(current_position.qty) * action.percent
             side = 'buy' if action.type == ActionType.BUY_TO_CLOSE else 'sell'
-            order_id = self._place_order(symbol, side, qty=qty)
+            order_id = self._place_order(symbol=symbol, side=side, qty=qty)
             if order_id:
                 order_ids.append(order_id)
             executed_closes.append(action)
@@ -311,38 +321,42 @@ class Live:
                 side = 'sell'
                 qty = int(cash_to_trade / action.price)
                 notional = None
-            order_id = self._place_order(symbol, side, qty=qty, notional=notional)
+            print(symbol, side, qty, notional)
+            order_id = self._place_order(symbol=symbol, side=side, qty=qty, notional=notional)
             if order_id:
                 order_ids.append(order_id)
             action.processor.ack(symbol)
 
         self._wait_for_order_to_fill(order_ids)
 
-    @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
+    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
     def _place_order(self, symbol: str, side: str,
                      qty: Optional[float] = None,
                      notional: Optional[float] = None,
                      limit_price: Optional[float] = None) -> Optional[str]:
-        order_type = 'market' if limit_price is None else 'limit'
+        order_type = trading.OrderType.MARKET if limit_price is None else trading.OrderType.LIMIT
         self._logger.info('Placing order for [%s]: side [%s]; qty [%s]; notional [%s]; type [%s].',
                           symbol, side, qty, notional, order_type)
+        side_map = {'buy': trading.OrderSide.BUY, 'sell': trading.OrderSide.SELL}
         try:
-            order = self._alpaca.submit_order(symbol=symbol, qty=qty, side=side,
-                                              type=order_type,
-                                              time_in_force='day',
-                                              notional=notional,
-                                              limit_price=limit_price)
-            return order.id
-        except tradeapi.rest.APIError as e:
-            self._logger.error('Failed to placer [%s] order for [%s]: %s', side, symbol, e)
+            params = {'symbol': symbol, 'qty': qty, 'side': side_map[side],
+                      'time_in_force': trading.TimeInForce.DAY, 'notional': notional}
+            if limit_price:
+                request = trading.LimitOrderRequest(**params, limit_price=limit_price)
+            else:
+                request = trading.MarketOrderRequest(**params)
+            order = self._alpaca.submit_order(request)
+            return str(order.id)
+        except APIError as e:
+            self._logger.error('Failed to place [%s] order for [%s]: %s', side, symbol, e)
 
-    @retrying.retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
+    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
     def _wait_for_order_to_fill(self, order_ids: List[str], timeout: int = 10) -> None:
         def _update_open_orders(open_orders):
             remaining = []
             for order_id in open_orders:
-                order = self._alpaca.get_order(order_id)
-                if order.status != 'filled':
+                order = self._alpaca.get_order_by_id(order_id)
+                if order.status != trading.OrderStatus.FILLED:
                     remaining.append(order_id)
             return remaining
 

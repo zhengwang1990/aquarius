@@ -62,9 +62,8 @@ def get_current_time() -> pd.Timestamp:
 def get_today() -> pd.Timestamp:
     """Gets a datetime object of today at 00:00 NY time."""
     # Mocking time.time() will change the behavior of the method.
-    return pd.to_datetime(
-        pd.Timestamp.combine(get_current_time().date(),
-                             datetime.time(0, 0))).tz_localize(TIME_ZONE)
+    return pd.to_datetime(pd.Timestamp.combine(get_current_time().date(),
+                                               datetime.time(0, 0))).tz_localize(TIME_ZONE)
 
 
 def get_latest_day():

@@ -39,7 +39,7 @@ class FmpClient(DataClient):
             remove_queue()
         self._call_history.append(time.time())
 
-    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
+    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=500)
     def get_data(self,
                  symbol: str,
                  start_time: pd.Timestamp,
@@ -71,7 +71,9 @@ class FmpClient(DataClient):
         response.raise_for_status()
         response_json = response.json()
         if isinstance(response_json, dict):
-            raw_bars = response_json['historical']
+            if 'historical' not in response_json:
+                print(symbol, url)
+            raw_bars = response_json.get('historical', [])
         else:
             raw_bars = response_json
         bars = []
@@ -88,7 +90,7 @@ class FmpClient(DataClient):
         """Gets the last trade prices of a list of symbols."""
         return {symbol: self._get_last_trade(symbol) for symbol in symbols}
 
-    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
+    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=500)
     def _get_last_trade(self, symbol: str) -> float:
         url = _BASE_URL + 'quote-short/' + symbol
         params = {'apikey': self._api_key}

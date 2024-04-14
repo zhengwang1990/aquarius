@@ -8,7 +8,7 @@ import signal
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-import alpaca_trade_api as tradeapi
+import alpaca.trading as trading
 import git
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -20,7 +20,14 @@ from alpharius.data import (
     DataClient, load_intraday_dataset, load_interday_dataset,
 )
 from alpharius.utils import (
-    TIME_ZONE, Transaction, compute_risks, compute_drawdown, compute_bernoulli_ci95, get_all_symbols,
+    ALPACA_API_KEY_ENV,
+    ALPACA_SECRET_KEY_ENV,
+    TIME_ZONE,
+    Transaction,
+    compute_risks,
+    compute_drawdown,
+    compute_bernoulli_ci95,
+    get_all_symbols,
 )
 from .common import (
     Action, ActionType, Context, Position, Processor, ProcessorFactory,
@@ -57,7 +64,7 @@ class Backtest:
         self._ack_all = ack_all
         self._data_client = data_client
 
-        backtesting_output_dir = os.path.join(OUTPUT_DIR, 'backtesting')
+        backtesting_output_dir = os.path.join(OUTPUT_DIR, 'backtest')
         self._output_num = 1
         while True:
             output_dir = os.path.join(backtesting_output_dir,
@@ -74,9 +81,14 @@ class Backtest:
         self._summary_log = logging_config(os.path.join(
             self._output_dir, 'summary.txt'), detail=False, name='summary')
 
-        alpaca = tradeapi.REST()
-        calendar = alpaca.get_calendar(start=self._start_date.strftime('%F'),
-                                       end=(self._end_date - datetime.timedelta(days=1)).strftime('%F'))
+        api_key = os.environ[ALPACA_API_KEY_ENV]
+        secret_key = os.environ[ALPACA_SECRET_KEY_ENV]
+        trading_client = trading.TradingClient(api_key, secret_key)
+        calendar = trading_client.get_calendar(
+            filters=trading.GetCalendarRequest(
+                start=self._start_date.date(),
+                end=(self._end_date - datetime.timedelta(days=1)).date(),
+            ))
         self._market_dates = [market_day.date for market_day in calendar
                               if market_day.date < self._end_date.date()]
         signal.signal(signal.SIGINT, self._safe_exit)
