@@ -16,7 +16,7 @@ from alpharius.utils import TIME_ZONE
 
 Asset = collections.namedtuple('Asset', ['symbol', 'name', 'tradable', 'marginable',
                                          'shortable', 'easy_to_borrow', 'fractionable'])
-Account = collections.namedtuple('Account', ['equity', 'cash', 'daytrading_buying_power'])
+Account = collections.namedtuple('Account', ['id', 'equity', 'cash', 'daytrading_buying_power'])
 Order = collections.namedtuple('Order', ['id', 'symbol', 'side', 'qty', 'notional',
                                          'filled_qty', 'filled_at', 'filled_avg_price',
                                          'submitted_at', 'status'])
@@ -53,7 +53,7 @@ class FakeAlpaca:
 
     def get_account(self):
         self.get_account_call_count += 1
-        return Account('2000', '2000', '8000')
+        return Account(uuid.uuid4(), '2000', '2000', '8000')
 
     def list_assets(self):
         self.list_assets_call_count += 1
@@ -233,7 +233,7 @@ class FakeTradingClient:
 
     def get_account(self):
         self.get_account_call_count += 1
-        return Account('2000', '2000', '8000')
+        return Account(uuid.uuid4(), '2000', '2000', '8000')
 
     def get_calendar(self, filters: trading.GetCalendarRequest) -> List[trading.Calendar]:
         self.get_calendar_call_count += 1

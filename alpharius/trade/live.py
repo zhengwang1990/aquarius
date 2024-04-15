@@ -18,10 +18,8 @@ from alpharius.db import Db
 from alpharius.utils import (
     get_today,
     get_all_symbols,
-    ALPACA_API_KEY_ENV,
-    ALPACA_SECRET_KEY_ENV,
     TIME_ZONE,
-
+    get_trading_client,
 )
 from .common import (
     Action, ActionType, ProcessorFactory, TradingFrequency, Context, Mode,
@@ -44,9 +42,7 @@ class Live:
         self._cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
         self._today = get_today()
         self._processor_factories = processor_factories
-        api_key = os.environ[ALPACA_API_KEY_ENV]
-        secret_key = os.environ[ALPACA_SECRET_KEY_ENV]
-        self._alpaca = trading.TradingClient(api_key, secret_key)
+        self._alpaca = get_trading_client()
         self._db = Db()
         self._update_account()
         self._update_positions()

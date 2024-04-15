@@ -2,7 +2,6 @@ import itertools
 import os
 import time
 
-import alpaca.trading as trading
 import pandas as pd
 import pytest
 import sqlalchemy
@@ -31,9 +30,9 @@ def mock_engine(mocker):
 def test_run_success(mock_trading_client, trading_frequency):
     fake_processor_factory = FakeProcessorFactory(trading_frequency)
     fake_processor = fake_processor_factory.processor
-    trading = trade.Live(processor_factories=[fake_processor_factory], data_client=FakeDataClient())
+    live = trade.Live(processor_factories=[fake_processor_factory], data_client=FakeDataClient())
 
-    trading.run()
+    live.run()
 
     assert mock_trading_client.get_order_call_count > 0
     assert mock_trading_client.get_all_positions_call_count > 0
@@ -44,19 +43,19 @@ def test_run_success(mock_trading_client, trading_frequency):
 
 
 def test_run_with_processors(mock_trading_client):
-    trading = trade.Live(processor_factories=trade.PROCESSOR_FACTORIES, data_client=FakeDataClient())
+    live = trade.Live(processor_factories=trade.PROCESSOR_FACTORIES, data_client=FakeDataClient())
 
-    trading.run()
+    live.run()
 
     assert mock_trading_client.get_account_call_count > 0
 
 
 def test_not_run_on_market_close_day(mocker, mock_trading_client):
     data_client = FakeDataClient()
-    trading = trade.Live(processor_factories=[], data_client=data_client)
+    live = trade.Live(processor_factories=[], data_client=data_client)
     mocker.patch.object(FakeTradingClient, 'get_calendar', return_value=[])
 
-    trading.run()
+    live.run()
 
     assert mock_trading_client.get_account_call_count > 0
     assert data_client.get_data_call_count == 0
@@ -64,11 +63,11 @@ def test_not_run_on_market_close_day(mocker, mock_trading_client):
 
 def test_not_run_if_far_from_market_open(mocker, mock_trading_client):
     data_client = FakeDataClient()
-    trading = trade.Live(processor_factories=[], data_client=data_client)
+    live = trade.Live(processor_factories=[], data_client=data_client)
     mocker.patch.object(time, 'time',
                         return_value=mock_trading_client.get_clock().next_open.timestamp() - 4000)
 
-    trading.run()
+    live.run()
 
     assert mock_trading_client.get_account_call_count > 0
     assert data_client.get_data_call_count == 0
@@ -77,17 +76,17 @@ def test_not_run_if_far_from_market_open(mocker, mock_trading_client):
 def test_small_position_not_open(mocker, mock_trading_client):
     fake_processor_factory = FakeProcessorFactory(
         trade.TradingFrequency.CLOSE_TO_OPEN)
-    trading = trade.Live(processor_factories=[fake_processor_factory], data_client=FakeDataClient())
+    live = trade.Live(processor_factories=[fake_processor_factory], data_client=FakeDataClient())
     mocker.patch.object(FakeTradingClient, 'get_account',
-                        return_value=Account('2000', '0.1', '8000'))
+                        return_value=Account('id', '2000', '0.1', '8000'))
 
-    trading.run()
+    live.run()
 
     assert mock_trading_client.submit_order_call_count == 0
 
 
 def test_trade_transactions_executed(mocker):
-    trading = trade.Live(processor_factories=[], data_client=FakeDataClient())
+    live = trade.Live(processor_factories=[], data_client=FakeDataClient())
     expected_transactions = [
         {'symbol': 'A', 'action_type': trade.ActionType.BUY_TO_OPEN,
          'qty': None, 'side': 'buy', 'notional': 900},
@@ -103,7 +102,7 @@ def test_trade_transactions_executed(mocker):
                for t in expected_transactions]
     mock_place_order = mocker.patch.object(trade.Live, '_place_order')
 
-    trading._trade(actions)
+    live._trade(actions)
 
     for t in expected_transactions:
         t.pop('action_type')
@@ -111,7 +110,7 @@ def test_trade_transactions_executed(mocker):
 
 
 def test_trade_transactions_skipped(mock_trading_client):
-    trading = trade.Live(processor_factories=[], data_client=FakeDataClient())
+    live = trade.Live(processor_factories=[], data_client=FakeDataClient())
     actions = [trade.Action('QQQ', trade.ActionType.BUY_TO_CLOSE, 1, 100,
                             FakeProcessor(trade.TradingFrequency.FIVE_MIN)),
                trade.Action('GOOG', trade.ActionType.SELL_TO_CLOSE, 1, 100,
@@ -119,7 +118,7 @@ def test_trade_transactions_skipped(mock_trading_client):
                trade.Action('AAPL', trade.ActionType.SELL_TO_CLOSE, 1, 100,
                             FakeProcessor(trade.TradingFrequency.FIVE_MIN))]
 
-    trading._trade(actions)
+    live._trade(actions)
 
     assert mock_trading_client.submit_order_call_count == 0
 
@@ -130,8 +129,8 @@ def test_update_db(mocker, mock_engine):
     mocker.patch.object(os, 'listdir', return_value=['trading.txt'])
     mocker.patch('builtins.open', mocker.mock_open(read_data='data'))
     mocker.patch.object(time, 'time', return_value=exit_time.timestamp() + 30)
-    trading = trade.Live(processor_factories=[], data_client=FakeDataClient())
-    trading._update_db([trade.Action('QQQ', trade.ActionType.SELL_TO_CLOSE, 1, 100,
+    live = trade.Live(processor_factories=[], data_client=FakeDataClient())
+    live._update_db([trade.Action('QQQ', trade.ActionType.SELL_TO_CLOSE, 1, 100,
                                      FakeProcessor(trade.TradingFrequency.FIVE_MIN))])
 
     assert mock_engine.conn.execute.call_count == 3

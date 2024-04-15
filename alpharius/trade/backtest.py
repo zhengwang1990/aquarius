@@ -20,14 +20,13 @@ from alpharius.data import (
     DataClient, load_intraday_dataset, load_interday_dataset,
 )
 from alpharius.utils import (
-    ALPACA_API_KEY_ENV,
-    ALPACA_SECRET_KEY_ENV,
     TIME_ZONE,
     Transaction,
     compute_risks,
     compute_drawdown,
     compute_bernoulli_ci95,
     get_all_symbols,
+    get_trading_client,
 )
 from .common import (
     Action, ActionType, Context, Position, Processor, ProcessorFactory,
@@ -81,9 +80,7 @@ class Backtest:
         self._summary_log = logging_config(os.path.join(
             self._output_dir, 'summary.txt'), detail=False, name='summary')
 
-        api_key = os.environ[ALPACA_API_KEY_ENV]
-        secret_key = os.environ[ALPACA_SECRET_KEY_ENV]
-        trading_client = trading.TradingClient(api_key, secret_key)
+        trading_client = get_trading_client()
         calendar = trading_client.get_calendar(
             filters=trading.GetCalendarRequest(
                 start=self._start_date.date(),

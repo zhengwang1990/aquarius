@@ -66,7 +66,7 @@ def get_today() -> pd.Timestamp:
                                                datetime.time(0, 0))).tz_localize(TIME_ZONE)
 
 
-def get_latest_day():
+def get_latest_day() -> datetime.date:
     """Gets the latest day in regular sense.
 
     If the time is before pre-market open it returns previous day.
@@ -77,8 +77,10 @@ def get_latest_day():
     return latest_day.date()
 
 
-def compute_risks(values: List[float],
-                  market_values: List[float]) -> Tuple[Optional[float], Optional[float], float]:
+def compute_risks(
+        values: List[float],
+        market_values: List[float],
+) -> Tuple[Optional[float], Optional[float], float]:
     """Computes alpha, beta and sharpe ratio risk factors.
 
     params:
@@ -122,20 +124,26 @@ def compute_drawdown(values: List[float]) -> Tuple[float, int, int]:
     return d, hi, li
 
 
-def construct_charts_link(symbol: str, date: str):
+def construct_charts_link(symbol: str, date: str) -> str:
     """Constructs link to charts page for the given symbol on a given day."""
     start_date = (pd.to_datetime(date) - datetime.timedelta(days=92)).strftime('%F')
     return f'charts?date={date}&start_date={start_date}&end_date={date}&symbol={symbol}'
 
 
-def compute_bernoulli_ci95(p: float, n: int):
+def compute_bernoulli_ci95(p: float, n: int) -> float:
     """Gets 95% confidence interval for Bernoulli sampling."""
     z = 1.96
     return z * math.sqrt(p * (1 - p) / n)
 
 
+def get_trading_client() -> trading.TradingClient:
+    api_key = os.environ[ALPACA_API_KEY_ENV]
+    secret_key = os.environ[ALPACA_SECRET_KEY_ENV]
+    return trading.TradingClient(api_key, secret_key)
+
+
 @functools.lru_cache()
-def get_all_symbols():
+def get_all_symbols() -> List[str]:
     """Gets all symbols that can be traded."""
     api_key = os.environ[ALPACA_API_KEY_ENV]
     secret_key = os.environ[ALPACA_SECRET_KEY_ENV]
