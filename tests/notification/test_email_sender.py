@@ -8,14 +8,14 @@ from ..fakes import FakeDataClient
 
 
 def test_send_summary(mock_smtp):
-    client = email_sender.EmailSender(FakeDataClient())
-    client.send_summary()
+    client = email_sender.EmailSender()
+    client.send_summary(FakeDataClient())
 
     mock_smtp.assert_called_once()
 
 
 def test_send_alert(mock_smtp):
-    client = email_sender.EmailSender(FakeDataClient())
+    client = email_sender.EmailSender()
     client.send_alert('error_message')
 
     mock_smtp.assert_called_once()

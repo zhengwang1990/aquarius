@@ -308,12 +308,12 @@ class Db:
                                 **kwargs)
         return [Transaction(*result) for result in results]
 
-    def backfill(self, start_date: Optional[str] = None) -> None:
+    def backfill(self, data_client: data.DataClient, start_date: Optional[str] = None) -> None:
         """Backfills the database from start_date."""
         today = get_today()
         start_date = start_date or today.strftime('%F')
         # Backfill transaction table
-        transactions = data.get_transactions(start_date, data.get_default_data_client())
+        transactions = data.get_transactions(start_date, data_client)
         iterator = tqdm(transactions, ncols=80) if sys.stdout.isatty() else transactions
         for transaction in iterator:
             if transaction.gl_pct is not None:

@@ -60,7 +60,7 @@ class Client:
 
     def __init__(self):
         self._alpaca = tradeapi.REST()
-        self._data = data.FmpClient()
+        self._data_client = data.FmpClient()
 
     def get_calendar(self):
         latest_day = get_latest_day()
@@ -189,7 +189,7 @@ class Client:
                            time_points,
                            portfolio_histories,
                            lock: threading.RLock):
-        day_bars = self._data.get_data(
+        day_bars = self._data_client.get_data(
             symbol,
             pd.Timestamp.combine(latest_day, datetime.time(0, 0)).tz_localize(TIME_ZONE),
             pd.Timestamp.combine(latest_day, datetime.time(23, 0)).tz_localize(TIME_ZONE),
@@ -203,7 +203,7 @@ class Client:
             if t_open not in dict_1d:
                 dict_1d[t_open] = bar['Open']
             dict_1d[t_close] = bar['Close']
-        year_bars = self._data.get_data(
+        year_bars = self._data_client.get_data(
             symbol,
             pd.Timestamp(time_points[0]),
             pd.Timestamp(time_points[-1]),
@@ -331,12 +331,12 @@ class Client:
             return dict()
         result = dict()
         calendar = self.get_calendar()
-        current_prices = self._data.get_last_trades(symbols)
+        current_prices = self._data_client.get_last_trades(symbols)
         prev_day = calendar[-2].date.strftime('%F')
         tasks = dict()
         with futures.ThreadPoolExecutor(max_workers=4) as pool:
             for symbol in symbols:
-                tasks[symbol] = pool.submit(self._data.get_daily,
+                tasks[symbol] = pool.submit(self._data_client.get_daily,
                                             symbol=symbol,
                                             day=pd.Timestamp(prev_day),
                                             time_interval=data.TimeInterval.DAY)
@@ -383,7 +383,7 @@ class Client:
         tasks, bars = dict(), dict()
         with futures.ThreadPoolExecutor(max_workers=2) as pool:
             for symbol in compare_symbols:
-                tasks[symbol] = pool.submit(self._data.get_data,
+                tasks[symbol] = pool.submit(self._data_client.get_data,
                                             symbol=symbol,
                                             start_time=pd.Timestamp(portfolio_dates[0]),
                                             end_time=pd.Timestamp(end_date),
@@ -424,15 +424,15 @@ class Client:
             time_interval = data.TimeInterval.FIVE_MIN
         else:
             time_interval = data.TimeInterval.DAY
-        bars = self._data.get_data(symbol=symbol,
-                                   start_time=start_time,
-                                   end_time=end_time,
-                                   time_interval=time_interval)
+        bars = self._data_client.get_data(symbol=symbol,
+                                          start_time=start_time,
+                                          end_time=end_time,
+                                          time_interval=time_interval)
         if timeframe == 'intraday':
-            prev_close = self._data.get_data(symbol=symbol,
-                                             start_time=start_time - datetime.timedelta(days=7),
-                                             end_time=start_time,
-                                             time_interval=data.TimeInterval.DAY)['Close'].iloc[-1]
+            prev_close = self._data_client.get_data(symbol=symbol,
+                                                    start_time=start_time - datetime.timedelta(days=7),
+                                                    end_time=start_time,
+                                                    time_interval=data.TimeInterval.DAY)['Close'].iloc[-1]
         else:
             prev_close = None
         name = self._alpaca.get_asset(symbol).name

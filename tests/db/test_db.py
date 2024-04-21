@@ -49,10 +49,8 @@ def test_update_log(mocker, client, mock_engine):
     mock_engine.conn.execute.assert_called_once()
 
 
-def test_backfill(mocker, client, mock_engine):
-    mocker.patch.object(data, 'get_default_data_client', return_value=FakeDataClient())
-
-    client.backfill('2022-11-03')
+def test_backfill(client, mock_engine):
+    client.backfill(FakeDataClient(), '2022-11-03')
 
     assert mock_engine.conn.execute.call_count > 0
 

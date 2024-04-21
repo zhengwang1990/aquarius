@@ -8,6 +8,7 @@ from concurrent import futures
 import flask
 from flask_apscheduler import APScheduler
 
+import alpharius.data as data
 from alpharius.db import Db
 from alpharius.notification.email_sender import EmailSender
 from alpharius.trade import PROCESSOR_FACTORIES, Backtest, Live
@@ -23,7 +24,6 @@ scheduler.init_app(app)
 scheduler.start()
 lock = threading.RLock()
 job_status = 'idle'
-DISABLE_SCHEDULING = True
 
 
 def email_on_exception(func):
@@ -42,7 +42,8 @@ def email_on_exception(func):
 
 @email_on_exception
 def _trade_run():
-    Live(processor_factories=PROCESSOR_FACTORIES).run()
+    Live(processor_factories=PROCESSOR_FACTORIES,
+         data_client=data.get_default_data_client()).run()
 
 
 def _trade_impl():
@@ -75,7 +76,8 @@ def _backtest_run():
     end_date = (latest_day + datetime.timedelta(days=1)).strftime('%F')
     transactions = Backtest(start_date=start_date,
                             end_date=end_date,
-                            processor_factories=PROCESSOR_FACTORIES).run()
+                            processor_factories=PROCESSOR_FACTORIES,
+                            data_client=data.get_default_data_client()).run()
     db_client = Db()
     for transaction in transactions:
         if transaction.exit_time.date() == latest_day:
@@ -90,8 +92,6 @@ def get_job_status():
 @scheduler.task('cron', id='trade', day_of_week='mon-fri',
                 hour='9-15', minute='*/15', timezone='America/New_York')
 def trade():
-    if DISABLE_SCHEDULING:
-        return
     if job_status != 'running':
         t = threading.Thread(target=_trade_impl)
         t.start()
@@ -101,18 +101,14 @@ def trade():
                 hour='16,17,22', minute=10, timezone='America/New_York')
 @email_on_exception
 def backfill():
-    if DISABLE_SCHEDULING:
-        return
     app.logger.info('Start backfilling')
-    Db().backfill()
+    Db().backfill(data.get_default_data_client())
     app.logger.info('Finish backfilling')
 
 
 @scheduler.task('cron', id='backtest', day_of_week='mon-fri',
                 hour=16, minute=15, timezone='America/New_York')
 def backtest():
-    if DISABLE_SCHEDULING:
-        return
     app.logger.info('Start backtesting')
     with futures.ProcessPoolExecutor(max_workers=1) as pool:
         pool.submit(_backtest_run).result()

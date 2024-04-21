@@ -32,3 +32,10 @@ def mock_trading_client(mocker):
     client = fakes.FakeTradingClient()
     mocker.patch.object(alpaca_trading, 'TradingClient', return_value=client)
     return client
+
+
+@pytest.fixture(autouse=True)
+def mock_default_data_client(mocker):
+    client = fakes.FakeDataClient()
+    mocker.patch('alpharius.data.get_default_data_client', return_value=client)
+    return client

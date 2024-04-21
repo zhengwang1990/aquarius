@@ -29,7 +29,6 @@ _HTML_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'html')
 
 class EmailSender:
     def __init__(self,
-                 data_client: data.DataClient,
                  logger: Optional[logging.Logger] = None) -> None:
         username = os.environ.get('EMAIL_USERNAME')
         password = os.environ.get('EMAIL_PASSWORD')
@@ -42,7 +41,6 @@ class EmailSender:
         self._client = self._create_client(username, password)
         self._sender = f'Stock Trading System <{username}@163.com>'
         self._receiver = receiver
-        self._data_client = data_client
         self._alpaca = tradeapi.REST()
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=1000)
@@ -65,7 +63,7 @@ class EmailSender:
     def _get_color_style(value: float):
         return 'style="color:{};"'.format('green' if value >= 0 else 'red')
 
-    def send_summary(self):
+    def send_summary(self, data_client: data.DataClient):
         if not self._client:
             self._logger.warning('Email client not created')
             return
@@ -91,7 +89,7 @@ class EmailSender:
                                '</td>\n')
 
         transactions_html = ''
-        transactions = data.get_transactions(market_dates[-1].strftime('%F'), self._data_client)
+        transactions = data.get_transactions(market_dates[-1].strftime('%F'), data_client)
         for transaction in transactions:
             gl_str = ''
             if transaction.gl_pct is not None:
@@ -139,10 +137,10 @@ class EmailSender:
         market_symbols = ['DIA', 'SPY', 'QQQ']
         market_values = {}
         for symbol in market_symbols:
-            df = self._data_client.get_data(symbol,
-                                            pd.Timestamp(historical_date[0]),
-                                            pd.Timestamp(historical_date[-1]),
-                                            data.TimeInterval.DAY)
+            df = data_client.get_data(symbol,
+                                      pd.Timestamp(historical_date[0]),
+                                      pd.Timestamp(historical_date[-1]),
+                                      data.TimeInterval.DAY)
             symbol_close = df['Close'].to_numpy()
             market_values[symbol] = symbol_close
 
@@ -252,9 +250,9 @@ def main():
     data_client = data.get_default_data_client()
 
     if args.mode == 'summary':
-        EmailSender(data_client).send_summary()
+        EmailSender().send_summary(data_client)
     else:
-        EmailSender(data_client).send_alert(args.error_message)
+        EmailSender().send_alert(args.error_message)
 
 
 if __name__ == '__main__':

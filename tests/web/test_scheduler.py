@@ -34,8 +34,6 @@ def mock_os(mocker):
 
 
 def test_trigger(client, mocker):
-    if scheduler.DISABLE_SCHEDULING:
-        return
     thread = mocker.patch.object(threading, 'Thread')
 
     assert client.post('/trigger').status_code == 200
@@ -43,8 +41,6 @@ def test_trigger(client, mocker):
 
 
 def test_trade(client, mocker):
-    if scheduler.DISABLE_SCHEDULING:
-        return
     thread = mocker.patch.object(threading, 'Thread')
 
     scheduler.trade()
@@ -63,8 +59,6 @@ def test_trade_impl(mocker):
 
 
 def test_backfill(mock_engine):
-    if scheduler.DISABLE_SCHEDULING:
-        return
     scheduler.backfill()
 
     assert mock_engine.conn.execute.call_count > 0
@@ -73,15 +67,11 @@ def test_backfill(mock_engine):
 @pytest.mark.parametrize('job_name',
                          ['trade', 'backfill', 'backtest'])
 def test_scheduler(job_name):
-    if scheduler.DISABLE_SCHEDULING:
-        return
     job = scheduler.scheduler.get_job(job_name)
     assert job.next_run_time.timestamp() < time.time() + 86400 * 3
 
 
 def test_backtest(mocker):
-    if scheduler.DISABLE_SCHEDULING:
-        return
     mock_submit = mocker.Mock()
     mock_pool = mocker.patch.object(futures, 'ProcessPoolExecutor')
     mock_pool.return_value.__enter__.return_value.submit = mock_submit
@@ -91,26 +81,23 @@ def test_backtest(mocker):
     mock_submit.assert_called_once()
 
 
-def test_backtest_run(mocker, mock_alpaca):
-    if scheduler.DISABLE_SCHEDULING:
-        return
+def test_backtest_run(mocker, mock_trading_client):
     mocker.patch.object(pd.DataFrame, 'to_pickle')
     # Today is set to 2023-08-31
     mocker.patch.object(time, 'time', return_value=1693450000)
 
     scheduler._backtest_run()
 
-    assert mock_alpaca.list_assets_call_count > 0
+    assert mock_trading_client.get_calendar_call_count > 0
 
 
 @pytest.mark.parametrize('method_name',
                          ['_backtest_run', '_trade_run', 'backfill'])
-def test_email_send(mocker, method_name, mock_smtp, mock_alpaca, mock_engine):
-    if scheduler.DISABLE_SCHEDULING:
-        return
+def test_email_send(mocker, method_name, mock_smtp, mock_alpaca, mock_trading_client, mock_engine):
     mocker.patch.object(image, 'MIMEImage', autospec=True)
     mocker.patch.object(multipart.MIMEMultipart, 'as_string', return_value='')
     mocker.patch.object(mock_alpaca, 'get_calendar', side_effect=Exception())
+    mocker.patch.object(mock_trading_client, 'get_calendar', side_effect=Exception())
     mocker.patch.object(mock_engine.conn, 'execute', side_effect=Exception())
     mocker.patch.object(time, 'sleep')
 
