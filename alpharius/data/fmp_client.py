@@ -71,8 +71,6 @@ class FmpClient(DataClient):
         response.raise_for_status()
         response_json = response.json()
         if isinstance(response_json, dict):
-            if 'historical' not in response_json:
-                print(symbol, url)
             raw_bars = response_json.get('historical', [])
         else:
             raw_bars = response_json

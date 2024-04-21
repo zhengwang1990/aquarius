@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from alpharius.data import DataClient, load_interday_dataset
-from alpharius.utils import ALPACA_API_KEY_ENV, ALPACA_SECRET_KEY_ENV, hash_str, get_all_symbols
+from alpharius.utils import ALPACA_API_KEY_ENV, ALPACA_SECRET_KEY_ENV, TIME_ZONE, hash_str, get_all_symbols
 from .common import (
     DAYS_IN_A_QUARTER, DAYS_IN_A_MONTH, CACHE_DIR, timestamp_to_index,
 )
@@ -47,7 +47,7 @@ class BaseStockUniverse:
             prev_day -= datetime.timedelta(days=1)
             if prev_day < self._market_dates[0]:
                 raise ValueError(f'{view_time} is too early')
-        return pd.Timestamp(prev_day)
+        return pd.Timestamp(prev_day).tz_localize(TIME_ZONE)
 
     def get_stock_universe(self, view_time: pd.Timestamp) -> List[str]:
         return get_all_symbols()
@@ -78,6 +78,7 @@ class CachedStockUniverse(BaseStockUniverse):
             content += f'\n{attr}={value}'
         cache_name = class_name + '_' + hash_str(content)
         self._cache_dir = os.path.join(_STOCK_UNIVERSE_CACHE_ROOT, cache_name)
+        os.makedirs(self._cache_dir, exist_ok=True)
         return self._cache_dir
 
     def get_stock_universe(self, view_time: pd.Timestamp) -> List[str]:

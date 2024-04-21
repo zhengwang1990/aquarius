@@ -19,7 +19,9 @@ _MAX_WORKERS = 10
 _interday_dataset_cache = cachetools.LRUCache(maxsize=2)
 
 
-@retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=500)
+@retrying.retry(stop_max_attempt_number=2,
+                wait_exponential_multiplier=500,
+                retry_on_exception=lambda e: isinstance(e, IOError))
 def _load_cached_symbol(symbol: str,
                         cache_dir: str,
                         load_func: Callable[[str], pd.DataFrame]) -> pd.DataFrame:

@@ -581,7 +581,6 @@ class Backtest:
         drawdown_start_row = ['Drawdown Start', my_drawdown_start.strftime('%F')]
         drawdown_end_row = ['Drawdown End', my_drawdown_end.strftime('%F')]
         for symbol in print_symbols:
-            print(sorted(self._interday_dataset.keys()))
             first_day_index = timestamp_to_index(self._interday_dataset[symbol].index,
                                                  pd.Timestamp(market_dates[0]).tz_localize(TIME_ZONE))
             last_day_index = timestamp_to_index(self._interday_dataset[symbol].index,
