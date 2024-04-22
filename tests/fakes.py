@@ -230,6 +230,7 @@ class FakeTradingClient:
         self.get_account_call_count = 0
         self.get_order_call_count = 0
         self.submit_order_call_count = 0
+        self.get_orders_call_count = 0
 
     def get_account(self):
         self.get_account_call_count += 1
@@ -296,11 +297,44 @@ class FakeTradingClient:
         filled_at = pd.to_datetime('2021-03-17T10:14:57.0Z')
         if self.get_order_call_count % 3 == 0:
             filled_at = None
-        return get_order('QQQ', trading.OrderSide.BUY, order_id, filled_at, '12', )
+        return get_order('QQQ', trading.OrderSide.BUY, order_id, filled_at, '12')
 
     def submit_order(self, order_data: trading.OrderRequest):
         self.submit_order_call_count += 1
         return get_order(order_data.symbol, order_data.side, qty=str(order_data.qty))
+
+    def get_orders(self, filter: trading.GetOrdersRequest):
+        self.get_orders_call_count += 1
+        want_filled_at = filter.status == trading.QueryOrderStatus.CLOSED
+        orders = [
+            get_order('DIA',
+                      order_side=trading.OrderSide.SELL,
+                      filled_at=pd.Timestamp('2021-03-17T10:14:57.0Z') if want_filled_at else None,
+                      qty='12'),
+            get_order('SPY',
+                      order_side=trading.OrderSide.BUY,
+                      filled_at=pd.Timestamp('2021-03-17T10:20:00.0Z') if want_filled_at else None,
+                      qty='13'),
+            get_order('DIA',
+                      order_side=trading.OrderSide.BUY,
+                      filled_at=pd.Timestamp('2021-03-17T10:15:57.0Z') if want_filled_at else None,
+                      qty='12'),
+            get_order('QQQ',
+                      order_side=trading.OrderSide.BUY,
+                      filled_at=pd.to_datetime(time.time() - 10, utc=True, unit='s') if want_filled_at else None,
+                      qty='10'),
+            get_order('QQQ',
+                      order_side=trading.OrderSide.SELL,
+                      filled_at=pd.to_datetime(time.time() - 5, utc=True, unit='s') if want_filled_at else None,
+                      qty='10'),
+            get_order('QQQ',
+                      order_side=trading.OrderSide.BUY,
+                      filled_at=pd.to_datetime(time.time(), utc=True, unit='s') if want_filled_at else None,
+                      qty='10'),
+        ]
+        if filter.direction == trading.Sort.DESC:
+            orders = orders[::-1]
+        return orders
 
 
 class FakeProcessor(trade.Processor):

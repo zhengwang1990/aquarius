@@ -5,13 +5,13 @@ import sys
 from concurrent import futures
 from typing import Dict, Callable, Iterable, List, Optional
 
-import alpaca_trade_api as tradeapi
+import alpaca.trading as trading
 import cachetools
 import pandas as pd
 import retrying
 from tqdm import tqdm
 
-from alpharius.utils import hash_str, Transaction, TIME_ZONE
+from alpharius.utils import Transaction, TIME_ZONE, hash_str, get_trading_client
 from .base import DataClient, CACHE_DIR, TimeInterval
 from .fmp_client import FmpClient
 
@@ -102,20 +102,24 @@ def get_transactions(start_date: Optional[str], data_client: DataClient) -> List
             return None
         return df['Close'].iloc[0]
 
-    alpaca = tradeapi.REST()
+    trading_client = get_trading_client()
 
     chunk_size = 500
     orders = []
-    start_time_str = (pd.to_datetime(start_date) - datetime.timedelta(days=7)).tz_localize(TIME_ZONE).isoformat()
-    end_time = pd.to_datetime('now', utc=True)
+    start_time = (pd.to_datetime(start_date) - datetime.timedelta(days=7)).tz_localize(TIME_ZONE)
+    end_time = pd.to_datetime('now', utc=True).tz_convert(TIME_ZONE)
     check_for_more_orders = True
     order_ids = set()
     while check_for_more_orders:
-        order_chunk = alpaca.list_orders(status='closed',
-                                         after=start_time_str,
-                                         until=end_time.isoformat(),
-                                         direction='desc',
-                                         limit=chunk_size)
+        order_chunk = trading_client.get_orders(
+            filter=trading.GetOrdersRequest(
+                status=trading.QueryOrderStatus.CLOSED,
+                after=start_time,
+                until=end_time,
+                direction=trading.Sort.DESC,
+                limit=chunk_size,
+            )
+        )
         for order in order_chunk:
             if order.id not in order_ids:
                 orders.append(order)
@@ -125,7 +129,7 @@ def get_transactions(start_date: Optional[str], data_client: DataClient) -> List
         else:
             check_for_more_orders = False
 
-    positions = alpaca.list_positions()
+    positions = trading_client.get_all_positions()
     orders_used = [False] * len(orders)
     position_symbols = set([position.symbol for position in positions])
     cut_time = pd.to_datetime(start_date).tz_localize(TIME_ZONE)
@@ -135,7 +139,7 @@ def get_transactions(start_date: Optional[str], data_client: DataClient) -> List
         used = orders_used[i]
         if order.filled_at is None or used:
             continue
-        filled_at = order.filled_at.tz_convert(TIME_ZONE)
+        filled_at = pd.to_datetime(order.filled_at.astimezone(TIME_ZONE))
         if filled_at < cut_time:
             break
         entry_time = round_time(filled_at)
@@ -155,7 +159,7 @@ def get_transactions(start_date: Optional[str], data_client: DataClient) -> List
                 prev_order = orders[j]
                 if prev_order.filled_at is None or prev_order.symbol != order.symbol:
                     continue
-                prev_filled_at = prev_order.filled_at.tz_convert(TIME_ZONE)
+                prev_filled_at = pd.to_datetime(prev_order.filled_at.astimezone(TIME_ZONE))
                 if prev_filled_at < filled_at and prev_order.side != order.side:
                     exit_price = entry_price
                     entry_price = float(prev_order.filled_avg_price)

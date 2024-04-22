@@ -286,9 +286,9 @@ def _get_risks(daily_prices):
 
 @bp.route('/analytics')
 def analytics():
-    alpaca_client = Client()
+    client = Client()
     with futures.ThreadPoolExecutor(max_workers=1) as pool:
-        get_daily_price_task = pool.submit(alpaca_client.get_daily_prices)
+        get_daily_price_task = pool.submit(client.get_daily_prices)
     db_client = Db()
     aggs = db_client.list_aggregations()
     stats, transaction_cnt, cash_flows = _get_stats(aggs)
