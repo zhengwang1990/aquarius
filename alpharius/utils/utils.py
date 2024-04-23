@@ -156,7 +156,7 @@ def get_all_symbols() -> List[str]:
     return [asset.symbol for asset in assets if
             asset.easy_to_borrow and asset.fractionable and asset.marginable
             and asset.tradable and asset.shortable
-            or asset.symbol in ['QQQ', 'TQQQ']]
+            or asset.symbol in ['QQQ', 'TQQQ', 'UCO', 'NUGT']]
 
 
 def hash_str(value: str) -> str:

@@ -254,7 +254,7 @@ class Client:
         orders_used = [False] * len(orders)
         positions = self._alpaca.list_positions()
         position_symbols = set([position.symbol for position in positions])
-        cut_time = calendar[calendar_index].date
+        cut_time = calendar[calendar_index].date.date()
         for i in range(len(orders)):
             order = orders[i]
             if order.filled_at is None:
