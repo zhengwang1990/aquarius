@@ -1,4 +1,5 @@
 import collections
+import contextlib
 import os
 import time
 from typing import Dict, List, Optional
@@ -27,7 +28,8 @@ class FmpClient(DataClient):
         self._max_calls = 300
         self._period = 60
 
-    def rate_limit_block(self):
+    @contextlib.contextmanager
+    def rate_limit(self):
         def remove_queue():
             while self._call_history and self._call_history[0] < time.time() - self._period:
                 self._call_history.popleft()
@@ -37,6 +39,7 @@ class FmpClient(DataClient):
             wait_time = max(self._call_history[0] + 60 - time.time(), 0)
             time.sleep(wait_time)
             remove_queue()
+        yield
         self._call_history.append(time.time())
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=500)
@@ -66,9 +69,9 @@ class FmpClient(DataClient):
         end = end_time.strftime('%F')
         url += symbol
         params = {'from': start, 'to': end, 'apikey': self._api_key}
-        self.rate_limit_block()
-        response = requests.get(url, params=params)
-        response.raise_for_status()
+        with self.rate_limit():
+            response = requests.get(url, params=params)
+            response.raise_for_status()
         response_json = response.json()
         if isinstance(response_json, dict):
             raw_bars = response_json.get('historical', [])
@@ -92,7 +95,7 @@ class FmpClient(DataClient):
     def _get_last_trade(self, symbol: str) -> float:
         url = _BASE_URL + 'quote-short/' + symbol
         params = {'apikey': self._api_key}
-        self.rate_limit_block()
-        response = requests.get(url, params=params)
-        response.raise_for_status()
+        with self.rate_limit():
+            response = requests.get(url, params=params)
+            response.raise_for_status()
         return response.json()[0]['price']
