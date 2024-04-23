@@ -45,13 +45,14 @@ def fake_get(url, *args, **kwargs):
             ],
         }
     elif 'quote-short' in url:
-        symbol = comps[4]
+        symbols = comps[4].split(',')
         content = [
             {
                 'symbol': symbol,
                 'price': 145.85,
                 'volume': 42822124
             }
+            for symbol in symbols
         ]
     else:
         raise ValueError('url not recognized')

@@ -87,15 +87,15 @@ class FmpClient(DataClient):
         data = [[b['open'], b['high'], b['low'], b['close'], b['volume']] for b in bars]
         return pd.DataFrame(data, index=index, columns=DATA_COLUMNS)
 
+    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=500)
     def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
         """Gets the last trade prices of a list of symbols."""
-        return {symbol: self._get_last_trade(symbol) for symbol in symbols}
-
-    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=500)
-    def _get_last_trade(self, symbol: str) -> float:
-        url = _BASE_URL + 'quote-short/' + symbol
+        url = _BASE_URL + 'quote-short/' + ','.join(symbols)
         params = {'apikey': self._api_key}
         with self.rate_limit():
             response = requests.get(url, params=params)
             response.raise_for_status()
-        return response.json()[0]['price']
+        res = {}
+        for item in response.json():
+            res[item['symbol']] = item['price']
+        return res
