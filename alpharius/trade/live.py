@@ -398,6 +398,6 @@ class Live:
 
     def _upload_log(self):
         try:
-            self._db.update_log(self._today.strftime('%F'))
+            self._db.update_log(self._today.strftime('%F'), self._output_dir)
         except sqlalchemy.exc.SQLAlchemyError as e:
             self._logger.warning('Log updating encountered an error\n%s', e)

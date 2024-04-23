@@ -44,7 +44,7 @@ def test_update_log(mocker, client, mock_engine):
     mocker.patch('builtins.open', side_effect=[mocker.mock_open(read_data='data').return_value,
                                                mocker.mock_open(read_data='').return_value])
 
-    client.update_log('2022-11-03')
+    client.update_log('2022-11-03', 'fake_dir')
 
     mock_engine.conn.execute.assert_called_once()
 

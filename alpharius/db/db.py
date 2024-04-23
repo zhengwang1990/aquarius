@@ -234,9 +234,7 @@ class Db:
                 slippage_count=agg['slippage_count'],
                 cash_flow=agg['cash_flow'])
 
-    def update_log(self, date: str) -> None:
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-        log_dir = os.path.join(base_dir, 'outputs', 'trading', date)
+    def update_log(self, date: str, log_dir: str) -> None:
         if os.path.isdir(log_dir):
             files = os.listdir(log_dir)
             for file in files:
