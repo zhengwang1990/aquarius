@@ -548,3 +548,11 @@ def backtest():
 @bp.route('/job_status')
 def job_status():
     return get_job_status()
+
+
+@bp.route('/file/<path:filepath>')
+def get_file(filepath):
+    with open(filepath, 'r') as f:
+        response = flask.make_response(f.read(), 200)
+        response.mimetype = 'text/plain'
+        return response
