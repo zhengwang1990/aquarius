@@ -32,7 +32,7 @@ def main():
     parser = argparse.ArgumentParser(description='Alpharius stock trading.')
 
     parser.add_argument('-m', '--mode', help='Running mode. Can be backtest or trade.',
-                        required=True, choices=['backtest', 'trade'])
+                        required=True, choices=['backtest', 'live'])
     parser.add_argument('--start_date', default=None,
                         help='Start date of the backtesting. Only used in backtest mode.')
     parser.add_argument('--end_date', default=None,
