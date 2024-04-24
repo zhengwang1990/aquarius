@@ -12,7 +12,7 @@ import alpharius.data as data
 from alpharius.db import Db
 from alpharius.notification.email_sender import EmailSender
 from alpharius.trade import PROCESSOR_FACTORIES, Backtest, Live
-from alpharius.utils import get_latest_day
+from alpharius.utils import get_latest_day, TIME_ZONE
 from .client import Client
 
 app = flask.Flask(__name__)
@@ -43,7 +43,8 @@ def email_on_exception(func):
 @email_on_exception
 def _trade_run():
     Live(processor_factories=PROCESSOR_FACTORIES,
-         data_client=data.get_default_data_client()).run()
+         data_client=data.get_default_data_client(),
+         logging_timezone=TIME_ZONE).run()
 
 
 def _trade_impl():

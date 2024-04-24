@@ -112,7 +112,7 @@ def get_unique_actions(actions: List[Action]) -> List[Action]:
 
 
 @functools.lru_cache(maxsize=None)
-def logging_config(logging_file=None, detail=True, name=None) -> logging.Logger:
+def logging_config(logging_file=None, detail=True, name=None, timezone=None) -> logging.Logger:
     """Configuration for logging."""
     logger = logging.getLogger(name=name)
     logger.setLevel(logging.DEBUG)
@@ -125,11 +125,15 @@ def logging_config(logging_file=None, detail=True, name=None) -> logging.Logger:
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(logging.INFO)
     stream_handler.setFormatter(formatter)
+    if timezone:
+        stream_handler.formatter.converter = lambda *args: datetime.datetime.now(tz=timezone).timetuple()
     logger.addHandler(stream_handler)
     if logging_file:
         file_handler = logging.FileHandler(logging_file)
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
+        if timezone:
+            file_handler.formatter.converter = lambda *args: datetime.datetime.now(tz=timezone).timetuple()
         logger.addHandler(file_handler)
     return logger
 

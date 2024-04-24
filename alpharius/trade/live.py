@@ -9,6 +9,7 @@ from typing import List, Optional, Set
 
 import alpaca.trading as trading
 import pandas as pd
+import pytz
 import retrying
 import sqlalchemy
 from alpaca.common import APIError
@@ -31,12 +32,17 @@ _MAX_WORKERS = 10
 
 class Live:
 
-    def __init__(self, processor_factories: List[ProcessorFactory], data_client: DataClient) -> None:
+    def __init__(self,
+                 processor_factories: List[ProcessorFactory],
+                 data_client: DataClient,
+                 logging_timezone: Optional[pytz.timezone] = None) -> None:
         self._output_dir = os.path.join(OUTPUT_DIR, 'live',
                                         datetime.datetime.now().strftime('%F'))
         os.makedirs(self._output_dir, exist_ok=True)
         self._logger = logging_config(os.path.join(self._output_dir, 'trading.txt'),
-                                      detail=True, name='live')
+                                      detail=True,
+                                      name='live',
+                                      timezone=logging_timezone)
         self._logger.info('Trading is running on [%s]', socket.gethostname())
         self._equity, self._cash = 0, 0
         self._cash_reserve = float(os.environ.get('CASH_RESERVE', 0))
