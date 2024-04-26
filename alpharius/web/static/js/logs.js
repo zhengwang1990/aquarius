@@ -32,6 +32,37 @@ logger_select.addEventListener("change", function(event){
     current_logger = logger;
 });
 
+const level_select = document.getElementById("level-select");
+level_select.addEventListener("change", function(event){
+    var level = event.target.value;
+    visible = ["debug", "info", "warning", "error"];
+    invisible = [];
+    if (level === "info") {
+        visible = ["info", "warning", "error"];
+        invisible = ["debug"];
+    }
+    if (level === "warning") {
+        visible = ["warning", "error"];
+        invisible = ["debug", "info"];
+    }
+    if (level === "error") {
+        visible = ["error"];
+        invisible = ["debug", "info", "warning"];
+    }
+    for (const cls of visible) {
+        elements = document.getElementsByClassName("log-entry-" + cls);
+        for (const elem of elements) {
+            elem.style.removeProperty("display");
+        }
+    }
+    for (const cls of invisible) {
+        elements = document.getElementsByClassName("log-entry-" + cls);
+        for (const elem of elements) {
+            elem.style.display = "none";
+        }
+    }
+});
+
 // Back-to-top button
 let btt_button = document.getElementById("btn-back-to-top");
 let gtb_button = document.getElementById("btn-go-to-bottom");

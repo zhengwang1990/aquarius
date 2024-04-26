@@ -142,7 +142,7 @@ class Live:
                                                        int(next_minute.minute)))).tz_localize(TIME_ZONE)
                 trigger_seconds = 50
                 if checkpoint_time.timestamp() == self._market_close:
-                    trigger_seconds -= 10
+                    trigger_seconds -= 20
                 if current_time.second > trigger_seconds and checkpoint_time not in processed:
                     self._process(checkpoint_time)
                     processed.append(checkpoint_time)

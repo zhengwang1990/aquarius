@@ -40,7 +40,7 @@
             <div class="input-group">
                 <span class="input-group-text"><i class="uil uil-info-circle"></i></span>
                 <select class="form-select" id="level-select">
-                    <option value="debug">Debug</option>
+                    <option value="debug" selected>Debug</option>
                     <option value="info">Info</option>
                     <option value="warning">Warning</option>
                     <option value="error">Error</option>
@@ -54,7 +54,7 @@
             {% for logger, logger_entries in log_entries.items() %}
                 <tbody id="log-{{logger}}" style="{{ 'display:none' if loggers and logger != loggers[0] }}">
                     {% for log_entry in logger_entries %}
-                        <tr>
+                        <tr class="log-entry-{{ log_entry['type'] }}">
                             <td class="fit-content-cells type-cells">
                                 <span class="badge-shape badge-{{ log_entry['type'] }} ">
                                     <span class="xs-hidden">{{ log_entry['type'] }}</span>

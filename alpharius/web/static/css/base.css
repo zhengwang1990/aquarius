@@ -349,6 +349,10 @@ nav.close ~ .dashboard .top{
         font-size: 10px;
     }
 
+    .dash-content #select-container{
+        padding: 25px 4px 10px 4px;
+    }
+
     #select-container .inline-span {
         width: calc(50%);
     }
