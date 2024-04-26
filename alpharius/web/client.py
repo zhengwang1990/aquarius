@@ -417,9 +417,11 @@ class Client:
     @retrying.retry(stop_max_attempt_number=2, wait_exponential_multiplier=1000)
     def get_charts(self, start_date: str, end_date: str, symbol: str, timeframe: str):
         start_time = pd.to_datetime(
-            pd.Timestamp.combine(pd.to_datetime(start_date).date(), datetime.time(0, 0))).tz_localize(TIME_ZONE)
+            pd.Timestamp.combine(pd.to_datetime(start_date).date(),
+                                 datetime.time(0, 0))).tz_localize(TIME_ZONE)
         end_time = pd.to_datetime(
-            pd.Timestamp.combine(pd.to_datetime(end_date).date(), datetime.time(23, 59))).tz_localize(TIME_ZONE)
+            pd.Timestamp.combine(pd.to_datetime(end_date).date(),
+                                 datetime.time(23, 59))).tz_localize(TIME_ZONE)
         if timeframe == 'intraday':
             time_interval = data.TimeInterval.FIVE_MIN
         else:
@@ -431,7 +433,7 @@ class Client:
         if timeframe == 'intraday':
             prev_close = self._data_client.get_data(symbol=symbol,
                                                     start_time=start_time - datetime.timedelta(days=7),
-                                                    end_time=start_time,
+                                                    end_time=start_time - datetime.timedelta(days=1),
                                                     time_interval=data.TimeInterval.DAY)['Close'].iloc[-1]
         else:
             prev_close = None
