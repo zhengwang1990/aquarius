@@ -263,6 +263,21 @@ nav.close ~ .dashboard .top{
     font-size: 12px;
 }
 
+.dash-content #select-container {
+    padding: 25px 10px 10px 10px;
+}
+
+#select-container .inline-span {
+    display: inline-block;
+    width: 315px;
+    padding: 5px 10px 5px 10px;
+}
+
+#select-container .input-group .form-select {
+    width: 250px;
+    font-size: 15px;
+}
+
 @media (max-width: 1200px) {
     nav{
         width: 73px;
@@ -314,6 +329,37 @@ nav.close ~ .dashboard .top{
 
     .dash-content .card .input-group-text {
         padding: 0.25rem 0.55rem;
+    }
+}
+
+@media (max-width: 800px) {
+    .card .card-body .xs-hidden {
+        display: none;
+    }
+
+    .card .card-body .xs-show {
+        display: inline;
+    }
+
+    .card .card-body table {
+        font-size: 12px;
+    }
+
+    .badge-shape {
+        font-size: 10px;
+    }
+
+    #select-container .inline-span {
+        width: calc(50%);
+    }
+
+    #select-container .input-group .form-select {
+        font-size: 10px;
+        width: calc(60%);
+    }
+
+    #select-container .input-group .form-select, .form-control {
+        font-size: 10px;
     }
 }
 
@@ -370,23 +416,13 @@ nav.close ~ .dashboard .top{
         opacity: 1;
         pointer-events: auto;
     }
-}
 
-@media (max-width: 800px) {
-    .card .card-body .xs-hidden {
-        display: none;
+     #select-container .input-group .form-select {
+        font-size: 8px;
     }
 
-    .card .card-body .xs-show {
-        display: inline;
-    }
-
-    .card .card-body table {
-        font-size: 12px;
-    }
-
-    .badge-shape {
-        font-size: 10px;
+    #select-container .input-group .form-select, .form-control {
+        font-size: 8px;
     }
 }
 

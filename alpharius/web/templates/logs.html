@@ -20,12 +20,12 @@
 <div class="card log-card">
     <div class="card-header"><span class="card-title">Logs</span></div>
     <div id="select-container">
-         <span class="inline-span">
+        <span class="inline-span">
             <div class="input-group">
               <span class="input-group-text"><i class="uil uil-calendar-alt"></i></span>
               <input type="text" class="form-control" id="datepicker" readonly>
             </div>
-         </span><span style="padding-left:20px"></span><span class="inline-span">
+        </span><span class="inline-span">
             <div class="input-group">
                 <span class="input-group-text"><i class="uil uil-file-copy-alt"></i></span>
                 <select class="form-select" id="logger-select">
@@ -36,7 +36,17 @@
                     {% endfor %}
                 </select>
             </div>
-         </span>
+        </span><span class="inline-span">
+            <div class="input-group">
+                <span class="input-group-text"><i class="uil uil-info-circle"></i></span>
+                <select class="form-select" id="level-select">
+                    <option value="debug">Debug</option>
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="error">Error</option>
+                </select>
+            </div>
+        </span>
     </div>
 
     <div class="card-body overflow-auto">
