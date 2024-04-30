@@ -1,6 +1,7 @@
 import collections
 import contextlib
 import os
+import threading
 import time
 from typing import Dict, List, Optional
 
@@ -27,6 +28,7 @@ class FmpClient(DataClient):
         self._call_history = collections.deque()
         self._max_calls = 300
         self._period = 60
+        self._lock = threading.RLock()
 
     @contextlib.contextmanager
     def rate_limit(self):
@@ -34,15 +36,19 @@ class FmpClient(DataClient):
             while self._call_history and self._call_history[0] < time.time() - self._period:
                 self._call_history.popleft()
 
-        remove_queue()
-        while len(self._call_history) >= self._max_calls:
-            wait_time = max(self._call_history[0] + 60 - time.time(), 0)
-            time.sleep(wait_time)
+        with self._lock:
             remove_queue()
+            while len(self._call_history) >= self._max_calls:
+                wait_time = max(self._call_history[0] + 60 - time.time(), 0)
+                time.sleep(wait_time)
+                remove_queue()
         yield
-        self._call_history.append(time.time())
+        with self._lock:
+            self._call_history.append(time.time())
 
-    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=500)
+    @retrying.retry(stop_max_attempt_number=3,
+                    wait_exponential_multiplier=500,
+                    retry_on_exception=lambda e: isinstance(e, requests.HTTPError))
     def get_data(self,
                  symbol: str,
                  start_time: pd.Timestamp,
@@ -87,7 +93,9 @@ class FmpClient(DataClient):
         data = [[b['open'], b['high'], b['low'], b['close'], b['volume']] for b in bars]
         return pd.DataFrame(data, index=index, columns=DATA_COLUMNS)
 
-    @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=500)
+    @retrying.retry(stop_max_attempt_number=3,
+                    wait_exponential_multiplier=500,
+                    retry_on_exception=lambda e: isinstance(e, requests.HTTPError))
     def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
         """Gets the last trade prices of a list of symbols."""
         url = _BASE_URL + 'quote-short/' + ','.join(symbols)
