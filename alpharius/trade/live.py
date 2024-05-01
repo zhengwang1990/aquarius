@@ -11,8 +11,8 @@ import alpaca.trading as trading
 import pandas as pd
 import pytz
 import retrying
-import sqlalchemy
 from alpaca.common import APIError
+from sqlalchemy import exc
 
 from alpharius.data import DataClient, TimeInterval, get_transactions, load_interday_dataset
 from alpharius.db import Db
@@ -142,7 +142,7 @@ class Live:
                                                        int(next_minute.minute)))).tz_localize(TIME_ZONE)
                 trigger_seconds = 50
                 if checkpoint_time.timestamp() == self._market_close:
-                    trigger_seconds -= 15
+                    trigger_seconds -= 20
                 if current_time.second > trigger_seconds and checkpoint_time not in processed:
                     self._process(checkpoint_time)
                     processed.append(checkpoint_time)
@@ -395,15 +395,15 @@ class Live:
                 transaction.processor = actions[symbol].processor.name
                 try:
                     self._db.insert_transaction(transaction)
-                except sqlalchemy.exc.SQLAlchemyError as e:
-                    self._logger.warning('[%s] Transaction inserting encountered an error\n%s', symbol, e)
+                except exc.SQLAlchemyError as e:
+                    self._logger.error('[%s] Transaction inserting encountered an error\n%s', symbol, e)
             try:
                 self._db.update_aggregation(self._today.strftime('%F'))
-            except sqlalchemy.exc.SQLAlchemyError as e:
-                self._logger.warning('Aggregation updating encountered an error\n%s', e)
+            except exc.SQLAlchemyError as e:
+                self._logger.error('Aggregation updating encountered an error\n%s', e)
 
     def _upload_log(self):
         try:
             self._db.update_log(self._today.strftime('%F'), self._output_dir)
-        except sqlalchemy.exc.SQLAlchemyError as e:
-            self._logger.warning('Log updating encountered an error\n%s', e)
+        except exc.SQLAlchemyError as e:
+            self._logger.error('Log updating encountered an error\n%s', e)
