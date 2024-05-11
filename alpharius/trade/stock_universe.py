@@ -4,7 +4,6 @@ import functools
 import inspect
 import json
 import os
-import re
 from typing import List
 
 import alpaca.trading as trading
@@ -73,8 +72,14 @@ class CachedStockUniverse(BaseStockUniverse):
         content = self.get_source()
         class_name = self.__class__.__name__
         for attr in sorted(self.__dict__.keys()):
-            value = repr(self.__dict__[attr])
-            value = re.sub(r' object at [0-9A-Za-z]+', '', value)
+            value = self.__dict__[attr]
+            if isinstance(value, CachedStockUniverse):
+                value = value.get_cache_dir()
+            if isinstance(value, (set, list)):
+                value = sorted(value)
+            if isinstance(value, dict):
+                value = sorted(value.keys())
+            value = repr(value)
             content += f'\n{attr}={value}'
         cache_name = class_name + '_' + hash_str(content)
         self._cache_dir = os.path.join(_STOCK_UNIVERSE_CACHE_ROOT, cache_name)
