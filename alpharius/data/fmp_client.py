@@ -26,7 +26,7 @@ class FmpClient(DataClient):
         """
         self._api_key = api_key or os.environ[_FMP_API_KEY_ENV]
         self._call_history = collections.deque()
-        self._max_calls = 300
+        self._max_calls = 280
         self._period = 60
         self._lock = threading.RLock()
 
@@ -46,7 +46,7 @@ class FmpClient(DataClient):
         with self._lock:
             self._call_history.append(time.time())
 
-    @retrying.retry(stop_max_attempt_number=4,
+    @retrying.retry(stop_max_attempt_number=3,
                     wait_exponential_multiplier=500,
                     retry_on_exception=lambda e: isinstance(e, requests.HTTPError))
     def get_data(self,
@@ -74,7 +74,7 @@ class FmpClient(DataClient):
         start = start_time.strftime('%F')
         end = end_time.strftime('%F')
         url += symbol
-        params = {'from': start, 'to': end, 'apikey': self._api_key}
+        params = {'from': start, 'to': end, 'apikey': self._api_key, 'extended': 'true'}
         with self.rate_limit():
             response = requests.get(url, params=params)
             response.raise_for_status()
@@ -93,7 +93,7 @@ class FmpClient(DataClient):
         data = [[b['open'], b['high'], b['low'], b['close'], b['volume']] for b in bars]
         return pd.DataFrame(data, index=index, columns=DATA_COLUMNS)
 
-    @retrying.retry(stop_max_attempt_number=4,
+    @retrying.retry(stop_max_attempt_number=3,
                     wait_exponential_multiplier=500,
                     retry_on_exception=lambda e: isinstance(e, requests.HTTPError))
     def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
