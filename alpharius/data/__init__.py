@@ -1,5 +1,6 @@
 from .alpaca_client import AlpacaClient
 from .fmp_client import FmpClient
+from .cache_client import CacheClient
 from .base import (
     TimeInterval,
     DataError,

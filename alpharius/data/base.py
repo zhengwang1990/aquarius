@@ -1,5 +1,4 @@
 import abc
-import datetime
 import os
 from enum import Enum
 from typing import Dict, List
@@ -33,7 +32,8 @@ class DataClient(abc.ABC):
         """Loads data of a given day."""
         start_time = pd.Timestamp(year=day.year, month=day.month,
                                   day=day.day, hour=0, minute=0).tz_localize(tz=TIME_ZONE)
-        end_time = start_time + datetime.timedelta(days=1)
+        end_time = pd.Timestamp(year=day.year, month=day.month,
+                                day=day.day, hour=23, minute=59).tz_localize(tz=TIME_ZONE)
         return self.get_data(symbol, start_time, end_time, time_interval)
 
     @abc.abstractmethod
