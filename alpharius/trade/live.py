@@ -242,7 +242,7 @@ class Live:
             intraday_lookback = self._intraday_data[symbol]
             if (len(intraday_lookback) == 0 or
                     intraday_lookback.index[-1] != last_index):
-                self._logger.warning('[%s] Intraday data not available', symbol)
+                self._logger.warning('[%s] intraday data not available', symbol)
                 self._intraday_data[symbol] = pd.concat(
                     [intraday_lookback,
                      pd.DataFrame([[price if c != 'Volume' else 0 for c in DATA_COLUMNS]],
