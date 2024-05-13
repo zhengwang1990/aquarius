@@ -85,18 +85,6 @@ def timestamp_to_index(index: pd.Index, timestamp: pd.Timestamp) -> Optional[int
     return None
 
 
-def timestamp_to_prev_index(index: pd.Index, timestamp: pd.Timestamp) -> Optional[int]:
-    if len(index) == 0:
-        return None
-    p = len(index) - 1
-    pd_timestamp = pd.to_datetime(timestamp).timestamp()
-    for i in range(len(index)):
-        if pd.to_datetime(index[i]).timestamp() > pd_timestamp:
-            p = i - 1
-            break
-    return p
-
-
 def get_unique_actions(actions: List[Action]) -> List[Action]:
     action_sets = set([(action.symbol, action.type) for action in actions])
     unique_actions = []
