@@ -5,7 +5,7 @@ import socket
 import threading
 import time
 from concurrent import futures
-from typing import List, Optional, Set
+from typing import List, Optional
 
 import alpaca.trading as trading
 import pandas as pd
@@ -14,7 +14,13 @@ import retrying
 from alpaca.common import APIError
 from sqlalchemy import exc
 
-from alpharius.data import DataClient, TimeInterval, get_transactions, load_interday_dataset
+from alpharius.data import (
+    DATA_COLUMNS,
+    DataClient,
+    TimeInterval,
+    get_transactions,
+    load_interday_dataset,
+)
 from alpharius.db import Db
 from alpharius.utils import (
     get_today,
@@ -103,7 +109,8 @@ class Live:
             processor_stock_universe = processor.get_stock_universe(self._today)
             self._processor_stock_universes[processor_name] = processor_stock_universe
             self._stock_universe[processor.get_trading_frequency()].update(processor_stock_universe)
-        self._logger.info('FIVE_MIN stock universe:\n%s', self._stock_universe.get(TradingFrequency.FIVE_MIN))
+        self._logger.info('FIVE_MIN stock universe: %s',
+                          sorted(self._stock_universe.get(TradingFrequency.FIVE_MIN, [])))
 
     def run(self) -> None:
         # Check if today is a trading day
@@ -163,7 +170,7 @@ class Live:
                                     TradingFrequency.CLOSE_TO_OPEN,
                                     TradingFrequency.CLOSE_TO_CLOSE]
 
-        self._update_intraday_data(frequency_to_process)
+        self._update_intraday_data(frequency_to_process, checkpoint_time)
 
         contexts = dict()
         for frequency, symbols in self._stock_universe.items():
@@ -211,15 +218,17 @@ class Live:
                                            args=(executed_closes,))
         self._db_thread.start()
 
-    def _update_intraday_data(self, frequency_to_process: List[TradingFrequency]) -> None:
+    def _update_intraday_data(self,
+                              frequency_to_process: List[TradingFrequency],
+                              checkpoint_time: pd.Timestamp) -> None:
         update_start = time.time()
         tasks = dict()
-        all_symbols: Set[str] = set()
+        all_symbols = []
         for frequency, symbols in self._stock_universe.items():
             if frequency not in frequency_to_process:
                 continue
-            all_symbols.update(symbols)
-        all_symbols: List[str] = list(all_symbols)
+            all_symbols.extend(symbols)
+        all_symbols = list(set(all_symbols))
         with futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
             for symbol in all_symbols:
                 t = pool.submit(self._data_client.get_daily,
@@ -228,16 +237,23 @@ class Live:
             for symbol, t in tasks.items():
                 self._intraday_data[symbol] = t.result()
         latest_trades = self._data_client.get_last_trades(all_symbols)
+        last_index = checkpoint_time - datetime.timedelta(minutes=5)
         for symbol, price in latest_trades.items():
             intraday_lookback = self._intraday_data[symbol]
-            if len(intraday_lookback) == 0:
-                self._logger.warning('[%s] intraday data not available', symbol)
-                continue
-            old_value = intraday_lookback['Close'].iloc[-1]
-            if abs(price / old_value - 1) > 0.01:
-                self._logger.info('[%s] Current price is updated from [%.5g] to [%.5g]',
-                                  symbol, old_value, price)
-            intraday_lookback.at[intraday_lookback.index[-1], 'Close'] = price
+            if (len(intraday_lookback) == 0 or
+                    intraday_lookback.index[-1] != last_index):
+                self._logger.warning('[%s] Intraday data not available', symbol)
+                self._intraday_data[symbol] = pd.concat(
+                    [intraday_lookback,
+                     pd.DataFrame([[price if c != 'Volume' else 0 for c in DATA_COLUMNS]],
+                                  index=[last_index],
+                                  columns=DATA_COLUMNS)])
+            else:
+                old_value = intraday_lookback['Close'].iloc[-1]
+                if abs(price / old_value - 1) > 0.01:
+                    self._logger.info('[%s] Current price is updated from [%.5g] to [%.5g]',
+                                      symbol, old_value, price)
+                intraday_lookback.at[intraday_lookback.index[-1], 'Close'] = price
         self._logger.info('Intraday data updated for [%d] symbols. Time elapsed [%.2fs]',
                           len(tasks), time.time() - update_start)
 
@@ -323,7 +339,6 @@ class Live:
                 side = 'sell'
                 qty = int(cash_to_trade / action.price)
                 notional = None
-            print(symbol, side, qty, notional)
             order_id = self._place_order(symbol=symbol, side=side, qty=qty, notional=notional)
             if order_id:
                 order_ids.append(order_id)
