@@ -9,6 +9,7 @@ import sqlalchemy
 
 import alpharius.data as data
 import alpharius.trade as trade
+from alpharius.utils import TIME_ZONE
 from ..fakes import Account, FakeTradingClient, FakeProcessor, FakeProcessorFactory, FakeDbEngine, FakeDataClient
 
 
@@ -166,7 +167,8 @@ def test_adjust_price(mocker):
     mocker.patch.object(
         FakeDataClient,
         'get_daily',
-        return_value=pd.DataFrame(index=[1615987800], data=[[1] * len(columns)], columns=columns),
+        return_value=pd.DataFrame(index=[pd.to_datetime(1615987800, utc=True, unit='s').tz_convert(TIME_ZONE)],
+                                  data=[[1] * len(columns)], columns=columns),
     )
     live = trade.Live(processor_factories=[fake_processor_factory], data_client=FakeDataClient())
     live.run()
