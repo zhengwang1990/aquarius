@@ -149,7 +149,7 @@ class Live:
                                                        int(next_minute.minute)))).tz_localize(TIME_ZONE)
                 trigger_seconds = 50
                 if checkpoint_time.timestamp() == self._market_close:
-                    trigger_seconds -= 20
+                    trigger_seconds -= 15
                 if current_time.second > trigger_seconds and checkpoint_time not in processed:
                     self._process(checkpoint_time)
                     processed.append(checkpoint_time)
@@ -237,16 +237,17 @@ class Live:
             for symbol, t in tasks.items():
                 self._intraday_data[symbol] = t.result()
         latest_trades = self._data_client.get_last_trades(all_symbols)
-        last_index = checkpoint_time - datetime.timedelta(minutes=5)
+        expected_index = checkpoint_time - datetime.timedelta(minutes=5)
         for symbol, price in latest_trades.items():
             intraday_lookback = self._intraday_data[symbol]
-            if (len(intraday_lookback) == 0 or
-                    intraday_lookback.index[-1] != last_index):
-                self._logger.warning('[%s] intraday data not available', symbol)
+            last_index = intraday_lookback.index[-1] if len(intraday_lookback) else None
+            if not last_index or last_index != expected_index:
+                self._logger.warning('[%s] intraday data not available. Expect last index [%s], but got [%s]',
+                                     symbol, expected_index, last_index)
                 self._intraday_data[symbol] = pd.concat(
                     [intraday_lookback,
                      pd.DataFrame([[price if c != 'Volume' else 0 for c in DATA_COLUMNS]],
-                                  index=[last_index],
+                                  index=[expected_index],
                                   columns=DATA_COLUMNS)])
             else:
                 old_value = intraday_lookback['Close'].iloc[-1]
