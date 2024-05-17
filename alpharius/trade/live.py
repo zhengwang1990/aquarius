@@ -243,7 +243,9 @@ class Live:
             last_index = intraday_lookback.index[-1] if len(intraday_lookback) else None
             if not last_index or last_index != expected_index:
                 self._logger.warning('[%s] intraday data not available. Expect last index [%s], but got [%s]',
-                                     symbol, expected_index, last_index)
+                                     symbol,
+                                     expected_index.strftime('%H:%M:%S'),
+                                     last_index.strftime('%H:%M:%S') if last_index else None)
                 self._intraday_data[symbol] = pd.concat(
                     [intraday_lookback,
                      pd.DataFrame([[price if c != 'Volume' else 0 for c in DATA_COLUMNS]],

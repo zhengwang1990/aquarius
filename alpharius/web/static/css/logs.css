@@ -83,4 +83,8 @@
     .card .card-body .table {
         font-size: 11px;
     }
+
+    .table .fit-content-cells {
+        padding-right: 0.5rem;
+    }
 }

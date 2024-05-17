@@ -306,7 +306,7 @@ def analytics():
                                  processors=processors)
 
 
-def _parse_log_content(content: str):
+def _parse_log_content(content: str, date: str):
     def is_entry_start(lin: str):
         ll = lin.lower()
         return (ll.startswith('[info] [') or ll.startswith('[warning] [')
@@ -315,6 +315,7 @@ def _parse_log_content(content: str):
     log_lines = content.split('\n')
     log_entries = []
     i = 0
+    link = construct_charts_link(r'\1', date)
     while i < len(log_lines):
         line = log_lines[i]
         if is_entry_start(line):
@@ -325,6 +326,7 @@ def _parse_log_content(content: str):
                 span_end = line.find(']', span_start)
                 spans.append(line[span_start + 1:span_end])
             message = line[span_end + 1:]
+            message = re.sub(r'\[([A-Z]+)\]', f'[<a href={link}>\\1</a>]', message)
             log_type = spans[0].lower()
             log_entry = {'type': log_type,
                          'type_initial': log_type[0],
@@ -355,7 +357,7 @@ def logs():
     log_entries = dict()
     for logger, content in results:
         loggers.append(logger)
-        log_entries[logger] = _parse_log_content(content)
+        log_entries[logger] = _parse_log_content(content, date)
     loggers.sort()
     for i in range(len(loggers)):
         if loggers[i] == 'Trading':

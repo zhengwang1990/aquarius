@@ -66,7 +66,7 @@
                                 <span class="xs-show">{{ log_entry['time_short'] }}</span>
                             </td>
                             <td class="xs-hidden fit-content-cells">{{ log_entry['code'] }}</td>
-                            <td class="message-cells">{{ log_entry['message'] }}</td>
+                            <td class="message-cells">{{ log_entry['message'] | safe }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>

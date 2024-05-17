@@ -2,15 +2,6 @@
     display: none;
 }
 
-a {
-    color: black;
-    text-decoration: none;
-}
-
-a:hover {
-    text-decoration: underline;
-}
-
 @media (max-width: 1500px) {
     .card .card-body table {
         font-size: 13px;
