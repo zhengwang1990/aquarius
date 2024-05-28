@@ -1,6 +1,7 @@
 import pytest
 import sqlalchemy
 
+import alpharius.web.web as web
 from alpharius.web import create_app
 from .. import fakes
 
@@ -28,3 +29,8 @@ def mock_data_client(mocker):
     client = fakes.FakeDataClient()
     mocker.patch('alpharius.data.FmpClient', return_value=client)
     return client
+
+
+@pytest.fixture(autouse=True)
+def mock_access_control(mocker):
+    mocker.patch('alpharius.web.web.access_control', side_effect=lambda f: f)

@@ -4,6 +4,7 @@ import difflib
 import functools
 import json
 import math
+import os
 import re
 from concurrent import futures
 from typing import List
@@ -28,7 +29,7 @@ FIRST_BACKTEST_DATE = '2023-01-06'
 # The time backtest cron job should finish.
 BACKTEST_FINISH_TIME = datetime.time(16, 30)
 ACCESS_KEY = 'access'
-ACCESS_VAL = '12345'
+ACCESS_VAL = os.environ.get('ACCESS_CODE')
 
 
 def access_control(f):
@@ -43,7 +44,7 @@ def access_control(f):
         else:
             return flask.render_template('access.html')
 
-    return wrapper
+    return wrapper if ACCESS_VAL else f
 
 
 def _get_dashboard_data():
