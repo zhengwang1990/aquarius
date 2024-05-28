@@ -1,6 +1,7 @@
 import collections
 import datetime
 import difflib
+import functools
 import json
 import math
 import re
@@ -26,6 +27,23 @@ bp = flask.Blueprint('web', __name__)
 FIRST_BACKTEST_DATE = '2023-01-06'
 # The time backtest cron job should finish.
 BACKTEST_FINISH_TIME = datetime.time(16, 30)
+ACCESS_KEY = 'access'
+ACCESS_VAL = '12345'
+
+
+def access_control(f):
+    @functools.wraps(f)
+    def wrapper():
+        if flask.request.cookies.get(ACCESS_KEY) == ACCESS_VAL:
+            return f()
+        elif flask.request.args.get(ACCESS_KEY) == ACCESS_VAL:
+            resp = flask.make_response(flask.redirect(flask.request.path))
+            resp.set_cookie(ACCESS_KEY, ACCESS_VAL, max_age=datetime.timedelta(days=356))
+            return resp
+        else:
+            return flask.render_template('access.html')
+
+    return wrapper
 
 
 def _get_dashboard_data():
@@ -44,6 +62,7 @@ def _get_dashboard_data():
 
 
 @bp.route('/')
+@access_control
 def dashboard():
     data = _get_dashboard_data()
     return flask.render_template('dashboard.html',
@@ -67,6 +86,7 @@ def _list_processors(db_client: Db) -> List[str]:
 
 
 @bp.route('/transactions')
+@access_control
 def transactions():
     items_per_page = 20
     page = flask.request.args.get('page')
@@ -285,6 +305,7 @@ def _get_risks(daily_prices):
 
 
 @bp.route('/analytics')
+@access_control
 def analytics():
     client = Client()
     with futures.ThreadPoolExecutor(max_workers=1) as pool:
@@ -346,6 +367,7 @@ def _parse_log_content(content: str, date: str):
 
 
 @bp.route('/logs')
+@access_control
 def logs():
     client = Db()
     dates = client.list_log_dates()
@@ -373,6 +395,7 @@ def logs():
 
 
 @bp.route('/charts')
+@access_control
 def charts():
     client = Client()
     date = flask.request.args.get('date')
@@ -497,6 +520,7 @@ def _get_diff_table(a_transactions, b_transactions):
 
 
 @bp.route('/backtest')
+@access_control
 def backtest():
     current_time = get_current_time()
     if current_time.time() < BACKTEST_FINISH_TIME:

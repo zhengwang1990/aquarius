@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form-group">
+    <form method="GET">
+        <div class="card">
+            <div class="card-header">
+                <h5>Enter Access Code</h5>
+            </div>
+            <div class="card-body">
+                <div style="margin-top:0.5em;">
+                    <input type="text" class="form-control" id="access" name="access" placeholder="Access Code">
+                </div>
+                <div style="margin-top:1em;text-align:center;">
+                    <input type="submit" class="btn btn-primary" value="Enter">
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
