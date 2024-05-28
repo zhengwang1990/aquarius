@@ -1,7 +1,6 @@
 import pytest
 import sqlalchemy
 
-import alpharius.web.web as web
 from alpharius.web import create_app
 from .. import fakes
 
