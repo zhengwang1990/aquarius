@@ -1,6 +1,7 @@
 import os
 from typing import Dict, List, Optional
 
+import numpy as np
 import pandas as pd
 import retrying
 from alpaca.data import (
@@ -66,7 +67,8 @@ class AlpacaClient(DataClient):
         except AttributeError:
             bars = []
         index = pd.DatetimeIndex([pd.Timestamp(b.timestamp).tz_convert(TIME_ZONE) for b in bars])
-        data = [[b.open, b.high, b.low, b.close, b.volume] for b in bars]
+        data = [[np.float32(b.open), np.float32(b.high), np.float32(b.low), np.float32(b.close), np.uint32(b.volume)]
+                for b in bars]
         return pd.DataFrame(data, index=index, columns=DATA_COLUMNS)
 
     @retrying.retry(stop_max_attempt_number=3, wait_exponential_multiplier=500)
