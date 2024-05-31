@@ -95,7 +95,7 @@ class O2lProcessor(Processor):
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
-        intraday_closes = context.intraday_lookback['Close']
+        intraday_closes = context.intraday_lookback['Close'].tolist()
         elapsed_fifteen = context.current_time == position['entry_time'] + datetime.timedelta(minutes=15)
         take_profit = elapsed_fifteen and len(intraday_closes) >= 4 and intraday_closes[-1] > intraday_closes[-4]
         early_stop = (elapsed_fifteen and len(intraday_closes) >= 4 and

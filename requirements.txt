@@ -15,7 +15,6 @@ pytest-mock
 python-dateutil
 pytz
 ratelimiter
-recordclass
 requests
 retrying
 sqlalchemy

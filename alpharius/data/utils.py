@@ -100,8 +100,7 @@ def get_transactions(start_date: Optional[str], data_client: DataClient) -> List
         df = data_client.get_data(symbol, t - datetime.timedelta(minutes=5), t, TimeInterval.FIVE_MIN)
         if not len(df) or pd.to_datetime(df.index[0]).timestamp() != t.timestamp() - 300:
             return None
-        # Convert np float to float so that it is sqlalchemy compatible
-        return float(df['Close'].iloc[0])
+        return df['Close'].iloc[0]
 
     trading_client = get_trading_client()
 

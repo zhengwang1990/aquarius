@@ -8,21 +8,39 @@ import math
 import os
 import re
 import time
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 import alpaca.trading as trading
 import numpy as np
 import pandas as pd
 import pytz
-import recordclass
 
 TIME_ZONE = pytz.timezone('America/New_York')
-Transaction = recordclass.recordclass(
-    'Transaction',
-    ['symbol', 'is_long', 'processor', 'entry_price', 'exit_price', 'entry_time', 'exit_time',
-     'qty', 'gl', 'gl_pct', 'slippage', 'slippage_pct'])
 ALPACA_API_KEY_ENV = 'APCA_API_KEY_ID'
 ALPACA_SECRET_KEY_ENV = 'APCA_API_SECRET_KEY'
+
+
+@dataclass
+class Transaction:
+    symbol: str
+    is_long: bool
+    processor: Optional[str]
+    entry_price: float
+    exit_price: Optional[float]
+    entry_time: pd.Timestamp
+    exit_time: Optional[pd.Timestamp]
+    qty: float
+    gl: Optional[float]
+    gl_pct: Optional[float]
+    slippage: Optional[float]
+    slippage_pct: Optional[float]
+
+    def __post_init__(self):
+        # Type conversion to convert np.float32 types to float so that it is compatible with DB
+        self.entry_price = float(self.entry_price)
+        if self.exit_price is not None:
+            self.exit_price = float(self.exit_price)
 
 
 def get_colored_value(value: str, color: str, with_arrow: bool = False) -> str:

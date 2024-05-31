@@ -96,7 +96,7 @@ class AbcdProcessor(Processor):
         if market_open_index is None:
             return
         open_price = context.intraday_lookback['Open'].iloc[market_open_index]
-        intraday_closes = context.intraday_lookback['Close'].iloc[market_open_index:]
+        intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
         if len(intraday_closes) < 10:
             return
         intraday_low = np.min(intraday_closes)
