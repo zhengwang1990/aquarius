@@ -38,7 +38,7 @@ def email_on_exception(func):
             error_module = cls.__module__
             error_name = cls.__qualname__
             if error_module is not None and 'builtin' not in error_module:
-                error_name = error_module + '.' + error_name + ':'
+                error_name = error_module + '.' + error_name
             error_message = error_name + ': ' + str(e) + '\n' + ''.join(traceback.format_tb(e.__traceback__))
             EmailSender().send_alert(error_message)
 

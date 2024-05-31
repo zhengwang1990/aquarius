@@ -330,7 +330,7 @@ def main():
     parser.add_argument('--start_date', default=None,
                         help='Start date of the backfilling.')
     args = parser.parse_args()
-    Db().backfill(args.start_date)
+    Db().backfill(data.get_default_data_client(), args.start_date)
 
 
 if __name__ == '__main__':
