@@ -65,6 +65,8 @@ class DownFourProcessor(Processor):
         for lose in losses:
             if lose > 0:
                 return
+            if lose < -0.05:
+                return
         h2l = context.h2l_avg
         is_trade = losses[-2] < 0.3 * h2l and losses[-1] > 0.05 * h2l
         if is_trade or (context.mode == Mode.TRADE and losses[-2] < 0.25 * h2l):

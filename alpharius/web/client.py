@@ -435,6 +435,7 @@ class Client:
                                                     start_time=start_time - datetime.timedelta(days=7),
                                                     end_time=start_time - datetime.timedelta(days=1),
                                                     time_interval=data.TimeInterval.DAY)['Close'].iloc[-1]
+            prev_close = float(prev_close)
         else:
             prev_close = None
         name = self._alpaca.get_asset(symbol).name
@@ -451,10 +452,10 @@ class Client:
             if timeframe == 'intraday' and not '04:00' <= label <= '19:55':
                 continue
             labels.append(label)
-            price = {'h': bar['High'], 'l': bar['Low'], 'o': bar['Open'], 'c': bar['Close'],
-                     'x': label, 's': [bar['Open'], bar['Close']]}
+            price = {'h': float(bar['High']), 'l': float(bar['Low']), 'o': float(bar['Open']),
+                     'c': float(bar['Close']), 'x': label, 's': [float(bar['Open']), float(bar['Close'])]}
             prices.append(price)
-            volume = {'x': label, 's': bar['Volume'], 'g': int(bar['Close'] >= bar['Open'])}
+            volume = {'x': label, 's': int(bar['Volume']), 'g': int(bar['Close'] >= bar['Open'])}
             volumes.append(volume)
         return {'labels': labels, 'prices': prices, 'volumes': volumes,
                 'prev_close': prev_close, 'name': name}

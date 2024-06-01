@@ -147,7 +147,20 @@ function get_chart_data(dates, symbol, timeframe) {
     xmlHttp.open("GET", route, false);
     xmlHttp.send(null);
     var res = xmlHttp.responseText;
-    var obj = JSON.parse(res);
+    var obj;
+    try {
+        obj = JSON.parse(res);
+    } catch (e) {
+        var error_message = new DOMParser().parseFromString(res, "text/html").getElementsByClassName("errormsg");
+        if (error_message.length > 0) {
+            displayAlert("danger", error_message[0].innerHTML, timeframe);
+        } else {
+            var p = document.createElement("p");
+            p.appendChild(document.createTextNode(e.toString()));
+            displayAlert("danger", p.innerHTML, timeframe);
+        }
+        throw e;
+    }
     if (timeframe === "intraday") {
         intraday_chart_data = obj;
         trimmed_intraday_chart_data = {

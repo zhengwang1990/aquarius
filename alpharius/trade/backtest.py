@@ -426,8 +426,8 @@ class Backtest:
         outputs = [get_header(day)]
         if executed_closes:
             table_list = [[t.symbol, t.processor, t.entry_time.time(), t.exit_time.time(),
-                           'long' if t.is_long else 'short', t.entry_price, t.exit_price,
-                           f'{t.gl_pct * 100:+.2f}%'] for t in executed_closes]
+                           'long' if t.is_long else 'short', f'{t.entry_price:.4g}',
+                           f'{t.exit_price:.4g}', f'{t.gl_pct * 100:+.2f}%'] for t in executed_closes]
             trade_info = tabulate.tabulate(table_list,
                                            headers=['Symbol', 'Processor', 'Entry Time', 'Exit Time', 'Side',
                                                     'Entry Price', 'Exit Price', 'Gain/Loss'],
@@ -448,9 +448,8 @@ class Backtest:
                         daily_change = (close_price / interday_data['Close'].iloc[interday_ind - 1] - 1) * 100
                 change = (close_price / position.entry_price - 1) * 100 if close_price is not None else None
                 value = close_price * position.qty if close_price is not None else None
-                position_info.append([position.symbol, f'{position.qty:.2g}', position.entry_price,
-                                      close_price,
-                                      f'{value:.2g}',
+                position_info.append([position.symbol, f'{position.qty:.2g}', f'{position.entry_price:.4g}',
+                                      f'{close_price:.4g}', f'{value:.2g}',
                                       f'{daily_change:+.2f}%' if daily_change is not None else None,
                                       f'{change:+.2f}%' if change is not None else None])
             outputs.append('[ Positions ]')
