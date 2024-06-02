@@ -8,6 +8,7 @@ import uuid
 from typing import List, Dict, Optional
 
 import alpaca.trading as trading
+import numpy as np
 import pandas as pd
 
 from alpharius import trade
@@ -427,7 +428,8 @@ class FakeDataClient(DataClient):
             pd_timestamp = pd.to_datetime(t, unit='s', utc=True).tz_convert(TIME_ZONE)
             if pd_timestamp.isoweekday() < 6:
                 index.append(pd_timestamp)
-                data.append([42.0, 50.01, 35.02, float(next(self._value_cycle)), 40.123])
+                data.append([np.float32(42.0), np.float32(50.01), np.float32(35.02),
+                             np.float32(next(self._value_cycle)), np.uint32(123)])
         return pd.DataFrame(data, index=index, columns=DATA_COLUMNS)
 
     def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:

@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS chart (
     high REAL,
     low REAL,
     close REAL,
-    volume REAL,
+    volume INTEGER,
     UNIQUE (symbol, time)
 );
 
