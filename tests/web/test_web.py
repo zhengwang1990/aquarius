@@ -158,3 +158,10 @@ def test_backtest(client, mock_engine, mocker):
     ]
 
     assert client.get('/backtest').status_code == 200
+
+
+def test_handle_exception(client, mocker):
+    mocker.patch('alpharius.data.FmpClient', side_effect=ValueError('fake test error'))
+    resp = client.get('/')
+    assert 'fake test error' in resp.text
+    assert resp.status_code != 200

@@ -1,3 +1,5 @@
+import os
+
 import pytest
 import sqlalchemy
 
@@ -6,7 +8,12 @@ from .. import fakes
 
 
 @pytest.fixture
-def app():
+def secret(mocker):
+    mocker.patch.dict(os.environ, {'SECRET_KEY': 'test'})
+
+
+@pytest.fixture
+def app(secret):
     app = create_app({'TESTING': True})
     return app
 

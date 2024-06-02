@@ -9,7 +9,10 @@ from .base import CACHE_DIR, DATA_COLUMNS, DataClient, TimeInterval
 
 
 class CacheClient(DataClient):
-    """A cache layer on top of DataClient with real data access."""
+    """A cache layer on top of DataClient with real data access.
+
+    It utilizes a local SQL Lite database as cache storage layer.
+    """
 
     def __init__(self, data_client: DataClient):
         self._data_client = data_client
