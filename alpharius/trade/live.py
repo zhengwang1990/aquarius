@@ -9,6 +9,7 @@ from typing import List, Optional
 
 import alpaca.trading as trading
 import pandas as pd
+import numpy as np
 import pytz
 import retrying
 from alpaca.common import APIError
@@ -256,7 +257,7 @@ class Live:
                 if abs(price / old_value - 1) > 0.01:
                     self._logger.info('[%s] Current price is updated from [%.5g] to [%.5g]',
                                       symbol, old_value, price)
-                intraday_lookback.at[intraday_lookback.index[-1], 'Close'] = price
+                intraday_lookback.at[intraday_lookback.index[-1], 'Close'] = np.float32(price)
         self._logger.info('Intraday data updated for [%d] symbols. Time elapsed [%.2fs]',
                           len(tasks), time.time() - update_start)
 
