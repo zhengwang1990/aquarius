@@ -163,6 +163,7 @@ class IntradayVolatilityStockUniverse(DataBasedStockUniverse, CachedStockUnivers
         self._top_volume = TopVolumeUniverse(lookback_start_date, lookback_end_date, data_client, num_top_volume)
         self._company_symbols = set(COMPANY_SYMBOLS)
         self._num_stocks = num_stocks
+        self._top_volume_start = 200
 
     def _get_intraday_range(self, symbol: str, prev_day_ind: int) -> float:
         hist = self._historical_data[symbol]
@@ -192,8 +193,10 @@ class IntradayVolatilityStockUniverse(DataBasedStockUniverse, CachedStockUnivers
             start_ind = max(prev_day_ind - DAYS_IN_A_QUARTER, 0)
             if prev_close < 0.4 * np.max(hist['Close'][start_ind:prev_day_ind + 1]):
                 continue
+            #prev_volume = hist['Volume'].iloc[prev_day_ind]
+            #max_volume = np.max(hist['Volume'].iloc[prev_day_ind - DAYS_IN_A_MONTH + 1:prev_day_ind])
             intraday_volatility = self._get_intraday_range(symbol, prev_day_ind)
-            intraday_volatility_list.append((symbol, intraday_volatility))
+            if intraday_volatility > 0.02:
+                intraday_volatility_list.append(symbol)
 
-        intraday_volatility_list.sort(key=lambda s: s[1], reverse=True)
-        return [s[0] for s in intraday_volatility_list[:self._num_stocks]]
+        return intraday_volatility_list

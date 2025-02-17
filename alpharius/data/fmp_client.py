@@ -47,8 +47,8 @@ class FmpClient(DataClient):
         with self._lock:
             self._call_history.append(time.time())
 
-    @retrying.retry(stop_max_attempt_number=3,
-                    wait_exponential_multiplier=500,
+    @retrying.retry(stop_max_attempt_number=5,
+                    wait_exponential_multiplier=1000,
                     retry_on_exception=lambda e: isinstance(e, requests.HTTPError))
     def get_data(self,
                  symbol: str,
@@ -95,8 +95,8 @@ class FmpClient(DataClient):
                  np.uint32(b['volume'])] for b in bars]
         return pd.DataFrame(data, index=index, columns=DATA_COLUMNS)
 
-    @retrying.retry(stop_max_attempt_number=3,
-                    wait_exponential_multiplier=500,
+    @retrying.retry(stop_max_attempt_number=5,
+                    wait_exponential_multiplier=1000,
                     retry_on_exception=lambda e: isinstance(e, requests.HTTPError))
     def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
         """Gets the last trade prices of a list of symbols."""
