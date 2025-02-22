@@ -88,7 +88,10 @@ class DataCollectProcessor(Processor):
         # Filters
         if len(intraday_closes) < N + 1:
             return
-        bar_losses = np.array([intraday_closes[i] / intraday_opens[i] - 1 for i in range(-N, 0)])
+        try:
+            bar_losses = np.array([intraday_closes[i] / intraday_opens[i] - 1 for i in range(-N, 0)])
+        except ZeroDivisionError:
+            return
         if any(bar_losses > 0):
             return
         if any(bar_losses < -0.05):

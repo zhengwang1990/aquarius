@@ -131,18 +131,24 @@ def search(df):
                             total = len(df)
                             if total < min_count:
                                 continue
-                            win = len(df[df['gl'] > 0])
-                            win_rate = win / total
-                            balance = 1
-                            for gl in df['gl']:
-                                balance = balance * (1 + gl - 0.0015)
-                            total_gl = balance - 1
-                            gl = balance ** (1 / total) - 1
+                            win_rate, gl, total_gl = get_stats(df)
                             if win_rate > max_rate or gl > max_gl or total_gl > max_total_gl:
                                 print('ch', ch2, '~', ch, 'ph', ph, '~', ph2, 'h2l', h2l2, '~', h2l, 'total', total, 'win rate', win_rate, 'total_gl', total_gl, 'avg gl', gl)
                                 max_gl = max(gl, max_gl)
                                 max_rate = max(win_rate, max_rate)
                                 max_total_gl = max(total_gl, max_total_gl)
+
+def get_stats(df):
+    total = len(df)
+    win = len(df[df['gl'] > 0])
+    win_rate = win / total
+    balance = 1
+    for gl in df['gl']:
+        balance = balance * (1 + gl - 0.0015)
+    total_gl = balance - 1
+    gl = balance ** (1 / total) - 1
+    return win_rate, gl, total_gl
+
 
 
 def main():
@@ -158,14 +164,20 @@ def main():
         df = pd.concat([df, pd.DataFrame(data, columns=COLUMNS)])
     df.reset_index(drop=True, inplace=True)
     print(df.columns)
-    df['gl'] = df.apply(lambda row: row.exit_price_20min / row.entry_price - 1, axis=1)
+    df['gl'] = df.apply(lambda row: row.exit_price_15min / row.entry_price - 1, axis=1)
     df['ch'] = df.apply(lambda row: row.current_bar_loss / row.h2l_avg, axis=1)
     df['ph'] = df.apply(lambda row: row.prev_bar_loss / row.h2l_avg, axis=1)
     df = df.drop(['current_bar_loss', 'prev_bar_loss', 'entry_price', 'exit_price_5min',
-                  'exit_price_10min', 'exit_price_15min'], axis=1)
+                  'exit_price_10min', 'exit_price_15min', 'exit_price_20min'], axis=1)
     print(f'Checking {len(df)} records')
     search(df)
-
+    # df = df[df['ch'] > 0.12]
+    # # df = df[df['ch'] < 1.1]
+    # df = df[df['ph'] < 0.6]
+    # df = df[df['h2l_avg'] < -0.08]
+    # # df = df[df['h2l_avg'] > -0.24]
+    # win_rate, gl, total_gl = get_stats(df)
+    # print('total', len(df), 'win rate', win_rate, 'total_gl', total_gl, 'avg gl', gl)
 
 if __name__ == '__main__':
     main()
