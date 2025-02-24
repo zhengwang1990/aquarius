@@ -10,11 +10,10 @@ from ..common import (
     Position, PositionStatus, ProcessorAction, Mode)
 from ..stock_universe import L2hVolatilityStockUniverse
 
-NUM_UNIVERSE_SYMBOLS = 20
 N = 4
 
 
-class DownFourProcessorV2(Processor):
+class DownFourV2Processor(Processor):
 
     def __init__(self,
                  lookback_start_date: pd.Timestamp,
@@ -53,6 +52,8 @@ class DownFourProcessorV2(Processor):
         market_open_index = context.market_open_index
         if market_open_index is None:
             return
+        if context.current_price > context.prev_day_close * 1.2:
+            return
 
         intraday_closes = context.intraday_lookback['Close'].tolist()[market_open_index:]
         intraday_opens = context.intraday_lookback['Open'].tolist()[market_open_index:]
@@ -72,11 +73,18 @@ class DownFourProcessorV2(Processor):
             return
         if intraday_vols[-2] > intraday_vols[-3]:
             return
+        try:
+            all_bars = np.array([abs(intraday_closes[i] / intraday_closes[i - 1] - 1)
+                                 for i in range(1, len(intraday_closes))])
+        except ZeroDivisionError:
+            return
+        if all_bars[-1] > np.percentile(all_bars, 95) * 4:
+            return
 
         current_bar_loss = bar_losses[-1]
         prev_bar_loss = bar_losses[-2]
 
-        is_trade = current_bar_loss / h2l_avg > 0.12 and prev_bar_loss / h2l_avg < 0.6
+        is_trade = current_bar_loss / h2l_avg > 0.3 and prev_bar_loss / h2l_avg < 0.6
         if is_trade or (context.mode == Mode.TRADE and current_bar_loss / h2l_avg > 0.1):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Prev loss: {prev_bar_loss * 100:.2f}%. '
@@ -97,5 +105,5 @@ class DownFourProcessorV2(Processor):
             return ProcessorAction(context.symbol, ActionType.SELL_TO_CLOSE, 1)
 
 
-class DownFourProcessorFactoryV2(ProcessorFactory):
-    processor_class = DownFourProcessorV2
+class DownFourV2ProcessorFactory(ProcessorFactory):
+    processor_class = DownFourV2Processor

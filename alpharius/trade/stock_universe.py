@@ -238,6 +238,8 @@ class L2hVolatilityStockUniverse(DataBasedStockUniverse, CachedStockUniverse):
             if prev_close < 0.4 * np.max(hist['Close'][start_ind:prev_day_ind + 1]):
                 continue
             l2h_avg = self._get_l2h_avg(symbol, prev_day_ind)
-            if l2h_avg < -0.08:
-                symbols.append(symbol)
-        return symbols
+            if l2h_avg < -0.05:
+                symbols.append((symbol, l2h_avg))
+        symbols.sort(key=lambda x: x[1])
+        symbols = symbols[:100]
+        return [s[0] for s in symbols]
