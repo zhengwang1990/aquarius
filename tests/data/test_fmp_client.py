@@ -9,8 +9,7 @@ import requests
 import alpharius.data as data
 
 
-def fake_get(url, *args, **kwargs):
-    comps = url.split('//')[-1].split('/')
+def fake_get(url, params, *args, **kwargs):
     if 'historical-chart' in url:
         content = [
             {
@@ -22,8 +21,8 @@ def fake_get(url, *args, **kwargs):
                 'volume': 1492644
             }
         ]
-    elif 'historical-price-full' in url:
-        symbol = comps[4]
+    elif 'historical-price-eod/full' in url:
+        symbol = params['symbol']
         content = {
             'symbol': symbol,
             'historical': [
@@ -44,8 +43,8 @@ def fake_get(url, *args, **kwargs):
                 },
             ],
         }
-    elif 'quote-short' in url:
-        symbols = comps[4].split(',')
+    elif 'batch-quote-short' in url:
+        symbols = params['symbols'].split(',')
         content = [
             {
                 'symbol': symbol,
@@ -95,9 +94,9 @@ def test_get_last_trades():
 def test_rate_limited(mocker):
     client = data.FmpClient()
     mock_sleep = mocker.patch.object(time, 'sleep')
-    mocker.patch.object(time, 'time', side_effect=[100] * 1000 + [1000] * 1000)
+    mocker.patch.object(time, 'time', side_effect=[100] * 3000 + [1000] * 2000)
 
-    for _ in range(400):
+    for _ in range(800):
         client.get_daily('AAPL', pd.Timestamp('2024-03-26'), data.TimeInterval.FIVE_MIN)
 
     assert mock_sleep.call_count > 0

@@ -14,7 +14,7 @@ from alpharius.utils import TIME_ZONE
 from .base import DATA_COLUMNS, DataClient, TimeInterval
 
 _FMP_API_KEY_ENV = 'FMP_API_KEY'
-_BASE_URL = 'https://financialmodelingprep.com/api/v3/'
+_BASE_URL = 'https://financialmodelingprep.com/stable/'
 
 
 class FmpClient(DataClient):
@@ -27,7 +27,7 @@ class FmpClient(DataClient):
         """
         self._api_key = api_key or os.environ[_FMP_API_KEY_ENV]
         self._call_history = collections.deque()
-        self._max_calls = 280
+        self._max_calls = 700
         self._period = 60
         self._lock = threading.RLock()
 
@@ -65,17 +65,16 @@ class FmpClient(DataClient):
             end_time = end_time.tz_localize(TIME_ZONE)
         url = _BASE_URL
         if time_interval == TimeInterval.FIVE_MIN:
-            url += 'historical-chart/5min/'
+            url += 'historical-chart/5min'
         elif time_interval == TimeInterval.HOUR:
-            url += 'historical-chart/1hour/'
+            url += 'historical-chart/1hour'
         elif time_interval == TimeInterval.DAY:
-            url += 'historical-price-full/'
+            url += 'historical-price-eod/full'
         else:
             raise ValueError(f'time_interval {time_interval} not supported')
         start = start_time.strftime('%F')
         end = end_time.strftime('%F')
-        url += symbol
-        params = {'from': start, 'to': end, 'apikey': self._api_key, 'extended': 'true'}
+        params = {'symbol': symbol, 'from': start, 'to': end, 'apikey': self._api_key, 'extended': 'true'}
         with self.rate_limit():
             response = requests.get(url, params=params)
             response.raise_for_status()
@@ -100,8 +99,8 @@ class FmpClient(DataClient):
                     retry_on_exception=lambda e: isinstance(e, requests.HTTPError))
     def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
         """Gets the last trade prices of a list of symbols."""
-        url = _BASE_URL + 'quote-short/' + ','.join(symbols)
-        params = {'apikey': self._api_key}
+        url = _BASE_URL + 'batch-quote-short'
+        params = {'symbols': ','.join(symbols), 'apikey': self._api_key}
         with self.rate_limit():
             response = requests.get(url, params=params)
             response.raise_for_status()
