@@ -1,8 +1,9 @@
 import datetime
 
+import numpy as np
 import pandas as pd
 import pytest
-from alpharius.utils import get_latest_day, compute_drawdown, compute_bernoulli_ci95, hash_str
+from alpharius.utils import get_latest_day, compute_drawdown, compute_bernoulli_ci95, hash_str, Transaction
 
 
 def test_get_latest_day_returns_previous_day(mocker):
@@ -34,3 +35,11 @@ def test_hash_str():
     s = '123' * 100
     h = hash_str(s)
     assert len(h) == 10
+
+
+def test_transaction_converts_float32():
+    t = Transaction('symbol', True, 'processor', np.float32(1), np.float32(1), pd.Timestamp('2021'),
+                    pd.Timestamp('2021'), np.float32(3), np.float32(0.01), np.float32(0.01),
+                    np.float32(0.01), np.float32(0.01))
+    for attr in ['entry_price', 'exit_price', 'qty', 'gl', 'gl_pct', 'slippage', 'slippage_pct']:
+        assert type(getattr(t, attr)) is float

@@ -38,17 +38,9 @@ class Transaction:
 
     def __post_init__(self):
         # Type conversion to convert np.float32 types to float so that it is compatible with DB
-        self.entry_price = float(self.entry_price)
-        if self.exit_price is not None:
-            self.exit_price = float(self.exit_price)
-        if self.gl is not None:
-            self.gl = float(self.gl)
-        if self.gl_pct is not None:
-            self.gl_pct = float(self.gl_pct)
-        if self.slippage is not None:
-            self.slippage = float(self.slippage)
-        if self.slippage_pct is not None:
-            self.slippage_pct = float(self.slippage_pct)
+        for k, v in self.__dict__.items():
+            if isinstance(v, np.float32):
+                self.__dict__[k] = float(v)
 
 
 def get_colored_value(value: str, color: str, with_arrow: bool = False) -> str:
