@@ -197,3 +197,49 @@ class IntradayVolatilityStockUniverse(DataBasedStockUniverse, CachedStockUnivers
 
         intraday_volatility_list.sort(key=lambda s: s[1], reverse=True)
         return [s[0] for s in intraday_volatility_list[:self._num_stocks]]
+
+
+class L2hVolatilityStockUniverse(DataBasedStockUniverse, CachedStockUniverse):
+
+    def __init__(self,
+                 lookback_start_date: pd.Timestamp,
+                 lookback_end_date: pd.Timestamp,
+                 data_client: DataClient,
+                 num_top_volume: int = 2000):
+        super().__init__(lookback_start_date, lookback_end_date, data_client)
+        self._top_volume = TopVolumeUniverse(lookback_start_date, lookback_end_date, data_client, num_top_volume)
+        self._company_symbols = set(COMPANY_SYMBOLS)
+
+    def _get_l2h_avg(self, symbol: str, prev_day_ind: int) -> float:
+        hist = self._historical_data[symbol]
+        res = []
+        for i in range(max(prev_day_ind - DAYS_IN_A_MONTH + 1, 1), prev_day_ind + 1):
+            h = hist['High'].iloc[i]
+            l = hist['Low'].iloc[i]
+            res.append(l / h - 1)
+        return np.average(res) if res else 0
+
+    def get_stock_universe_impl(self, view_time: pd.Timestamp) -> List[str]:
+        prev_day = self.get_prev_day(view_time)
+        top_volume_symbols = set(self._top_volume.get_stock_universe(view_time))
+        symbols = []
+        for symbol, hist in self._historical_data.items():
+            if symbol not in self._company_symbols:
+                continue
+            if symbol not in top_volume_symbols:
+                continue
+            if prev_day not in hist.index:
+                continue
+            prev_day_ind = timestamp_to_index(hist.index, prev_day)
+            if prev_day_ind < DAYS_IN_A_MONTH:
+                continue
+            prev_close = hist['Close'].iloc[prev_day_ind]
+            start_ind = max(prev_day_ind - DAYS_IN_A_QUARTER, 0)
+            if prev_close < 0.4 * np.max(hist['Close'][start_ind:prev_day_ind + 1]):
+                continue
+            l2h_avg = self._get_l2h_avg(symbol, prev_day_ind)
+            if l2h_avg < -0.05:
+                symbols.append((symbol, l2h_avg))
+        symbols.sort(key=lambda x: x[1])
+        symbols = symbols[:100]
+        return [s[0] for s in symbols]
