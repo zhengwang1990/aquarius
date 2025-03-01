@@ -85,7 +85,7 @@ class DownFourV2Processor(Processor):
         prev_bar_loss = bar_losses[-2]
 
         is_trade = current_bar_loss / h2l_avg > 0.3 and prev_bar_loss / h2l_avg < 0.6
-        if is_trade or (context.mode == Mode.TRADE and current_bar_loss / h2l_avg > 0.1):
+        if is_trade or (context.mode == Mode.TRADE and current_bar_loss / h2l_avg > 0.2):
             self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                                f'Prev loss: {prev_bar_loss * 100:.2f}%. '
                                f'Current loss: {current_bar_loss * 100:.2f}%. '
@@ -97,7 +97,11 @@ class DownFourV2Processor(Processor):
 
     def _close_position(self, context: Context) -> Optional[ProcessorAction]:
         position = self._positions[context.symbol]
-        is_close = context.current_time >= position['entry_time'] + datetime.timedelta(minutes=15)
+        intraday_closes = context.intraday_lookback['Close'].tolist()
+        is_close = (context.current_time >= position['entry_time'] + datetime.timedelta(minutes=15) and
+                    len(intraday_closes) >= 4 and
+                    (intraday_closes[-1] < intraday_closes[-2] or (intraday_closes[-1] >= intraday_closes[-4])))
+        is_close = is_close or context.current_time >= position['entry_time'] + datetime.timedelta(minutes=20)
         self._logger.debug(f'[{context.current_time.strftime("%F %H:%M")}] [{context.symbol}] '
                            f'Closing position: {is_close}. Current price {context.current_price}.')
         if is_close:

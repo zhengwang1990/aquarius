@@ -3,6 +3,7 @@ import contextlib
 import os
 import threading
 import time
+from datetime import timedelta
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -14,7 +15,7 @@ from alpharius.utils import TIME_ZONE
 from .base import DATA_COLUMNS, DataClient, TimeInterval
 
 _FMP_API_KEY_ENV = 'FMP_API_KEY'
-_BASE_URL = 'https://financialmodelingprep.com/stable/'
+_BASE_URL = 'https://financialmodelingprep.com/'
 
 
 class FmpClient(DataClient):
@@ -30,6 +31,7 @@ class FmpClient(DataClient):
         self._max_calls = 700
         self._period = 60
         self._lock = threading.RLock()
+        self._now = pd.Timestamp.now().tz_localize(TIME_ZONE)
 
     @contextlib.contextmanager
     def rate_limit(self):
@@ -65,11 +67,14 @@ class FmpClient(DataClient):
             end_time = end_time.tz_localize(TIME_ZONE)
         url = _BASE_URL
         if time_interval == TimeInterval.FIVE_MIN:
-            url += 'historical-chart/5min'
+            if self._now - start_time > timedelta(days=60):
+                url += f'api/v3/historical-chart/5min/{symbol}'
+            else:
+                url += 'stable/historical-chart/5min'
         elif time_interval == TimeInterval.HOUR:
-            url += 'historical-chart/1hour'
+            url += 'stable/historical-chart/1hour'
         elif time_interval == TimeInterval.DAY:
-            url += 'historical-price-eod/full'
+            url += 'stable/historical-price-eod/full'
         else:
             raise ValueError(f'time_interval {time_interval} not supported')
         start = start_time.strftime('%F')
@@ -99,7 +104,7 @@ class FmpClient(DataClient):
                     retry_on_exception=lambda e: isinstance(e, requests.HTTPError))
     def get_last_trades(self, symbols: List[str]) -> Dict[str, float]:
         """Gets the last trade prices of a list of symbols."""
-        url = _BASE_URL + 'batch-quote-short'
+        url = _BASE_URL + 'stable/batch-quote-short'
         params = {'symbols': ','.join(symbols), 'apikey': self._api_key}
         with self.rate_limit():
             response = requests.get(url, params=params)
